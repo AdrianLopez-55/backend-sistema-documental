@@ -1,26 +1,31 @@
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType  } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {cors: true});
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    }
-  }),);
+  // app.enableVersioning({
+  //   type: VersioningType.HEADER,
+  //   header: 'v=',
+  // });
+  // app.useGlobalPipes(new ValidationPipe({
+  //   whitelist: true,
+  //   forbidNonWhitelisted: true,
+  //   transform: true,
+  //   transformOptions: {
+  //     enableImplicitConversion: true,
+  //   }
+  // }),);
   
   const config = new DocumentBuilder()
   .setTitle('API Documentation')
-  .setDescription('api login auth and registry documents')
+  .setDescription('api validate and registry documents')
   .setVersion('1.0')
   .addTag('validate user')
-  .addTag('validar-url')
   .addTag('Registry Documents')
+  .addTag('External Data Personal')
+  .addTag('Send Base64 File')
   .addTag('Road-map')
   .addBearerAuth()
   .build();
@@ -36,7 +41,7 @@ async function bootstrap() {
     }
   });
 
-  //const PORT = process.env.PORT || 3000;
-  await app.listen(8085);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
 }
 bootstrap();

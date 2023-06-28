@@ -1,17 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import mongoose, { Document, Model } from 'mongoose';
 import { User } from 'src/users/schema/user.schema';
-import {PhysicalLocation, PhysicalLocationSchema} from './phisical-location.schema'
+// import {PhysicalLocation, PhysicalLocationSchema} from './phisical-location.schema'
 import { Comment, CommentSchema } from './comment.schema';
 import { SignatueAproved, SignatueAprovedSchema } from './signature-aproved.schema';
 import { MIlestoneSchema, Milestone } from './milestone.schema';
 
 export type DocumentDocument = Documents & Document
 
-@Schema()
+@Schema({versionKey: '__v'})
 export class Documents {
 	@Prop({default: () => `DOC-${incrementalValue(0)}`})
-	numberDocument: string
+	numberDocument: string;
 
 	@Prop()
 	title: string;
@@ -22,8 +22,8 @@ export class Documents {
 	@Prop()
 	digitalUbication: string;
 
-	@Prop([PhysicalLocationSchema])
-	physicalLocation: PhysicalLocation[];
+	// @Prop([PhysicalLocationSchema])
+	// physicalLocation: PhysicalLocation[];
 
 	@Prop()
 	documentType: string;
@@ -33,6 +33,9 @@ export class Documents {
 
 	@Prop()
 	nivelAcces: string;
+
+	@Prop()
+	category: string;
 
 	@Prop()
 	description: string;

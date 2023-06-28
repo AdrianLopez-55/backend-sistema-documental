@@ -16,7 +16,7 @@ RUN npm install
 EXPOSE 3000
 
 # Define las variables de entorno para la conexión a MongoDB
-ENV MONGO_URI mongodb://fundation:freefundation221@10.10.214.219:27017/
+ENV MONGO_URI mongodb://localhost/
 
 # Inicia la aplicación NestJS
 CMD ["yarn", "start:dev"]

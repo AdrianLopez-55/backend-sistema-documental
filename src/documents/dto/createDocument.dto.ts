@@ -1,10 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsString } from "class-validator";
+import { IsArray, IsString, isString } from "class-validator";
 
 export class CreateDocumentDTO {
-	// @ApiProperty({example: 'DOC-001', type: String, description: 'unique document number'})
-	// @IsString()
-	// readonly numberDocument: string
 
 	@ApiProperty({example: 'Resources from DataCenter'})
 	@IsString()
@@ -30,8 +27,39 @@ export class CreateDocumentDTO {
 	@IsString()
 	readonly nivelAcces: string;
 
+	// @ApiProperty({example: 'Informes'})
+	// @IsString()
+	// category: string
+
 	@ApiProperty({example: 'The resources that were sent to the data center for their ...'})
 	@IsString()
 	readonly description: string;
 
+	// @ApiProperty({example: 'jfjoiqjenodaurieon', description: 'most be base64'})
+	// @IsString()
+	// readonly base64: string;
+
+	// @ApiProperty({example: 'image/jpg', description: 'most be mime from documebt'})
+	// @IsString()
+	// readonly mime: string;
+
+	// readonly filename? : string;
+	// readonly extension? : string;
+	// readonly category? : string;
+
+	// constructor(fileId: string){
+	// 	this.fileId = fileId;
+	// }
+
+	// @ApiProperty()
+	// @IsString()
+	// filename: string
+
+	// @ApiProperty()
+	// @IsString()
+	// originalname: string
+
+	// @ApiProperty()
+	// @IsString()
+	// filePath: string
 }

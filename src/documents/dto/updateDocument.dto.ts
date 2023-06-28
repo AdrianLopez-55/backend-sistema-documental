@@ -2,9 +2,6 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsString, isArray } from "class-validator";
 
 export class UpdateDocumentDTO {
-	// @ApiProperty({example: 'DOC-001'})
-	// @IsString()
-	// readonly numberDocument: string
 
 	@ApiProperty({example: 'Resources from DataCenter'})
 	@IsString()
@@ -29,6 +26,10 @@ export class UpdateDocumentDTO {
 	@ApiProperty({example: 'Restringido'})
 	@IsString()
 	readonly nivelAcces: string;
+
+	@ApiProperty({example: 'Informes'})
+	@IsString()
+	readonly category: string
 
 	@ApiProperty({example: 'The resources that were sent to the data center for their ...'})
 	@IsString()

@@ -1,11 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString } from "class-validator";
 
-export class LoginAuthDocumentalDTO{
+export class LoginCentralAuthDTO{
 	@ApiProperty()
 	@IsString()
-	email:string;
+	readonly app: string;
+	
 	@ApiProperty()
 	@IsString()
-	password:string;
+	readonly token: string;
 }
