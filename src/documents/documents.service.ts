@@ -11,6 +11,7 @@ import { Observable, map } from 'rxjs';
 import { Base64DocumentDto } from 'src/base64-document/dto/base64-document.dto';
 import { Base64DocumentResponseDTO } from 'src/base64-document/dto/base64-document-response.dto';
 import { UpdateFileRegisterDTO } from './dto/updateFileRegister.dto';
+import { ObtainDataPersonalDTO } from './dto/personal-result.dto';
 
 @Injectable()
 export class DocumentsService {
@@ -20,8 +21,9 @@ export class DocumentsService {
 
 	constructor(@InjectModel(Documents.name) private readonly documentModel: Model<DocumentDocument>, private readonly httpService: HttpService){}
 	
-	async create(createDocumentDTO: CreateDocumentDTO): Promise<Documents> {
-		// const personalDataUrl = process.env.API_PERSONAL;
+	async create(createDocumentDTO: CreateDocumentDTO): Promise<Documents | any> {
+		const personalDataUrl = `${process.env.API_PERSONAL_GET}?ci=${encodeURIComponent(createDocumentDTO.ciPersonal)}`;
+		
 		// try {
 		// 	const response = await this.httpService.get(`${personalDataUrl}/api/personal`).toPromise();
 		// 	console.log(response.data)
@@ -53,7 +55,10 @@ export class DocumentsService {
 		// createDocumentDTO.category = fileData.category
 
 		// const externalApiPersonal = ''
+
+		// const urlPersonal = `${process.env.API_PERSONAL_GET}?ci=${encodeURIComponent(personalCi)}`;
 		
+
 		const { file } = createDocumentDTO
 		if(file){
 			const mimeType = file.split(';')[0].split(':')[1];
@@ -66,6 +71,34 @@ export class DocumentsService {
 
 
 		try {
+			// const responsePersonalCi = await this.httpService.get(urlPersonal).toPromise()
+			// const personalDataList = responsePersonalCi.data;
+			// if(personalDataList.length === 0){
+			// 	throw new Error('cant find author')
+			// }
+			// const personalData = personalDataList.find((data: CreateDocumentDTO))
+			
+			//------------- obtain personal to register -----------
+			const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+			const personalDataList = responsePersonal.data
+			console.log('esto es personalDAtaList')
+			console.log(personalDataList)
+			if(personalDataList.length === 0){
+				throw new Error('No se encontró el personal 1111111')
+			}
+
+			const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
+			if (!personalData) {
+				throw new Error('No se encontró el personal 2222222');
+			}
+			console.log('esto es personalData')
+			console.log(personalData)
+			const { _idPersonal, name, ci, email, phone, nationality } = personalData;
+			let authorDocument = {}; 
+			authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+
+
+			//------------file update register ------------
 			const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
 			const { _id, filename, size, filePath, status, category, extension } = response.data.file;
 			let fileRegister = {}
@@ -90,9 +123,9 @@ export class DocumentsService {
 
 
 			
-			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister})
-			// console.log('esto es newDocument')
-			// console.log(newDocument)
+			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
+			console.log('esto es newDocument')
+			console.log(newDocument)
 			return newDocument.save();
 
 		} catch (error) {
@@ -101,15 +134,58 @@ export class DocumentsService {
 			
 		}
 	  } else if(file === null){
-			let fileRegister = {};
-			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister})
+		const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+		const personalDataList = responsePersonal.data
+		console.log('esto es personalDAtaList')
+		console.log(personalDataList)
+		if(personalDataList.length === 0){
+			throw new Error('No se encontró el personal 1111111')
+		}
+
+		const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
+		if (!personalData) {
+			throw new Error('No se encontró el personal 2222222');
+		}
+		console.log('esto es personalData')
+		console.log(personalData)
+		const { _idPersonal, name, ci, email, phone, nationality } = personalData
+		let authorDocument = {}; 
+		authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+
+
+				let fileRegister = {};
+			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
 			// console.log('esto es newDocument sin file base64')
 			// console.log(newDocument)
+			console.log('esto es newDocument')
+			console.log(newDocument)
 			return newDocument.save();
 	  } else {
 		if(file === undefined){
+			const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+			const personalDataList = responsePersonal.data
+			console.log('esto es personalDAtaList')
+			console.log(personalDataList)
+			if(personalDataList.length === 0){
+				throw new Error('No se encontró el personal 1111111')
+			}
+
+			const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
+			if (!personalData) {
+				throw new Error('No se encontró el personal 2222222');
+			}
+			console.log('esto es personalData')
+			console.log(personalData)
+			const { _idPersonal, name, ci, email, phone, nationality } = personalData
+			let authorDocument = {}; 
+			authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+
+
 			let fileRegister = {};
-			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister})
+			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
+			console.log('esto es newDocument')
+			console.log(newDocument)
+			return newDocument.save()
 		}
 	  }
 

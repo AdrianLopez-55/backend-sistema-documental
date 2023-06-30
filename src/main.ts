@@ -26,7 +26,6 @@ async function bootstrap() {
   .addTag('Validate Token')
   .addTag('Registry Documents')
   .addTag('External Data Personal')
-  .addTag('Send Base64 File')
   .addTag('Road-map')
   .addBearerAuth()
   .build();

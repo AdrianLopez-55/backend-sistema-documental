@@ -17,13 +17,13 @@ import { HttpModule } from '@nestjs/axios';
 import { PersonalModule } from './personal/personal.module';
 import { PersonalController } from './personal/personal.controller';
 import { PersonalService } from './personal/personal.service';
-import { Base64DocumentController } from './base64-document/base64-document.controller';
-import { Base64DocumentService } from './base64-document/base64-document.service';
+// import { Base64DocumentController } from './base64-document/base64-document.controller';
+// import { Base64DocumentService } from './base64-document/base64-document.service';
 // import { MyController } from './myControllerGetPersonal.controller';
 // import { ExternalDataService } from './externalDataService.service';
 import configuration from './config/configuration'
 import getConfig from './config/configuration'
-import { Base64DocumentModule } from './base64-document/base64-document.module';
+// import { Base64DocumentModule } from './base64-document/base64-document.module';
 
 
 @Module({
@@ -43,10 +43,10 @@ import { Base64DocumentModule } from './base64-document/base64-document.module';
     AuthModule,
     HttpModule,
     PersonalModule,
-    Base64DocumentModule,
+    // Base64DocumentModule,
   ],
-  controllers: [AppController, Base64DocumentController, PersonalController,], //MyController],
-  providers: [AppService, Base64DocumentService, PersonalService,], //ExternalDataService],
+  controllers: [AppController, PersonalController,], //MyController],
+  providers: [AppService, PersonalService,], //ExternalDataService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer){

@@ -7,9 +7,13 @@ export class CreateDocumentDTO {
 	@IsString()
 	readonly title: string;
 
-	@ApiProperty({example: 'J. Adrian Chase'})
+	// @ApiProperty({example: 'J. Adrian Chase'})
+	// @IsString()
+	// readonly authorDocument: string;
+
+	@ApiProperty({example: '8574898'})
 	@IsString()
-	readonly authorDocument: string;
+	readonly ciPersonal: string;
 
 	// @ApiProperty({example: '/archivos/documento001.pdf'})
 	// @IsString()

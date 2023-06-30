@@ -16,8 +16,11 @@ export class Documents {
 	@Prop()
 	title: string;
 
-	@Prop({ type: mongoose.Schema.Types.String, ref: 'User'})
-	authorDocument: User;
+	// @Prop({ type: mongoose.Schema.Types.String, ref: 'User'})
+	// authorDocument: User;
+
+	@Prop()
+	authorDocument: mongoose.Schema.Types.Mixed
 
 	// @Prop()
 	// digitalUbication: string;

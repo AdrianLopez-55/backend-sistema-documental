@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, HttpException, HttpStatus } from '@nestjs/common';
 import { PersonalService } from './personal.service';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import getConfig from '../config/configuration'
@@ -35,6 +35,16 @@ export class PersonalController {
 		} catch (error){
 			return 'Error al obtener el id del personal externo'
 		}
+	}
+
+	@Get(':ci')
+	async getPersonalByCi(@Param('ci') ci: string): Promise<any>{
+		try {
+			const personalData = await this.personalService.fetchDataFromExternalServerByCi(ci);
+			return personalData;
+		} catch (error) {
+			throw new HttpException('Error al obtener los datos del personal', HttpStatus.INTERNAL_SERVER_ERROR);
+		  }
 	}
 
 }
