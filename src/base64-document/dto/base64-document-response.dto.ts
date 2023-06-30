@@ -22,9 +22,9 @@ export class Base64DocumentResponseDTO {
 	@ApiProperty()
 	category: string;
 
-	@ApiProperty()
-	mime: string;
+	// @ApiProperty()
+	// mime: string;
 
-	@ApiProperty()
-	base64: string
+	// @ApiProperty()
+	// base64: string
 }

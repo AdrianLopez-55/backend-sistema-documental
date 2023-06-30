@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, HttpCode, HttpException, HttpStatus, Req, Query, Put, ForbiddenException, UseInterceptors, UploadedFile, ParseIntPipe  } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, HttpCode, HttpException, HttpStatus, Req, Query, Put, ForbiddenException, BadRequestException, NotFoundException, UseInterceptors, UploadedFile, ParseIntPipe, Res  } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto'
 import { ApiAcceptedResponse, ApiBadGatewayResponse, ApiBadRequestResponse, ApiBearerAuth, ApiBody, ApiConflictResponse, ApiConsumes, ApiCreatedResponse, ApiDefaultResponse, ApiForbiddenResponse, ApiFoundResponse, ApiGatewayTimeoutResponse, ApiGoneResponse, ApiInternalServerErrorResponse, ApiMethodNotAllowedResponse, ApiMovedPermanentlyResponse, ApiNoContentResponse, ApiNotAcceptableResponse, ApiNotFoundResponse, ApiNotImplementedResponse, ApiOkResponse, ApiOperation, ApiPayloadTooLargeResponse, ApiPreconditionFailedResponse, ApiQuery, ApiRequestTimeoutResponse, ApiResponse, ApiServiceUnavailableResponse, ApiTags, ApiTooManyRequestsResponse, ApiUnauthorizedResponse, ApiUnprocessableEntityResponse, ApiUnsupportedMediaTypeResponse } from '@nestjs/swagger';
 import { CreateDocumentDTO } from './dto/createDocument.dto';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ParseObjectIdPipe } from 'src/utilities/parse-object-id-pipe.pipe';
 import { CreateCommentDto } from './dto/createComment.dto';
 import { CreatePhysicalLocationDto } from './dto/createPhysicalLocation.dto';
@@ -16,6 +16,7 @@ import { Documents } from './schema/documents.schema';
 import { version } from 'os';
 import { Base64DocumentResponseDTO } from 'src/base64-document/dto/base64-document-response.dto';
 import { PersonalService } from 'src/personal/personal.service';
+import { BadRequestError } from 'passport-headerapikey';
 // import { FileInterceptor } from '@nestjs/platform-express';
 // import { Express } from 'express';
 
@@ -34,8 +35,16 @@ import { PersonalService } from 'src/personal/personal.service';
 	@ApiOperation({summary: 'registry new document'})
 	@ApiCreatedResponse({ description: 'The document has been successfully created.', type: CreateDocumentDTO})
 	@ApiBadRequestResponse({description: 'bad request response', type: badRequestDocDto})
-	async create(@Body() createDocumentDTO: CreateDocumentDTO){
+	async create(@Res() res: Response, @Body() createDocumentDTO: CreateDocumentDTO){
+		
+		try{
 		const numberDocument = await this.sequenceService.getNextValueNumberDocument();
+		
+		// const response = await this.documentsService.filesUploader(createDocumentDTO, res);
+		// console.log(response);
+
+
+
 		// try{
 		// 	// const { personalId } = createDocumentDTO;
 		// 	const personalData = await this.documentsService.getPersonalId(personalData).toPromise();
@@ -44,11 +53,26 @@ import { PersonalService } from 'src/personal/personal.service';
 		// 	}
 		// 	const document = new dcu
 		// }
+		if(createDocumentDTO.file === ""){
+			createDocumentDTO.file = null
+		}
+
+
 		const newRegisterDocument = {
 			...createDocumentDTO, numberDocument
 		}
+
+		// const newRegisterDocument = await this.documentsService.create(createDocumentDTO)
+
 		// return nuevoDocumento;
+		res.send(newRegisterDocument)
+		console.log('esto es newRegisterDocument.file de controller')
+		console.log(newRegisterDocument.file)
 		return this.documentsService.create(newRegisterDocument);
+	} catch (error){
+		throw new BadRequestException('Something bad happened in the send data', { cause: new Error(), description: 'some data was sent in a wrong way' });
+		// throw new NotFoundException('Something bad happened in the send data', { cause: new Error(), description: 'some data was sent in a wrong way' })
+	}
 	}
 
 	// @Post('form')
@@ -87,8 +111,23 @@ import { PersonalService } from 'src/personal/personal.service';
 	@ApiQuery({name: 'numberDocument', example: 'DOC-001', required: false, description: 'search document by numer document'})
 	@ApiQuery({name: 'title', example: 'Gastos', required: false, description: 'search document by title'})
 	@ApiQuery({name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author'})
-	async findDocumentActive(): Promise<Documents[]>{
-		return this.documentsService.findDocumentsActive()
+	async findDocumentActive(
+		@Query('numberDocument') numberDocument: string,
+		@Query('title') title: string,
+		@Query('authorDocument') authorDocument: string,
+		@Req() request: Request
+		): Promise<Documents[]>{
+			const query: any = { active: true };
+			if(numberDocument) {
+				query.numberDocument = numberDocument
+			}
+			if(title) {
+				query.title = title
+			}
+			if(authorDocument) {
+				query.authorDocument = authorDocument
+			}
+		return this.documentsService.findDocumentsActive(query)
 	} 
 
 	@Get('inactive')
@@ -96,8 +135,23 @@ import { PersonalService } from 'src/personal/personal.service';
 	@ApiQuery({ name: 'numberDocument', example: 'DOC-001', required: false, description: 'search document by numer document' })
 	@ApiQuery({ name: 'title', example: 'Gastos', required: false, description: 'search document by title' })
 	@ApiQuery({ name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author' })
-	async findDocumentInactive(): Promise<Documents[]>{
-		return this.documentsService.findDocumentsInactive()
+	async findDocumentInactive(
+		@Query('numberDocument') numberDocument: string,
+		@Query('title') title: string,
+		@Query('authorDocument') authorDocument: string,
+		@Req() request: Request
+	): Promise<Documents[]>{
+		const query: any = { active: false };
+		if(numberDocument) {
+			query.numberDocument = numberDocument
+		}
+		if(title) {
+			query.title = title
+		}
+		if(authorDocument) {
+			query.authorDocument = authorDocument
+		}
+		return this.documentsService.findDocumentsInactive(query)
 	} 
 
   	@ApiOperation({ summary: 'get records by pagination', description: 'Gets the records of documents by pagination'})
@@ -132,6 +186,13 @@ import { PersonalService } from 'src/personal/personal.service';
 	// 	return this.documentsService.getDocumentVersion(id, version)
 	// }
 
+	// @Get('file-register')
+	// @ApiOperation({summary: 'Get file register data from documents'})
+	// async getFileRegisterData(): Promise<any[]>{
+	// 	console.log('qeuruereru')
+	// 	return this.documentsService.getFileRegisterData()
+	// }
+
 	@Get(':id/versions/:version')
 	async getDocumentVersion(
 	  @Param('id') id: string,
@@ -141,17 +202,22 @@ import { PersonalService } from 'src/personal/personal.service';
 	}
 
 	@Put(':id')
-	@ApiOperation({
-		summary: 'update document by id',
-	  })
+	@ApiOperation({summary: 'update document by id',})
 	@ApiOkResponse({description: 'document update correctly'})
 	@ApiNotFoundResponse({description: 'document not found'})
 	@ApiForbiddenResponse({description: 'document not use now'})
-	async update(@Param("id") id: string, @Body() updateDocumentDTO: UpdateDocumentDTO):Promise<Documents>{
+	async update(@Param("id") id: string, @Body() updateDocumentDTO: UpdateDocumentDTO): Promise<Documents>{
 		const document = await this.documentsService.findOne(id)
 		if(!document.active){
 			throw new ForbiddenException('documento inactivo')
 		}
+		// if(updateDocumentDTO.file === ""){
+		// 	const existingDocument = this.documentsService.findOne(id);
+		// 	// (await existingDocument).fileRegister
+		// 	if((await existingDocument).fileRegister === undefined){
+		// 			updateDocumentDTO.file = (await existingDocument).fileRegister.toString();
+		// 	}
+		// }
 		return this.documentsService.update(id, updateDocumentDTO)
 	}
 

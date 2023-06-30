@@ -11,19 +11,19 @@ export class CreateDocumentDTO {
 	@IsString()
 	readonly authorDocument: string;
 
-	@ApiProperty({example: '/archivos/documento001.pdf'})
-	@IsString()
-	readonly digitalUbication: string;
-
-	@ApiProperty({example: 'Resource'})
+	// @ApiProperty({example: '/archivos/documento001.pdf'})
+	// @IsString()
+	// readonly digitalUbication: string;
+	
+	@ApiProperty({example: 'Contract'})
 	@IsString()
 	readonly documentType: string;
 
-	@ApiProperty({example: 'aprobado'})
+	@ApiProperty({example: 'Revision'})
 	@IsString()
 	readonly stateDocument: string;
 
-	@ApiProperty({example: 'Restringido'})
+	@ApiProperty({example: 'restricted'})
 	@IsString()
 	readonly nivelAcces: string;
 
@@ -31,9 +31,13 @@ export class CreateDocumentDTO {
 	// @IsString()
 	// category: string
 
-	@ApiProperty({example: 'The resources that were sent to the data center for their ...'})
+	@ApiProperty({example: 'contract document registration for new staff. It is on revision'})
 	@IsString()
 	readonly description: string;
+
+	@ApiProperty({example: 'data:@file/jpeg;base64,/9jqw4AAQ...'})
+	file: string
+
 
 	// @ApiProperty({example: 'jfjoiqjenodaurieon', description: 'most be base64'})
 	// @IsString()

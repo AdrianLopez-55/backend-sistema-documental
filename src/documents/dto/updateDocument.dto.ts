@@ -34,4 +34,7 @@ export class UpdateDocumentDTO {
 	@ApiProperty({example: 'The resources that were sent to the data center for their ...'})
 	@IsString()
 	readonly description: string;
+
+	@ApiProperty({example: 'data:@file/jpeg;base64,/9jqw4AAQ...'})
+	file: string
 }

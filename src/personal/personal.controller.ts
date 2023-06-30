@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { PersonalService } from './personal.service';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import getConfig from '../config/configuration'
 
 @Controller('personal')
 export class PersonalController {
@@ -14,7 +15,7 @@ export class PersonalController {
 	// @ApiQuery({name: 'email', example: 'alvaro@gmail.com', required: false, description: 'search personal by email'})
 	// @ApiQuery({name: 'ci', example: '7216198', required: false, description: 'search personal by ci'})
 	public async getExternalData(): Promise<any>{
-		const url = 'http://10.10.214.219:3300/api/personal';
+		const url = `${getConfig().api_personal_get}`;
 		try {
 			const data = await this.personalService.fetchDataFromExternalServer(url);
 			return data;
@@ -35,4 +36,5 @@ export class PersonalController {
 			return 'Error al obtener el id del personal externo'
 		}
 	}
+
 }

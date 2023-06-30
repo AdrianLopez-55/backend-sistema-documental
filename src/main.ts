@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ValidationPipe, VersioningType  } from '@nestjs/common';
+import getConfig from './config/configuration'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {cors: true});
@@ -22,7 +23,7 @@ async function bootstrap() {
   .setTitle('API Documentation')
   .setDescription('api validate and registry documents')
   .setVersion('1.0')
-  .addTag('validate user')
+  .addTag('Validate Token')
   .addTag('Registry Documents')
   .addTag('External Data Personal')
   .addTag('Send Base64 File')
@@ -41,7 +42,6 @@ async function bootstrap() {
     }
   });
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(getConfig().port);
 }
 bootstrap();

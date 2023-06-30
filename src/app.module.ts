@@ -21,20 +21,29 @@ import { Base64DocumentController } from './base64-document/base64-document.cont
 import { Base64DocumentService } from './base64-document/base64-document.service';
 // import { MyController } from './myControllerGetPersonal.controller';
 // import { ExternalDataService } from './externalDataService.service';
+import configuration from './config/configuration'
+import getConfig from './config/configuration'
+import { Base64DocumentModule } from './base64-document/base64-document.module';
 
 
 @Module({
   imports: [
     ApiModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot(
+      {
+        isGlobal: true,
+        load: [configuration]
+      }
+    ),
     DocumentsModule,
     //UsersModule,
     RoadMapModule,
-    MongooseModule.forRoot(process.env.MONGO_URI),//process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
+    MongooseModule.forRoot(getConfig().mongodb),//process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
     PassportModule,
     AuthModule,
     HttpModule,
-    PersonalModule
+    PersonalModule,
+    Base64DocumentModule,
   ],
   controllers: [AppController, Base64DocumentController, PersonalController,], //MyController],
   providers: [AppService, Base64DocumentService, PersonalService,], //ExternalDataService],

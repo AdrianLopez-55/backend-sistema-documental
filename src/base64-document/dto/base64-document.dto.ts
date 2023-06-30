@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsObject, IsString, ValidateNested } from "class-validator";
+import { IsObject, IsString, IsTaxId, ValidateNested } from "class-validator";
 
 
 export class Base64DocumentFileDataDTO {
@@ -23,5 +23,17 @@ export class Base64DocumentDto {
 	
 	@Type(() => Base64DocumentFileDataDTO)
 	readonly file: Base64DocumentFileDataDTO
+}
 
+export class Base64FileUploadDTO {
+	@ApiProperty()
+	readonly file: string;
+
+	// @ApiProperty()
+	// @IsString()
+	// file_id?: string
+
+	// @ApiProperty()
+	// @IsString()
+	// filename?: string
 }
