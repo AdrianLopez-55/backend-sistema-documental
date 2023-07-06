@@ -1,16 +1,18 @@
-import { HttpException, Injectable, Req, NotFoundException, GatewayTimeoutException } from '@nestjs/common';
+import { 
+	HttpException, 
+	Injectable, 
+	NotFoundException, 
+	GatewayTimeoutException 
+} from '@nestjs/common';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
 import { CreateDocumentDTO } from './dto/createDocument.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { DocumentDocument, Documents } from './schema/documents.schema';
 import { Model } from 'mongoose';
-import { Request, response } from 'express';
+import { Request } from 'express';
 import { PaginationDto } from 'src/common/pagination.dto';
 import { HttpService } from '@nestjs/axios';
-import { Observable, map } from 'rxjs';
-import { Base64DocumentDto } from 'src/base64-document/dto/base64-document.dto';
 import { Base64DocumentResponseDTO } from 'src/base64-document/dto/base64-document-response.dto';
-import { UpdateFileRegisterDTO } from './dto/updateFileRegister.dto';
 import { ObtainDataPersonalDTO } from './dto/personal-result.dto';
 
 @Injectable()
@@ -23,41 +25,6 @@ export class DocumentsService {
 	
 	async create(createDocumentDTO: CreateDocumentDTO): Promise<Documents | any> {
 		const personalDataUrl = `${process.env.API_PERSONAL_GET}?ci=${encodeURIComponent(createDocumentDTO.ciPersonal)}`;
-		
-		// try {
-		// 	const response = await this.httpService.get(`${personalDataUrl}/api/personal`).toPromise();
-		// 	console.log(response.data)
-		// 	const personalData = response.data;
-		// 	const selectedAutor = personalData.name;
-		// 	console.log(selectedAutor)
-		// 	const documentToRegister = {
-		// 		...createDocumentDTO,
-		// 		authorDocument: selectedAutor,
-		// 	};
-
-		// const createdDocument = new this.documentModel(documentToRegister);
-		// console.log(createdDocument)
-		// const savedDocument = await createdDocument.save();
-		// return savedDocument
-		// } catch (error){
-		// 	console.log(error);
-		// 	throw new Error('error al registrar documento')
-		// }
-
-		//para enviar id de archivo del servicio externo
-		// const externalApiUrl = 'http://10.10.214.219:3200/';
-		// const response = await this.httpService.get(`${externalApiUrl}/file/${createDocumentDTO.fileId}`).toPromise();
-		// const fileData = response.data;
-
-		// createDocumentDTO.filename = fileData.filename
-		// createDocumentDTO.originalname = fileData.originalname
-		// createDocumentDTO.filePath = fileData.filePath
-		// createDocumentDTO.category = fileData.category
-
-		// const externalApiPersonal = ''
-
-		// const urlPersonal = `${process.env.API_PERSONAL_GET}?ci=${encodeURIComponent(personalCi)}`;
-		
 
 		const { file } = createDocumentDTO
 		if(file){
@@ -68,42 +35,43 @@ export class DocumentsService {
 				mime: mimeType,
 				base64: base64
 			}
-
-
+			
 		try {
-			// const responsePersonalCi = await this.httpService.get(urlPersonal).toPromise()
-			// const personalDataList = responsePersonalCi.data;
-			// if(personalDataList.length === 0){
-			// 	throw new Error('cant find author')
-			// }
-			// const personalData = personalDataList.find((data: CreateDocumentDTO))
 			
 			//------------- obtain personal to register -----------
 			const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
 			const personalDataList = responsePersonal.data
-			console.log('esto es personalDAtaList')
-			console.log(personalDataList)
+			
 			if(personalDataList.length === 0){
-				throw new Error('No se encontró el personal 1111111')
+				throw new Error('Personal not exists')
 			}
 
 			const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
 			if (!personalData) {
-				throw new Error('No se encontró el personal 2222222');
+				throw new Error('cant not find persoanl with that ci');
 			}
-			console.log('esto es personalData')
-			console.log(personalData)
-			const { _idPersonal, name, ci, email, phone, nationality } = personalData;
+	
+			const { _idP, name, ci, email, phone, nationality } = personalData;
 			let authorDocument = {}; 
-			authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+			authorDocument = { _idAutor: _idP, name, ci, email, phone, nationality };
 
 
 			//------------file update register ------------
+			const lengthBase64 = fileObj.base64.length;
+			if(lengthBase64 < 4){
+				console.log('base64 no valido')
+				throw new Error('base64 not valid!')
+			} else if(fileObj.mime === undefined){
+				throw new Error('base64 not valid, not contain a correct mime')
+			} else if(fileObj.base64 === undefined){
+				throw new Error('base64 not valid, bad base64 send')
+			}
+
 			const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
 			const { _id, filename, size, filePath, status, category, extension } = response.data.file;
 			let fileRegister = {}
 			fileRegister = {
-				_id,
+				_idFile: _id,
 				filename,
 				size,
 				filePath,
@@ -111,64 +79,25 @@ export class DocumentsService {
 				category,
 				extension
 			}
-			console.log('esto es fileRegister')
-			console.log(fileRegister)
-
-			// const createDocumentDTO: CreateDocumentDTO = {
-			// 	file: 'Se registro el archivo'
-			// }
-			// const updateDocument = await documentModel
-			// console.log('esto es el dto de base64documentResponse')
-			// console.log(createDocumentDTO)
-
-
 			
 			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
 			console.log('esto es newDocument')
 			console.log(newDocument)
+
 			return newDocument.save();
 
 		} catch (error) {
-			// throw error.response?.data
 			throw new GatewayTimeoutException('Something bad hapened', {cause: new Error(), description: 'cannot get a response in time with the external service'});
-			
 		}
+
 	  } else if(file === null){
-		const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
-		const personalDataList = responsePersonal.data
-		console.log('esto es personalDAtaList')
-		console.log(personalDataList)
-		if(personalDataList.length === 0){
-			throw new Error('No se encontró el personal 1111111')
-		}
-
-		const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
-		if (!personalData) {
-			throw new Error('No se encontró el personal 2222222');
-		}
-		console.log('esto es personalData')
-		console.log(personalData)
-		const { _idPersonal, name, ci, email, phone, nationality } = personalData
-		let authorDocument = {}; 
-		authorDocument = { _idPersonal, name, ci, email, phone, nationality };
-
-
-				let fileRegister = {};
-			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
-			// console.log('esto es newDocument sin file base64')
-			// console.log(newDocument)
-			console.log('esto es newDocument')
-			console.log(newDocument)
-			return newDocument.save();
-	  } else {
-		if(file === undefined){
 			const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
 			const personalDataList = responsePersonal.data
-			console.log('esto es personalDAtaList')
-			console.log(personalDataList)
+			// console.log('esto es personalDAtaList')
+			// console.log(personalDataList)
 			if(personalDataList.length === 0){
 				throw new Error('No se encontró el personal 1111111')
-			}
+		}
 
 			const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
 			if (!personalData) {
@@ -176,6 +105,35 @@ export class DocumentsService {
 			}
 			console.log('esto es personalData')
 			console.log(personalData)
+
+			const { _idPersonal, name, ci, email, phone, nationality } = personalData
+			let authorDocument = {}; 
+			authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+
+			let fileRegister = {};
+			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
+			console.log('esto es newDocument')
+			console.log(newDocument)
+			return newDocument.save();
+	  } else {
+		if(file === undefined){
+			const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+			const personalDataList = responsePersonal.data
+			// console.log('esto es personalDAtaList')
+			// console.log(personalDataList)
+			
+			if(personalDataList.length === 0){
+				throw new Error('No se encontró el personal 1111111')
+			}
+
+			const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === createDocumentDTO.ciPersonal);
+
+			if (!personalData) {
+				throw new Error('No se encontró el personal 2222222');
+			}
+
+			// console.log('esto es personalData')
+			// console.log(personalData)
 			const { _idPersonal, name, ci, email, phone, nationality } = personalData
 			let authorDocument = {}; 
 			authorDocument = { _idPersonal, name, ci, email, phone, nationality };
@@ -183,36 +141,14 @@ export class DocumentsService {
 
 			let fileRegister = {};
 			const newDocument = new this.documentModel({...createDocumentDTO, fileRegister, authorDocument})
-			console.log('esto es newDocument')
-			console.log(newDocument)
-			return newDocument.save()
+			return newDocument.save();
 		}
 	  }
-
-		// const newDocument = new this.documentModel(...createDocumentDTO)
-		// console.log('esto es newDocument')
-		// console.log(newDocument)
-		//return newDocument //await this.documentModel.create()//newDocument.save();
 	}
-
-	//obtener personal
-	// getPersonalId(_id: string): Observable<any>{
-	// 	const url = `${process.env.API_PERSONAL}/api/personal/${_id}`
-	// 	return this.httpService.get(url).pipe(
-	// 		map(response => response.data),
-	// 	)
-	// }
-	
-
 
 	async findAll(request: Request): Promise<Documents[]> {
-		//const sortOptions = sort ? { [sort]: 1 } : {};
 		return this.documentModel.find(request.query).sort({numberDocument: 1}).setOptions({sanitizeFilter: true}).exec();
 	}
-
-	// async findDocumentsActive(query: any): Promise<Documents[]>{
-	// 	return this.documentModel.find({active: true}).sort({numberDocument: 1}).setOptions({sanitizeFilter: true}).exec();
-	// }
 
 	async findDocumentsActive(query: any): Promise<Documents[]>{
 		return this.documentModel.find(query).sort({numberDocument: 1}).setOptions({sanitizeFilter: true}).exec();
@@ -233,30 +169,6 @@ export class DocumentsService {
 		return this.documentModel.findOne({_id: id}).exec();
 	}
 
-	// async getFileRegisterData(): Promise<any[]>{
-	// 	const document = await this.documentModel.find({}, 'fileRegister').exec();
-	// 	console.log(document)
-	// 	return document.map((doc) => doc.fileRegister)
-	// }
-
-	// async getVersion(id: string): Promise<Documents>{
-	// 	const versions = await this.documentModel.findById({_id:id}).select('-__v')
-	// 	return versions;
-	// }
-
-	// async getDocumentVersion(id: string, version: number): Promise<Documents>{
-	// 	const document = await this.documentModel.findById(id).select(`-__v`).lean().exec();
-	// 	if(!document){
-	// 		throw new NotFoundException('Documento no encontrado');
-	// 	}
-	// 	if (document.__v < version) {
-	// 		throw new NotFoundException('Versión del documento no encontrada');
-	// 	}
-	// 	const specificVersion = await this.documentModel.findById(id).select(`-__v`).lean().exec();
-
-	// 	return specificVersion;
-	// }
-
 	async getDocumentVersion(id: string, version: number): Promise<Documents> {
 		const document = await this.documentModel
 		  .findOne({ _id: id, __v: version })
@@ -273,10 +185,18 @@ export class DocumentsService {
 
 	async update(id: string, updateDocumentDTO: UpdateDocumentDTO): Promise<Documents> {
 		const findDocument = await this.documentModel.findById(id)
+		const personalDataUrl = `${process.env.API_PERSONAL_GET}?ci=${encodeURIComponent(updateDocumentDTO.ciPersonal)}`;
+		
 		if(!findDocument.active){
-			throw new HttpException('document Inactive', 404)
+			throw new HttpException('document Inactive', 403)
 		}
+		if(!findDocument){
+			throw new HttpException('document not exist', 404)
+		}
+
 		const { file } = updateDocumentDTO;
+		const { ciPersonal } = updateDocumentDTO
+		//--------- todos los casos en los que base64 se envio de manera correcta
 		if(file && file.startsWith('data')){
 			const mimeType = file.split(';')[0].split(':')[1];
 			const base64 = file.split(',')[1];
@@ -286,48 +206,103 @@ export class DocumentsService {
 				base64: base64
 			};
 			if(findDocument.fileRegister){
-				try {
-					const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
-					const { _id, filename, size, filePath, status, category, extension } = response.data.file;
-					let fileRegister = {}
-					fileRegister = {
-						_id,
-						filename,
-						size,
-						filePath,
-						status,
-						category,
-						extension
+				if(findDocument.authorDocument){
+					try {
+
+						//--------------------------update personal---------------------------------
+						const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+						const personalDataList = responsePersonal.data
+						
+						if(personalDataList.length === 0){
+							throw new Error('Personal not exists')
+						}
+			
+						const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === updateDocumentDTO.ciPersonal);
+						if (!personalData) {
+							throw new Error('cant not find persoanl with that ci');
+						}
+				
+						const { _idPersonal, name, ci, email, phone, nationality } = personalData;
+						let authorDocument = {}; 
+						authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+						
+						//------------------------update files ----------------------------------
+							const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
+							const { _id, filename, size, filePath, status, category, extension } = response.data.file;
+							let fileRegister = {}
+							fileRegister = {
+								_id,
+								filename,
+								size,
+								filePath,
+								status,
+								category,
+								extension
+							}
+							//------- update con ci vacio ---------
+							if(ciPersonal === ""){
+								updateDocumentDTO.ciPersonal = findDocument.authorDocument.toString();
+								const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO}, {new: true}).exec();
+								return document
+							}
+							
+							
+							//---------------------
+							const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, fileRegister, authorDocument}, {new: true}).exec();
+							console.log('nuevos datos puestos')
+							console.log(document)
+							return document;
+		
+					} catch (error){
+						throw error.response?.data
 					}
-					// console.log('esto es fileRegister')
-					// console.log(fileRegister)
-		
-					// const createDocumentDTO: CreateDocumentDTO = {
-					// 	file: 'Se registro el archivo'
-					// }
-					// const updateDocument = await documentModel
-					// console.log('esto es el dto de base64documentResponse')
-					// console.log(createDocumentDTO)
-		
-		
+				} else {
+					try {
+						if(findDocument.authorDocument === null){
+							updateDocumentDTO.ciPersonal = null
+							const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
+							const { _id, filename, size, filePath, status, category, extension } = response.data.file;
+							let fileRegister = {}
+							fileRegister = {
+								_id,
+								filename,
+								size,
+								filePath,
+								status,
+								category,
+								extension
+							}
+							const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, fileRegister}, {new: true}).exec();
+							return document;
+						}
+						updateDocumentDTO.ciPersonal = findDocument.authorDocument.toString()
+						const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
+							const { _id, filename, size, filePath, status, category, extension } = response.data.file;
+							let fileRegister = {}
+							fileRegister = {
+								_id,
+								filename,
+								size,
+								filePath,
+								status,
+								category,
+								extension
+							}
+							const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, fileRegister}, {new: true}).exec();
+							return document;
+						
+					}catch (error){
+						throw new Error('Datos no validos')
+					}
+				}//  else if(updateDocumentDTO.ciPersonal === "" || updateDocumentDTO.ciPersonal === ''){
 					
-					//const newDocument = new this.documentModel({...updateDocumentDTO, fileRegister})
-					// // console.log('esto es newDocument')
-					// // console.log(newDocument)
-					// return newDocument.save();
-					
-					const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, fileRegister}, {new: true}).exec();
-					
-					return document;
-		
-				// } catch (error) {
-				// 	// throw error.response?.data
-				// 	throw new GatewayTimeoutException('Something bad hapened', {cause: new Error(), description: 'cannot get a response in time with the external service'});
+				// 		updateDocumentDTO.ciPersonal = findDocument.authorDocument.toString();
+				// 		const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO}, {new: true}).exec();
+				// 		console.log('update con ci vacio para mantener datos, document')
+				// 		console.log(document)
+				// 		return document
 					
 				// }
-			} catch (error){
-				throw error.response?.data
-			}
 			} else {
 				try {
 					const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise();
@@ -342,8 +317,9 @@ export class DocumentsService {
 						category,
 						extension
 					}
-					// const newDocument = new this.documentModel({...updateDocumentDTO, fileRegister})
+					
 					const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, fileRegister}, {new: true}).exec();
+					console.log('document para segundo caso de fileregister')
 					console.log(document)
 					return document;
 				} catch (error){
@@ -351,97 +327,70 @@ export class DocumentsService {
 				}
 			}
 		} else {
+			//----------- if para caso de que fileregister se envie vacio y haya null en dato fileregister ----------
 			if(findDocument.fileRegister === null){
-				console.log('es null')
+				console.log('es null fileregister')
 				updateDocumentDTO.file = null;
-				const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO}, {new: true}).exec();
+
+				// ------------ edicion ciPersonal si base64 se envia vacio ----------------
+				const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+				const personalDataList = responsePersonal.data
+				
+				
+				if(personalDataList.length === 0){
+					throw new Error('Personal not exists')
+				}
+	
+				const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === updateDocumentDTO.ciPersonal);
+				if (!personalData) {
+					throw new Error('cant not find persoanl with that ci');
+				}
+		
+				const { _idPersonal, name, ci, email, phone, nationality } = personalData;
+				let authorDocument = {}; 
+				authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+
+				const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, authorDocument}, {new: true}).exec();
 				console.log(document)
 				return document
 			}
-			console.log('sin nadaaaa y con datos en fileRegister')
+
+			console.log('se envio vacio file y con datos en fileRegister para mantener')
+			
 			updateDocumentDTO.file = findDocument.fileRegister.toString()
-			const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO}, {new: true}).exec();
+			//---------------- update ciPersonal si se envia vacio en file y hay datos ya registrados de fileregister
+			const responsePersonal = await this.httpService.get(personalDataUrl).toPromise();
+			const personalDataList = responsePersonal.data
+			
+			if(personalDataList.length === 0){
+				throw new Error('Personal not exists')
+			}
+
+			const personalData = personalDataList.find((data: ObtainDataPersonalDTO) => data.ci === updateDocumentDTO.ciPersonal);
+			if (!personalData) {
+				throw new Error('cant not find persoanl with that ci');
+			}
+			//------- update con ci vacio ---------
+			if(ciPersonal === ""){
+				updateDocumentDTO.ciPersonal = findDocument.authorDocument.toString();
+				const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO}, {new: true}).exec();
+				return document
+			}
+	
+			const { _idPersonal, name, ci, email, phone, nationality } = personalData;
+			let authorDocument = {}; 
+			authorDocument = { _idPersonal, name, ci, email, phone, nationality };
+
+			const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO, authorDocument}, {new: true}).exec();
 			console.log(document)
 			return document
 			
 		}
 	}
-		// try {
-		// 	const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, { file: fileObj }).toPromise()
-		// 	const { _id, filename, size, filePath, status, category, extension } = response.data.file;
-		// 	let fileRegister = {}
-		// 	fileRegister = {
-		// 		_id,
-		// 		filename,
-		// 		size,
-		// 		filePath,
-		// 		status,
-		// 		category,
-		// 		extension
-		// 	}
-		// 	// console.log('esto es fileRegister')
-		// 	// console.log(fileRegister)
-
-		// 	// const createDocumentDTO: CreateDocumentDTO = {
-		// 	// 	file: 'Se registro el archivo'
-		// 	// }
-		// 	// const updateDocument = await documentModel
-		// 	// console.log('esto es el dto de base64documentResponse')
-		// 	// console.log(createDocumentDTO)
-
-
-			
-		// 	const newDocument = new this.documentModel({...updateDocumentDTO, fileRegister})
-		// 	// // console.log('esto es newDocument')
-		// 	// // console.log(newDocument)
-		// 	// return newDocument.save();
-			
-		// 	const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, newDocument}, {new: true}).exec();
-		// 	console.log(document)
-		// 	return await document;
-
-		// } catch (error) {
-		// 	// throw error.response?.data
-		// 	throw new GatewayTimeoutException('Something bad hapened', {cause: new Error(), description: 'cannot get a response in time with the external service'});
-			
-		// }
-	   //else {
-		// if(file === ""){
-		// 	const existingDocument = this.documentModel.findOne({_id: id}).exec()
-		// 	if((await existingDocument).fileRegister === undefined){
-		// 		if((await existingDocument).fileRegister !== null){
-		// 			updateDocumentDTO.file = (await existingDocument).fileRegister.toString();
-		// 			const newDocument = new this.documentModel({...updateDocumentDTO})
-		// 			const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, newDocument /*...updateDocumentDTO*/}, {new: true}).exec();
-		// 			console.log(document)
-		// 			return (await document).save();
-		// 		}
-		// 	}
-		// }
-	  //}
-
-		
-		
-		// const document = this.documentModel.findOneAndUpdate({ _id: id }, {$inc: {__v: 1}, ...updateDocumentDTO}, {new: true}).exec();
-		// return (await document).save();
-	
-
-	// async updateRegisterDocumentById(id: string, updateFileRegisterDTO: UpdateFileRegisterDTO){
-	// 	// const documentId = this.documentModel.findOne({_id: id}).exec();
-	// 	let document: DocumentDocument = await this.documentModel.findById(id);
-	// 	let fileRegisterDocument = document.fileRegister;
-	// }
 
 	async remove(id: string) {
 		return this.documentModel.findByIdAndRemove({ _id: id}).exec();
 	}
-	
-	// async addPhysicalLocation(id: string, physicalLocation: any) {
-	// 	let document: DocumentDocument = await this.documentModel.findById(id);
-	// 	document.physicalLocation.push(physicalLocation);
-	// 	document.save();
-	// 	return document;
-	// }
 
 	async addComment(id: string, comment: any) {
 		let document: DocumentDocument = await this.documentModel.findById(id);
@@ -479,14 +428,6 @@ export class DocumentsService {
 	}
 
 	async filesUploader(createDocumentDTO:CreateDocumentDTO, res: Response) {
-		// try {
-		// 	const response = await this.httpService.post(`${this.apiFilesUploader}/files/upload`, base64DocumentDto).toPromise();
-		// 	const fileData: Base64DocumentResponseDTO = response.data
-		// 	return fileData
-		// } catch (error) {
-		// 	throw error.response?.data
-		// }
-
 		const { file } = createDocumentDTO
 		if(file){
 			const mimeType = file.split(';')[0].split(':')[1];
@@ -510,59 +451,16 @@ export class DocumentsService {
 				status: status,
 				category: category,
 			}
-			// const updateDocument = await documentModel
+			
 			console.log('esto es el dto de base64document')
 			console.log(base64DocumentResponseDTO)
 			return base64DocumentResponseDTO
 
 		} catch (error) {
-			
-			// throw error.response?.data
 			throw new GatewayTimeoutException('Something bad hapened', {cause: new Error(), description: 'cannot get a response in time with the external service'});
 			
 		}
 	  }
 
-	// async create(base64FileUploadDTO: Base64FileUploadDTO){
-	// 	return await this.base64FileModel.create(base64FileUploadDTO)
-	// }
 	}
-
-
-
-	// async updateDocumentWithBase64Data(id: string, base64DocumentResponseDTO: Base64DocumentResponseDTO): Promise<Documents | null>{
-	// 	const updateDocument = await this.documentModel.findOneAndUpdate(
-	// 		{_id: id},
-	// 		{
-	// 			_id: base64DocumentResponseDTO._id,
-	// 			filename: base64DocumentResponseDTO.filename,
-	// 			extension: base64DocumentResponseDTO.extension,
-	// 			size: base64DocumentResponseDTO.size,
-	// 			filePath: base64DocumentResponseDTO.filePath,
-	// 			status: base64DocumentResponseDTO.status,
-	// 			category: base64DocumentResponseDTO.category,
-	// 			mime: base64DocumentResponseDTO.mime,
-	// 			base64: base64DocumentResponseDTO.base64
-	// 		},
-	// 		{new: true}
-	// 	).exec();
-	// 	console.log(updateDocument)
-
-	// 	return updateDocument;
-	// }
-
-	// public async updateDocumentWithPersonalData(
-	// 	documentId: string,
-	// 	personalData: any,
-	// ): Promise<Documents>{
-	// 	try {
-	// 		const document = await this.documentModel.findById(documentId);
-
-	// 		if(!document){
-	// 			throw new NotFoundException('Documento no encontrado');
-	// 		}
-
-	// 		document.file
-	// 	}
-	// }
 }

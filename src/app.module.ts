@@ -23,7 +23,9 @@ import { PersonalService } from './personal/personal.service';
 // import { ExternalDataService } from './externalDataService.service';
 import configuration from './config/configuration'
 import getConfig from './config/configuration'
+import {  MulterModule } from '@nestjs/platform-express'
 // import { Base64DocumentModule } from './base64-document/base64-document.module';
+import { PermissionsModule } from './permissions/permissions.module';
 
 
 @Module({
@@ -43,6 +45,12 @@ import getConfig from './config/configuration'
     AuthModule,
     HttpModule,
     PersonalModule,
+    MulterModule.register({
+      limits: {
+        fileSize: 10485760
+      }
+    }),
+    PermissionsModule
     // Base64DocumentModule,
   ],
   controllers: [AppController, PersonalController,], //MyController],

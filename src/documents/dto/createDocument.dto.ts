@@ -13,7 +13,7 @@ export class CreateDocumentDTO {
 
 	@ApiProperty({example: '8574898'})
 	@IsString()
-	readonly ciPersonal: string;
+	ciPersonal: string;
 
 	// @ApiProperty({example: '/archivos/documento001.pdf'})
 	// @IsString()
@@ -39,7 +39,7 @@ export class CreateDocumentDTO {
 	@IsString()
 	readonly description: string;
 
-	@ApiProperty({example: 'data:@file/jpeg;base64,/9jqw4AAQ...'})
+	@ApiProperty({example: 'data:@file/jpeg;base64,/9jq'})
 	file: string
 
 

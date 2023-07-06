@@ -9,16 +9,7 @@ import getConfig from '../config/configuration'
 @Controller('api')
 @ApiTags('Validate Token')
 export class ApiController {
-	constructor(
-		private apiService:ApiService,
-		private readonly httpService: HttpService,
-	){}
-
-	// @Post("auth-documental-login")
-	// async authLogin(@Res() res:Response,@Body() loginAuthDocumentalDTO:LoginCentralAuthDTO){
-	// 	const response =  await this.apiService.loginAuthDocumental(loginAuthDocumentalDTO)
-	// 	return res.status(HttpStatus.OK).json({response});
-	// }
+	constructor(private apiService:ApiService,private readonly httpService: HttpService,){}
 
  @Post('login-central')
   async loginCentral(@Req() req: Request, @Res() res: Response, @Body() loginCentralAuthDTO: LoginCentralAuthDTO){
@@ -27,6 +18,7 @@ export class ApiController {
       const response = await this.apiService.loginAuthCentral(loginCentralAuthDTO)
 	  console.log('token enviado con exito')
 	  res.send(response);
+	  res.status(200).send(response.data)
     } catch (error){
 		console.log(error)
 		throw error

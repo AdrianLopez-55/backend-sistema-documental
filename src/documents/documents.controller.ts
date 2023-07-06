@@ -1,24 +1,47 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, HttpCode, HttpException, HttpStatus, Req, Query, Put, ForbiddenException, BadRequestException, NotFoundException, UseInterceptors, UploadedFile, ParseIntPipe, Res  } from '@nestjs/common';
+import { 
+	Body, 
+	Controller, 
+	Delete, 
+	Get, 
+	Param, 
+	Post, 
+	Req, 
+	Query, 
+	Put, 
+	ForbiddenException, 
+	BadRequestException, 
+	ParseIntPipe, 
+	Res, 
+	UseGuards,
+	UseInterceptors,
+} from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto'
-import { ApiAcceptedResponse, ApiBadGatewayResponse, ApiBadRequestResponse, ApiBearerAuth, ApiBody, ApiConflictResponse, ApiConsumes, ApiCreatedResponse, ApiDefaultResponse, ApiForbiddenResponse, ApiFoundResponse, ApiGatewayTimeoutResponse, ApiGoneResponse, ApiInternalServerErrorResponse, ApiMethodNotAllowedResponse, ApiMovedPermanentlyResponse, ApiNoContentResponse, ApiNotAcceptableResponse, ApiNotFoundResponse, ApiNotImplementedResponse, ApiOkResponse, ApiOperation, ApiPayloadTooLargeResponse, ApiPreconditionFailedResponse, ApiQuery, ApiRequestTimeoutResponse, ApiResponse, ApiServiceUnavailableResponse, ApiTags, ApiTooManyRequestsResponse, ApiUnauthorizedResponse, ApiUnprocessableEntityResponse, ApiUnsupportedMediaTypeResponse } from '@nestjs/swagger';
+import { 
+	ApiBadRequestResponse, 
+	ApiBearerAuth, 
+	ApiCreatedResponse, 
+	ApiForbiddenResponse, 
+	ApiNotFoundResponse, 
+	ApiOkResponse, 
+	ApiOperation, 
+	ApiQuery, 
+	ApiTags 
+} from '@nestjs/swagger';
 import { CreateDocumentDTO } from './dto/createDocument.dto';
 import { Request, Response } from 'express';
 import { ParseObjectIdPipe } from 'src/utilities/parse-object-id-pipe.pipe';
 import { CreateCommentDto } from './dto/createComment.dto';
-import { CreatePhysicalLocationDto } from './dto/createPhysicalLocation.dto';
 import { CreateSignatureAprovedDto } from './dto/createSignatureAproved.dto';
 import { CreateMilestoneDto } from './dto/createMilestone.dto';
-import { badRequestDocDto } from './dto/responsesDto/documentResponse/badRequestDoc';
 import { SequenceService } from './sequenceService.service';
 import { PaginationDto } from 'src/common/pagination.dto';
 import { Documents } from './schema/documents.schema';
-import { version } from 'os';
-import { Base64DocumentResponseDTO } from 'src/base64-document/dto/base64-document-response.dto';
-import { PersonalService } from 'src/personal/personal.service';
-import { BadRequestError } from 'passport-headerapikey';
-// import { FileInterceptor } from '@nestjs/platform-express';
-// import { Express } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from './multer.config';
+import { Roles } from 'src/guard/decorators/roles.decorator';
+import { UserRole } from 'src/guard/constants/roles';
+import { RolesGuard } from 'src/guard/roles.guard';
 
 	@Controller('documents')
 	@ApiTags('Registry Documents')
@@ -33,76 +56,50 @@ import { BadRequestError } from 'passport-headerapikey';
 	// @ApiConsumes('application/json')
 	// @UseInterceptors(FileInterceptor('file'))
 	@ApiOperation({summary: 'registry new document'})
+	@UseInterceptors(FileInterceptor('file', multerConfig))
 	@ApiCreatedResponse({ description: 'The document has been successfully created.', type: CreateDocumentDTO})
-	@ApiBadRequestResponse({description: 'bad request response', type: badRequestDocDto})
+	@ApiBadRequestResponse({description: 'bad request response'})
 	async create(@Res() res: Response, @Body() createDocumentDTO: CreateDocumentDTO){
 		
 		try{
 		const numberDocument = await this.sequenceService.getNextValueNumberDocument();
 		
-		// const response = await this.documentsService.filesUploader(createDocumentDTO, res);
-		// console.log(response);
-
-
-
-		// try{
-		// 	// const { personalId } = createDocumentDTO;
-		// 	const personalData = await this.documentsService.getPersonalId(personalData).toPromise();
-		// 	if(!personalData){
-		// 		throw new Error('no se enontro personal')
-		// 	}
-		// 	const document = new dcu
-		// }
 		if(createDocumentDTO.file === ""){
 			createDocumentDTO.file = null
 		}
 
-
 		const newRegisterDocument = {
 			...createDocumentDTO, numberDocument
 		}
+		// if(createDocumentDTO.ciPersonal === ""){
+		// 	throw new BadRequestException('ci cant not empty', { cause: new Error(), description: 'ci not empty '})
+		// }
 
-		// const newRegisterDocument = await this.documentsService.create(createDocumentDTO)
-
-		// return nuevoDocumento;
 		res.send(newRegisterDocument)
-		console.log('esto es newRegisterDocument.file de controller')
-		console.log(newRegisterDocument.file)
 		return this.documentsService.create(newRegisterDocument);
 	} catch (error){
 		throw new BadRequestException('Something bad happened in the send data', { cause: new Error(), description: 'some data was sent in a wrong way' });
-		// throw new NotFoundException('Something bad happened in the send data', { cause: new Error(), description: 'some data was sent in a wrong way' })
 	}
 	}
-
-	// @Post('form')
-	// @UseInterceptors(FileInterceptor('file'))
-	// async uploadDocument(
-	//   @UploadedFile() file: Express.Multer.File,
-	// ): Promise<any> {
-	//   // Procesar el archivo y los datos JSON aquí
-	//   const jsonData = JSON.parse(file.buffer.toString());
-	//   // Guardar los datos en MongoDB usando el servicio correspondiente
-	//   const savedDocument = await this.documentsService.createDocument(jsonData);
-	//   // Retornar la respuesta adecuada
-	//   return {
-	// 	message: 'Documento guardado exitosamente',
-	// 	document: savedDocument,
-	//   };
-	// }
-
 	
 	@Get()
+	// @ApiBearerAuth()
+	// @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.USER)
+	// @UseGuards(RolesGuard)
 	@ApiOperation({
 		summary: 'see all documents or search by filters',
 	})
 	@ApiNotFoundResponse({ description: 'The documents cant find'})
 	@ApiQuery({name: 'numberDocument', example: 'DOC-001', required: false, description: 'search document by numer document'})
 	@ApiQuery({name: 'title', example: 'Gastos', required: false, description: 'search document by title'})
-	@ApiQuery({name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author'})
+	// @ApiQuery({name: 'name', example: 'jeol', required: false, description: 'search document by author'})
 	@ApiOkResponse({description: 'documents finds', type: CreateDocumentDTO})
 	@ApiNotFoundResponse({description: 'documents not founds'})
 	findAll(@Req() request: Request){
+		// const query: any = { active: true };
+		// if(name){
+		// 	query.name = name
+		// }
 		return this.documentsService.findAll(request);
 	}
 
@@ -110,11 +107,11 @@ import { BadRequestError } from 'passport-headerapikey';
 	@ApiOperation({summary: 'see only documents actives',})
 	@ApiQuery({name: 'numberDocument', example: 'DOC-001', required: false, description: 'search document by numer document'})
 	@ApiQuery({name: 'title', example: 'Gastos', required: false, description: 'search document by title'})
-	@ApiQuery({name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author'})
+	// @ApiQuery({name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author'})
 	async findDocumentActive(
 		@Query('numberDocument') numberDocument: string,
 		@Query('title') title: string,
-		@Query('authorDocument') authorDocument: string,
+		// @Query('authorDocument') authorDocument: string,
 		@Req() request: Request
 		): Promise<Documents[]>{
 			const query: any = { active: true };
@@ -124,9 +121,9 @@ import { BadRequestError } from 'passport-headerapikey';
 			if(title) {
 				query.title = title
 			}
-			if(authorDocument) {
-				query.authorDocument = authorDocument
-			}
+			// if(authorDocument) {
+			// 	query.authorDocument = authorDocument
+			// }
 		return this.documentsService.findDocumentsActive(query)
 	} 
 
@@ -134,11 +131,11 @@ import { BadRequestError } from 'passport-headerapikey';
 	@ApiOperation({summary: 'see only documents inactives',})
 	@ApiQuery({ name: 'numberDocument', example: 'DOC-001', required: false, description: 'search document by numer document' })
 	@ApiQuery({ name: 'title', example: 'Gastos', required: false, description: 'search document by title' })
-	@ApiQuery({ name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author' })
+	// @ApiQuery({ name: 'authorDocument', example: 'Juan Pablo', required: false, description: 'search document by author' })
 	async findDocumentInactive(
 		@Query('numberDocument') numberDocument: string,
 		@Query('title') title: string,
-		@Query('authorDocument') authorDocument: string,
+		// @Query('authorDocument') authorDocument: string,
 		@Req() request: Request
 	): Promise<Documents[]>{
 		const query: any = { active: false };
@@ -148,9 +145,9 @@ import { BadRequestError } from 'passport-headerapikey';
 		if(title) {
 			query.title = title
 		}
-		if(authorDocument) {
-			query.authorDocument = authorDocument
-		}
+		// if(authorDocument) {
+		// 	query.authorDocument = authorDocument
+		// }
 		return this.documentsService.findDocumentsInactive(query)
 	} 
 
@@ -177,22 +174,6 @@ import { BadRequestError } from 'passport-headerapikey';
 		return this.documentsService.findOne(id);
 	}
 
-	// @Get(':id/versions')
-	// async getVersion(@Param('id', ParseObjectIdPipe) id: string, @Param('version', ParseIntPipe) version: number ): Promise<Documents>{
-	// 	const document = await this.documentsService.getDocumentVersion(id, version)
-	// 	if(!document.active){
-	// 		throw new ForbiddenException('documento inactivo')
-	// 	}
-	// 	return this.documentsService.getDocumentVersion(id, version)
-	// }
-
-	// @Get('file-register')
-	// @ApiOperation({summary: 'Get file register data from documents'})
-	// async getFileRegisterData(): Promise<any[]>{
-	// 	console.log('qeuruereru')
-	// 	return this.documentsService.getFileRegisterData()
-	// }
-
 	@Get(':id/versions/:version')
 	async getDocumentVersion(
 	  @Param('id') id: string,
@@ -211,39 +192,12 @@ import { BadRequestError } from 'passport-headerapikey';
 		if(!document.active){
 			throw new ForbiddenException('documento inactivo')
 		}
-		// if(updateDocumentDTO.file === ""){
-		// 	const existingDocument = this.documentsService.findOne(id);
-		// 	// (await existingDocument).fileRegister
-		// 	if((await existingDocument).fileRegister === undefined){
-		// 			updateDocumentDTO.file = (await existingDocument).fileRegister.toString();
-		// 	}
-		// }
+		if(updateDocumentDTO.ciPersonal === ""){
+			throw new BadRequestException('ci no colocado')
+		}
+		
 		return this.documentsService.update(id, updateDocumentDTO)
 	}
-
-	// @Put(':id/base64')
-	// async updateDocumentWithBAse64(@Param('id') id: string, @Body() Base64DocumentResponseDTO: Base64DocumentResponseDTO): Promise<any>{
-	// 	const updateDocument = await this.documentsService.updateDocumentWithBase64Data(
-	// 		id,
-	// 		Base64DocumentResponseDTO,
-	// 	);
-
-	// 	return {success: true, data: updateDocument}
-	// }
-
-	// @Put(':documentId/personal/:personalId')
-	// @ApiOperation({ summary: 'Copy personal data to document' })
-	// @ApiTags('Document Registry')
-	// public async copyPersonalDataToDocument(
-	// 	@Param('documentId') documentId: string,
-	// 	@Param('personalId') personalId: string,
-	// ): Promise<Documents>{
-	// 	try{
-	// 		const personalData = await this.personalService.fetchDataFromExternalServerById(personalId);
-	// 		const updateDocument = await 
-	// 	}
-	// }
-
 
 	@Delete(':id/inactive')
 	@ApiOkResponse({description: 'document converted to inactive successfully'})
@@ -258,26 +212,6 @@ import { BadRequestError } from 'passport-headerapikey';
 	async reactiverDocument(@Param('id') id: string, active: boolean){
 		return this.documentsService.activerDocument(id, active)
 	}
-
-	// @Delete(':id')
-	// @ApiOperation({
-	// 	summary: 'delete documento by id',
-	// })
-	// remove(@Param('id') id: string){
-	// 	return this.documentsService.remove(id);
-	// }
-
-	// @Post(':id/physical-location')
-	// @ApiOperation({
-	// 	summary: 'create dates from physical lcation',
-	//   })
-	// @ApiOkResponse({description: 'add physical-location correctly'})
-	// async addPhysicalLocation(
-	// 	@Param('id', ParseObjectIdPipe) id: string,
-	// 	@Body() physicalLocation: CreatePhysicalLocationDto,
-	// ){
-	// 	return this.documentsService.addPhysicalLocation(id, physicalLocation)
-	// }
 
 	@Post(':id/comment')
 	@ApiOperation({

@@ -1,12 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString } from "class-validator";
 
-export class LoginCentralAuthDTO{
+export class CreatePermissionDto {
 	@ApiProperty()
 	@IsString()
-	token: string;
-	
-	@ApiProperty()
-	@IsString()
-	app: string;
+	name: string;
 }

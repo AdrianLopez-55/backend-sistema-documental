@@ -19,7 +19,7 @@ export class Documents {
 	// @Prop({ type: mongoose.Schema.Types.String, ref: 'User'})
 	// authorDocument: User;
 
-	@Prop()
+	@Prop({default: null})
 	authorDocument: mongoose.Schema.Types.Mixed
 
 	// @Prop()
@@ -54,6 +54,7 @@ export class Documents {
 
 	@Prop([MIlestoneSchema])
 	milestone: Milestone[];
+
 
 	@Prop({default: true})
 	active: boolean

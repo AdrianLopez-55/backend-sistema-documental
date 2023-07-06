@@ -38,6 +38,8 @@ export class PersonalController {
 	}
 
 	@Get(':ci')
+	@ApiOperation({summary: 'get personal by ci'})
+	@ApiTags('External Data Personal')
 	async getPersonalByCi(@Param('ci') ci: string): Promise<any>{
 		try {
 			const personalData = await this.personalService.fetchDataFromExternalServerByCi(ci);
