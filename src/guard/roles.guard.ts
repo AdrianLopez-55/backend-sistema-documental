@@ -30,7 +30,7 @@
 //     }
     
 //     try {
-//       const res = await this.httpService.post('http://10.10.214.219:3110/auth/decoded', {token}).toPromise();
+//       const res = await this.httpService.post('apicentral/auth/decoded', {token}).toPromise();
 //       console.log(res.data)
 //     } catch (error) {
       
@@ -40,7 +40,7 @@
 //     let userRoles
     
 //     try {
-//       const decodedToken = await this.httpService.post('http://localhost:3110/api/auth/decoded',{token}).toPromise() 
+//       const decodedToken = await this.httpService.post('apicentral/api/auth/decoded',{token}).toPromise() 
 
 //       userRoles = decodedToken.data.roles
 //     } catch (error) {

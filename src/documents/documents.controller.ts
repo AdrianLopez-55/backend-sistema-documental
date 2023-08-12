@@ -322,6 +322,7 @@ export class DocumentsController {
   }
 
   @Post(':id/:paso/numero-paso')
+  @ApiOperation({ summary: 'return to a previous step in the workflow' })
   async volverPasoAnteior(@Param('id') id: string, @Param('paso') paso: number):Promise<Documents>{
     return this.documentsService.selectPasoAnterior(id, paso)
   }

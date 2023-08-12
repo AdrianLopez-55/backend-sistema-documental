@@ -328,13 +328,13 @@ export class DocumentsService {
 
   }
 
-  async marcarDocumentoLeido(documentId: string){
-    const document = await this.documentModel.findById(documentId);
-    if(!document){
-      throw new Error('documento no existe para marcar como leido')
-    }
-    return document.save();
-  }
+  // async marcarDocumentoLeido(documentId: string){
+  //   const document = await this.documentModel.findById(documentId);
+  //   if(!document){
+  //     throw new Error('documento no existe para marcar como leido')
+  //   }
+  //   return document.save();
+  // }
 
   async filterParams(filter: DocumentsFilter):Promise<Documents[]> {
     const query = {};
@@ -383,7 +383,6 @@ export class DocumentsService {
       .exec();
   }
 
-  
   async findDocumentsInactive(query: any): Promise<Documents[]> {
     return this.documentModel
       .find(query)
@@ -451,7 +450,7 @@ export class DocumentsService {
   }
 
   fetchAdditionalData(id: string): Observable<any> {
-    const url = `http://10.10.214.219:3200/file/${id}`;
+    const url = `${process.env.API_FILES_UPLOADER}/file/${id}`;
     return this.httpService.get(url).pipe(
       map((response: AxiosResponse) => {
         const formattedData = {
