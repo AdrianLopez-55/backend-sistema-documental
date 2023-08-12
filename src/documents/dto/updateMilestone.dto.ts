@@ -1,17 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator";
-import { User } from "src/users/schema/user.schema";
+import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
+import { CreateMilestoneDto } from './createMilestone.dto';
 
-export class UpdateMilestoneDto {
-	@ApiProperty({example: 'juandolie'})
-	@IsString()
-	readonly author: User;
-
-	@ApiProperty({example: 'Creacion'})
-	@IsString()
-	readonly typeMIlestone: string;
-
-	@ApiProperty({example: 'se creo el documento ...'})
-	@IsString()
-	readonly description: string;
-}
+export class UpdateMilestoneDto extends PartialType(CreateMilestoneDto) {}

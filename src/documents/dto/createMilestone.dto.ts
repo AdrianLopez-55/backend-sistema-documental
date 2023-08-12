@@ -1,18 +1,14 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator";
-import { User } from "src/users/schema/user.schema";
-
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 
 export class CreateMilestoneDto {
-	@ApiProperty({example: 'juandolie'})
-	@IsString()
-	readonly author: User;
+  @ApiProperty({ example: 'Completion of the software design phase' })
+  @IsString()
+  readonly typeMilestone: string;
 
-	@ApiProperty({example: 'Creacion'})
-	@IsString()
-	readonly typeMIlestone: string;
-
-	@ApiProperty({example: 'se creo el documento ...'})
-	@IsString()
-	readonly description: string;
+  @ApiProperty({
+    example: 'The milestone marks the culmination of the design phase',
+  })
+  @IsString()
+  readonly descriptionMilestone: string;
 }

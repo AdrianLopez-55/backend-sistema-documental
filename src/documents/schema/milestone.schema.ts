@@ -1,25 +1,25 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import mongoose, { Document, Model } from "mongoose";
-import { User, UserSchema } from "src/users/schema/user.schema";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose, { Document, Model } from 'mongoose';
 
-export type MilestoneDocument = Milestone & Document
+export type MilestoneDocument = Milestone & Document;
 
 @Schema()
 export class Milestone {
-	@Prop({ type: mongoose.Schema.Types.String, ref: 'User'})
-	author: User;
+  @Prop({ uppercase: true })
+  typeMIlestone: string;
 
-	@Prop()
-	typeMIlestone: string;
+  @Prop({ uppercase: true })
+  description: string;
+  
+  @Prop({ default: true })
+  activeMilestone: boolean;
 
-	@Prop({default: Date.now()})
-	dateComment: Date;
+  @Prop({ default: Date.now(), immutable: true })
+  createdAt: Date;
 
-	@Prop()
-	description: string;
+  @Prop({ default: Date.now() })
+  updateAt: Date;
 
-	@Prop({default: true})
-	active: boolean
 }
 
 export const MIlestoneSchema = SchemaFactory.createForClass(Milestone);

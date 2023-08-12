@@ -1,22 +1,21 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import mongoose, { Document, Model } from "mongoose";
-import { User } from "src/users/schema/user.schema";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Model } from 'mongoose';
 
-export type CommentDocument = Comment & Document
+export type CommentDocument = Comment & Document;
 
 @Schema()
 export class Comment {
-	@Prop({ type: mongoose.Schema.Types.String, ref: 'User'})
-	author: User;
+  @Prop({ uppercase: true })
+  comment: string;
 
-	@Prop()
-	date: Date;
+  @Prop({ default: true })
+  activeComment: boolean;
 
-	@Prop()
-	comment: string;
+  @Prop({ default: Date.now(), immutable: true})
+  createdAt: Date;
 
-	@Prop({default: true})
-	active: boolean
+  @Prop({ default: Date.now() })
+  updateAt: Date;
 }
 
 export const CommentSchema = SchemaFactory.createForClass(Comment);

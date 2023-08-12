@@ -6,10 +6,10 @@ export class ParseObjectIdPipe
   implements PipeTransform<any, mongoose.Types.ObjectId>
 {
   transform(value: any): mongoose.Types.ObjectId {
-    const validObjectId: boolean = mongoose.isObjectIdOrHexString(value); 
+    const validObjectId: boolean = mongoose.isObjectIdOrHexString(value);
     if (!validObjectId) {
-      throw new BadRequestException('Invalid ObjectId'); 
+      throw new BadRequestException('Invalid ObjectId');
     }
-    return value; 
+    return value;
   }
 }

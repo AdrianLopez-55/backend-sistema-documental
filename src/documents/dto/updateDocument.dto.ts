@@ -1,44 +1,33 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsString, isArray } from "class-validator";
+import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
+import { CreateDocumentDTO } from './createDocument.dto';
 
-export class UpdateDocumentDTO {
+export class UpdateDocumentDTO extends PartialType(CreateDocumentDTO){}
 
-	@ApiProperty({example: 'Resources from DataCenter'})
-	@IsString()
-	readonly title: string;
 
-	// @ApiProperty({example: 'J. Adrian Chase'})
-	// @IsString()
-	// readonly authorDocument: string;
+// export class UpdateDocumentDTO {
+//   @ApiProperty({ example: 'Resources from DataCenter' })
+//   @IsString()
+//   readonly title: string;
 
-	@ApiProperty({example: '8574898'})
-	@IsString()
-	ciPersonal: string;
+//   @ApiProperty({ example: 'Costos' })
+//   @IsString()
+//   documentType: string;
 
-	// @ApiProperty({example: '/archivos/documento001.pdf'})
-	// @IsString()
-	// readonly digitalUbication: string;
-	
-	@ApiProperty({example: 'Contract'})
-	@IsString()
-	readonly documentType: string;
+//   @ApiProperty({ example: 'Revision' })
+//   @IsString()
+//   readonly stateDocument: string;
 
-	@ApiProperty({example: 'Revision'})
-	@IsString()
-	readonly stateDocument: string;
+//   @ApiProperty({ example: 'derecho' })
+//   @IsString()
+//   documentDestinations: string;
 
-	@ApiProperty({example: 'restricted'})
-	@IsString()
-	readonly nivelAcces: string;
+//   @ApiProperty({
+//     example: 'contract document registration for new staff. It is on revision',
+//   })
+//   @IsString()
+//   readonly description: string;
 
-	// @ApiProperty({example: 'Informes'})
-	// @IsString()
-	// category: string
-
-	@ApiProperty({example: 'contract document registration for new staff. It is on revision'})
-	@IsString()
-	readonly description: string;
-
-	@ApiProperty({example: 'data:@file/jpeg;base64,/9jq'})
-	file: string
-}
+//   @ApiProperty({ example: 'data:@file/jpeg;base64,/9jq' })
+//   file: string;
+// }

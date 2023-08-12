@@ -3,7 +3,7 @@ import { CreatePermissionDto } from './create-permission.dto';
 import { IsString } from 'class-validator';
 
 export class UpdatePermissionDto extends PartialType(CreatePermissionDto) {
-	@ApiProperty()
-	@IsString()
-	name?: string;
+	// @ApiProperty()
+	// @IsString()
+	// name?: string;
 }
