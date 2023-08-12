@@ -1,0 +1,62 @@
+# SOLO PARA PRUEBAS
+version: '3.4'
+
+services:
+  mongo:
+    container_name: mongo
+    image: 'mongo:4.4'
+    environment:
+      - MONGO_DATA_DIR=/data/db
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo:/data/db
+
+volumes:
+  mongo:
+
+
+
+# version: '3.4'
+
+# services:
+#   # app:
+#   #   build:
+#   #     context: .
+#   #     dockerfile: Dockerfile
+#   #   ports:
+#   #     - 8085:8085
+#   #   depends_on:
+#   #     - mongodb-test
+  
+#   mongodb-test:
+#     image: mongo
+#     ports:
+#       - 27017:27017
+#     volumes:
+#       - mongodb-test:/data/db
+
+# volumes:
+#   mongodb-test:
+
+
+
+
+# version: '3'
+# services:
+#   app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     ports:
+#       - 8085:8085
+#     environment:
+#       - NODE_ENV=development
+#     depends_on:
+#       - mongo
+#   mongo:
+#     image: mongo
+#     volumes:
+#       - ./data:/data/db
+
+

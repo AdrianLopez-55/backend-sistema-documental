@@ -33,3 +33,10 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# archive code
+/app-documental.zip
+/app-documental2.zip
+/app-documental3.zip
+/app-documental4.zip
+/aji289@10.10.214.219
