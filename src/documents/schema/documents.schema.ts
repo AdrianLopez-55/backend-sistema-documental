@@ -30,6 +30,15 @@ export class Documents {
   @Prop({ default: null })
   fileRegister: mongoose.Schema.Types.Mixed;
 
+  @Prop({ default: null })
+  fileBase64: string;
+
+  @Prop()
+  idTemplate: string;
+
+  @Prop()
+  base64Template: string;
+
   @Prop([CommentSchema])
   comments: Comment[];
 

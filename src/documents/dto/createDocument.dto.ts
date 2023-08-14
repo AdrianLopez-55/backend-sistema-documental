@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 
 export class CreateDocumentDTO {
-  @ApiProperty({ example: 'Resources from DataCenter' })
+  @ApiProperty({ example: 'Memorandum-2023' })
   @IsString()
   readonly title: string;
 
@@ -25,4 +25,5 @@ export class CreateDocumentDTO {
 
   @ApiProperty({ example: 'data:@file/jpeg;base64,/9jq' })
   file: string;
+
 }

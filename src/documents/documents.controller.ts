@@ -65,7 +65,7 @@ import { DocumentsFilter } from './dto/documents-filter.dto';
 // import { RolesGuard } from 'src/guard/roles.guard';
 
 @Controller('documents')
-@ApiTags('Registry Documents')
+@ApiTags('Documents')
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
@@ -265,6 +265,12 @@ export class DocumentsController {
     @Param('version', ParseIntPipe) version: number,
   ): Promise<Documents> {
     return this.documentsService.getDocumentVersion(id, version);
+  }
+
+  @Get('create-docx')
+  async createDocx(): Promise<string>{
+    this.documentsService.createDocx()
+    return 'document created...'
   }
 
   @Put(':id')

@@ -24,6 +24,7 @@ import { StepService } from './step/step.service';
 import { WorkflowService } from './workflow/workflow.service';
 import { WorkflowModule } from './workflow/workflow.module';
 import { StepModule } from './step/step.module';
+import { DocxModule } from './docx/docx.module';
 import * as path from 'path';
 import * as ejs from 'ejs';
 
@@ -49,6 +50,7 @@ import * as ejs from 'ejs';
     DocumentationTypeModule,
     WorkflowModule,
     StepModule,
+    DocxModule,
   ],
   controllers: [AppController, /*PersonalController*/],
   providers: [/*{provide: APP_INTERCEPTOR, useClass: ErrorsInterceptor},*/ AppService, /*PersonalService,*/],
