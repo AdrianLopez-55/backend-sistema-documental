@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, HttpException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { CreateDocumentationTypeDto } from './dto/create-documentation-type.dto';
 import { UpdateDocumentationTypeDto } from './dto/update-documentation-type.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -8,14 +13,16 @@ import {
   DocumentationTypeDocument,
 } from './schema/documentation-type.schema';
 import { ErrorManager } from './error.interceptor';
-import { Request } from 'express'
+import { Request } from 'express';
 import { DocumentationTypeFilter } from './dto/documentType-filter.dto';
+import { CustomErrorService } from 'src/error.service';
 
 @Injectable()
 export class DocumentationTypeService {
   constructor(
     @InjectModel(DocumentationType.name)
     private readonly documentationTypeModel: Model<DocumentationTypeDocument>,
+    private readonly customErrorService: CustomErrorService,
   ) {}
 
   async create(createDocumentationTypeDto: CreateDocumentationTypeDto) {
@@ -24,7 +31,13 @@ export class DocumentationTypeService {
       .findOne({ typeName })
       .exec();
     if (existingdocumentatuoType) {
-      throw new HttpException('El titulo ya está en uso. No se permite la duplicación.', 400)
+      this.customErrorService.customResponse(
+        HttpStatus.BAD_REQUEST,
+        true,
+        'ya existe dato',
+        'El nombre de tipo de documentacion ya existe.',
+      );
+      // throw new HttpException('El titulo ya está en uso. No se permite la duplicación.', 400)
     }
     const newDocument = new this.documentationTypeModel(
       createDocumentationTypeDto,
@@ -33,25 +46,35 @@ export class DocumentationTypeService {
   }
 
   async findAll() {
-    const findAllDocumetationType = await this.documentationTypeModel.find().exec();
-    return findAllDocumetationType.sort((a,b) => a.typeName.localeCompare(b.typeName));
+    const findAllDocumetationType = await this.documentationTypeModel
+      .find()
+      .exec();
+    return findAllDocumetationType.sort((a, b) =>
+      a.typeName.localeCompare(b.typeName),
+    );
   }
 
-  async findDocumentsTypeActive(): Promise<DocumentationType[]>{
-    const documentTypeActives = await this.documentationTypeModel.find({ activeDocumentType: true }).exec();
-    return documentTypeActives.sort((a,b) => a.typeName.localeCompare(b.typeName));
+  async findDocumentsTypeActive(): Promise<DocumentationType[]> {
+    const documentTypeActives = await this.documentationTypeModel
+      .find({ activeDocumentType: true })
+      .exec();
+    return documentTypeActives.sort((a, b) =>
+      a.typeName.localeCompare(b.typeName),
+    );
   }
 
   async findOne(id: string): Promise<DocumentationType> {
     const documentatioType = await this.documentationTypeModel
-    .findOne({ _id: id })
-    .exec();
+      .findOne({ _id: id })
+      .exec();
 
-    if(!documentatioType){
-      throw new ErrorManager({
-        type: 'NOT_FOUND',
-        message: 'Tipo de documentacion no encontrado'
-      })
+    if (!documentatioType) {
+      this.customErrorService.customResponse(
+        HttpStatus.NOT_FOUND,
+        true,
+        'No encontrado',
+        'No se encontro el tipo de documentacion',
+      );
     }
     return documentatioType;
   }
@@ -88,24 +111,27 @@ export class DocumentationTypeService {
   ): Promise<DocumentationType> {
     try {
       const documentationType = this.documentationTypeModel
-      .findOne({ typeName })
-      .exec();
-    return documentationType;
+        .findOne({ typeName })
+        .exec();
+      return documentationType;
     } catch (error) {
       console.error('Error al buscar nombre tipo de doucmento', error);
-      throw error; 
+      throw error;
     }
   }
 
-  async filterParams(filter: DocumentationTypeFilter): Promise<DocumentationType[]>{
+  async filterParams(
+    filter: DocumentationTypeFilter,
+  ): Promise<DocumentationType[]> {
     const query = {};
 
-    if(filter.typeName){
-      query['typeName'] = { $regex: filter.typeName, $options: 'i' }
+    if (filter.typeName) {
+      query['typeName'] = { $regex: filter.typeName, $options: 'i' };
     }
 
-    const filteredDocumetationType = await this.documentationTypeModel.find(query).exec();
-    return filteredDocumetationType
-	}
-  
+    const filteredDocumetationType = await this.documentationTypeModel
+      .find(query)
+      .exec();
+    return filteredDocumetationType;
+  }
 }

@@ -1,64 +1,159 @@
-// import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-// import { Reflector } from '@nestjs/core';
-// import { Permission } from './constants/Permissions';
-// import { HttpService } from '@nestjs/axios';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  HttpException,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Permission } from './constants/Permission';
+import { HttpService } from '@nestjs/axios';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import {
+  PermissionDocument,
+  Permission as PermissionSchema,
+} from 'src/permissions/schemas/permission.schema';
+import { Rol, RolDocument } from 'src/rol/schema/rol.schema';
 
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(
+    private reflector: Reflector,
+    private httpService: HttpService,
+    @InjectModel(PermissionSchema.name)
+    private readonly permissionModel: Model<PermissionDocument>,
+    @InjectModel(Rol.name) private readonly rolModel: Model<RolDocument>,
+  ) {}
 
-// @Injectable()
-// export class RolesGuard implements CanActivate {
-//   constructor(
-//     private reflector: Reflector,
-//     private httpService:HttpService
-//     ) {}
+  async canActivate(context: ExecutionContext) {
+    const requiredPermission = this.reflector.getAllAndOverride<Permission[]>(
+      'permissions',
+      [context.getHandler(), context.getClass()],
+    );
 
-//   async canActivate(context: ExecutionContext){
-    
-//     const requiredRoles = this.reflector.getAllAndOverride<Permission[]>('permissions', [
-//       context.getHandler(),
-//       context.getClass(),
-//     ]);
+    if (!requiredPermission) {
+      return true;
+    }
 
-//     if (!requiredRoles) {
-//       return true;
-//     }
+    const request = context.switchToHttp().getRequest();
 
-//     const request = context.switchToHttp().getRequest();
-    
-//     const token = this.extractTokenFromHeader(request);
-//     if (!token) {
-//       throw new UnauthorizedException('No autorizado, no existe token');
-//     }
-    
-//     try {
-//       const res = await this.httpService.post('apicentral/auth/decoded', {token}).toPromise();
-//       console.log(res.data)
-//     } catch (error) {
-      
-//     }
+    const token = this.extractTokenFromHeader(request);
+    if (!token) {
+      throw new UnauthorizedException('No autorizado, no existe token');
+    }
 
+    let userPermission;
+    let userDataId;
+    let userDataRol;
+    try {
+      const decodedToken = await this.httpService
+        .post(`${process.env.API_CENTRAL}/auth/decoded`, { token })
+        .toPromise();
+      //-------------usuarios
+      userDataId = decodedToken.data.idUser;
+      userDataRol = decodedToken.data.roles;
+      console.log('esto es id del usuario');
+      console.log(userDataId);
+      request['user'] = userDataId;
+      request['userRol'] = userDataRol;
 
-//     let userRoles
-    
-//     try {
-//       const decodedToken = await this.httpService.post('apicentral/api/auth/decoded',{token}).toPromise() 
+      //-------------roles ----
 
-//       userRoles = decodedToken.data.roles
-//     } catch (error) {
-//       throw error.response?.data
-//     }
-    
-  
-//     for (const role of userRoles) {
+      if (decodedToken.data.roles.length === 0) {
+        throw new HttpException('no tiene roles', 401);
+      }
 
-//       if (requiredRoles.includes(role.name)) {
-//         return true;
-//       }
-//     }
-//     throw new UnauthorizedException('No tienes permisos para ejecutar esta acción');
-//   }
+      const rolesWithDetails = await Promise.all(
+        decodedToken.data.roles.map((roleId) =>
+          this.httpService
+            .get(`${process.env.API_CENTRAL}/rol/${roleId}`)
+            .toPromise(),
+        ),
+      );
 
-//   private extractTokenFromHeader(request: Request & { headers: { authorization?: string } }): string | undefined {
-//     const [type, token] = request.headers.authorization?.split(' ') ?? [];
-//     return type === 'Bearer' ? token : undefined;
-//   }
-// }
+      const roleDetails = rolesWithDetails.map((response) => response.data);
+      // console.log('esto es roleDetails');
+      // console.log(roleDetails);
+
+      const roleNames = roleDetails.map((role) => role.rolName);
+      if (!roleNames) {
+        throw new HttpException('no tiene los permisos necesarios', 403);
+      }
+
+      // console.log('esto es el nombre del rol sacado del token');
+      // console.log(roleNames);
+
+      let hasRequiredPermissions = true;
+      for (const rolName of roleNames) {
+        const findRole = await this.rolModel
+          .findOne({ rolName: rolName })
+          .exec();
+
+        if (findRole) {
+          const rolePermissions = findRole.permissionName;
+          if (rolePermissions.length === 0) {
+            hasRequiredPermissions = false;
+          }
+          for (const rolePermission of rolePermissions) {
+            const findPermission = await this.permissionModel
+              .findById(rolePermission)
+              .exec();
+
+            if (findPermission) {
+              const hasAllPermissions = requiredPermission.every((permission) =>
+                findPermission.permissionName.includes(permission),
+              );
+              if (hasAllPermissions) {
+                hasRequiredPermissions = true;
+                return true;
+              } else {
+                hasRequiredPermissions = false;
+              }
+            } else {
+              hasRequiredPermissions = false;
+            }
+          }
+        } else {
+          hasRequiredPermissions = false;
+        }
+      }
+      if (!hasRequiredPermissions) {
+        throw new HttpException('el rol no tiene los permisos requeridos', 403);
+      }
+
+      //-----------uso de permisos del token
+      // userPermission = roleDetails.map((index) => index.permissionName).flat();
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw error.response?.data;
+    }
+
+    //---------- listar los permisos y comparlo con local, ya no usar ---
+    // const findAllPermission = await this.permissionModel.find();
+    // const filteredPermissions = findAllPermission.filter((permission) =>
+    //   userPermission.includes(permission._id.toString()),
+    // );
+    // console.log(findAllPermission);
+    // console.log(userPermission);
+    // console.log('asfsadfdasf', filteredPermissions);
+
+    // for (const permission of filteredPermissions) {
+    //   if (requiredPermission[0] == permission.permissionName) {
+    //     return true;
+    //   }
+    // }
+    // throw new UnauthorizedException(
+    //   'NO tiene permisos para ejecutar esta accion',
+    // );
+  }
+
+  private extractTokenFromHeader(
+    request: Request & { headers: { authorization?: string } },
+  ): string | undefined {
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
+  }
+}

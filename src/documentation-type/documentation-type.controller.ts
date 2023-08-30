@@ -10,23 +10,38 @@ import {
   InternalServerErrorException,
   HttpException,
   Query,
-  Req
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { DocumentationTypeService } from './documentation-type.service';
 import { CreateDocumentationTypeDto } from './dto/create-documentation-type.dto';
 import { UpdateDocumentationTypeDto } from './dto/update-documentation-type.dto';
-import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { DocumentationType } from './schema/documentation-type.schema';
 import { Request, Response } from 'express';
 import { DocumentationTypeFilter } from './dto/documentType-filter.dto';
+import { Permissions } from 'src/guard/decorators/permissions.decorator';
+import { Permission } from 'src/guard/constants/Permission';
+import { RolesGuard } from 'src/guard/roles.guard';
 
 @Controller('documentation-type')
+// @UseGuards(RolesGuard)
 @ApiTags('documentation-type')
 export class DocumentationTypeController {
   constructor(
     private readonly documentationTypeService: DocumentationTypeService,
   ) {}
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Post()
   @ApiOperation({ summary: 'Create a new documentation type' })
   create(@Body() createDocumentationTypeDto: CreateDocumentationTypeDto) {
@@ -34,9 +49,12 @@ export class DocumentationTypeController {
       createDocumentationTypeDto,
     );
     return newDocumentationType;
-    
   }
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Get()
   @ApiOperation({ summary: 'see all documentation type in the database' })
   @ApiOkResponse({ description: 'document Types finds in the database' })
@@ -44,43 +62,59 @@ export class DocumentationTypeController {
   findAll() {
     return this.documentationTypeService.findAll();
   }
-  
+
+  // @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Get('filtrado')
-  @ApiOperation({ summary: 'Get records by parameter filtering', description: 'Search for records by filtering'})
-  async filterParam(
-    @Query() filter: DocumentationTypeFilter,
-  ){
-    console.log(filter.typeName)
-    return await this.documentationTypeService.filterParams(filter)
+  @ApiOperation({
+    summary: 'Get records by parameter filtering',
+    description: 'Search for records by filtering',
+  })
+  async filterParam(@Query() filter: DocumentationTypeFilter) {
+    console.log(filter.typeName);
+    return await this.documentationTypeService.filterParams(filter);
   }
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Get('active')
   @ApiOperation({ summary: 'see only document type actives' })
-  async findDocumentTypeActive():Promise<DocumentationType[]>{
+  async findDocumentTypeActive(): Promise<DocumentationType[]> {
     return this.documentationTypeService.findDocumentsTypeActive();
   }
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Get(':id')
   @ApiOperation({ summary: 'see documentation type in the database by ID' })
   findOne(@Param('id') id: string) {
     return this.documentationTypeService.findOne(id);
   }
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Get('document-type/:typeName')
   @ApiOperation({ summary: 'search document type by name' })
-  async getDocumentTypeByName(
-    @Param('typeName') typeName: string,
-  ) {
+  async getDocumentTypeByName(@Param('typeName') typeName: string) {
     const documentType =
       await this.documentationTypeService.getDocumentatioTypeByName(typeName);
-      if (!documentType) {
-        throw new HttpException('tipo de documentacion no encontrado', 404);
-      }
+    if (!documentType) {
+      throw new HttpException('tipo de documentacion no encontrado', 404);
+    }
     return documentType;
   }
 
-
-
+  // @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Put(':id')
   @ApiOperation({ summary: 'update document by ID' })
   update(
@@ -90,6 +124,9 @@ export class DocumentationTypeController {
     return this.documentationTypeService.update(id, updateDocumentationTypeDto);
   }
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Delete(':id')
   @ApiOperation({ summary: 'Inactiver document type by ID' })
   remove(@Param('id') id: string, activeDocumentType: boolean) {
@@ -99,6 +136,9 @@ export class DocumentationTypeController {
     );
   }
 
+  // @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Put(':id/activer')
   @ApiOperation({ summary: 'reactivate document type by id' })
   activeTypeDocument(@Param('id') id: string, activeDocumentType: boolean) {

@@ -20,6 +20,12 @@ import { WorkflowModule } from 'src/workflow/workflow.module';
 import { StepModule } from 'src/step/step.module';
 import { Step, StepSchema } from 'src/step/schemas/step.schema';
 import { DocumentationTypeModule } from 'src/documentation-type/documentation-type.module';
+import { CustomErrorService } from 'src/error.service';
+import {
+  Permission,
+  PermissionSchema,
+} from 'src/permissions/schemas/permission.schema';
+import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
 
 @Module({
   imports: [
@@ -28,21 +34,24 @@ import { DocumentationTypeModule } from 'src/documentation-type/documentation-ty
       { name: DocumentationType.name, schema: DocumentationTypeSchema },
       { name: Workflow.name, schema: WorkflowSchema },
       { name: Step.name, schema: StepSchema },
+      { name: Permission.name, schema: PermissionSchema },
+      { name: Rol.name, schema: RolSchema },
     ]),
     HttpModule,
     WorkflowModule,
     StepModule,
-    DocumentationTypeModule
+    DocumentationTypeModule,
   ],
   controllers: [DocumentsController],
   providers: [
-    DocumentsService, 
-    SequenceService, 
-    DocumentationTypeService, 
-    ObtainPersonalDataTokenDTO, 
+    DocumentsService,
+    SequenceService,
+    DocumentationTypeService,
+    ObtainPersonalDataTokenDTO,
     ApiService,
     AuthGuard,
     WorkflowService,
+    CustomErrorService,
   ],
 })
 export class DocumentsModule {}

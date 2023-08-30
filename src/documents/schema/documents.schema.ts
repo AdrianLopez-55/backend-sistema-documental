@@ -1,9 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { Document, Model, mongo } from 'mongoose';
+import mongoose, { Document, Model, Mongoose, mongo } from 'mongoose';
 import { Comment, CommentSchema } from './comment.schema';
 import { MIlestoneSchema, Milestone } from './milestone.schema';
 import { Workflow, WorkflowSchema } from 'src/workflow/schemas/workflow.schema';
-import { DocumentationType, DocumentationTypeSchema } from 'src/documentation-type/schema/documentation-type.schema';
+import {
+  DocumentationType,
+  DocumentationTypeSchema,
+} from 'src/documentation-type/schema/documentation-type.schema';
 
 export type DocumentDocument = Documents & Document;
 
@@ -11,6 +14,18 @@ export type DocumentDocument = Documents & Document;
 export class Documents {
   @Prop({ default: () => `DOC-${incrementalValue(0)}` })
   numberDocument: string;
+
+  @Prop()
+  userId: string;
+
+  @Prop({ type: Object })
+  userInfo: {
+    name: string;
+    lastName: string;
+    ci: string;
+    email: string;
+    unity: string;
+  };
 
   @Prop({ uppercase: true })
   title: string;
@@ -21,7 +36,7 @@ export class Documents {
   @Prop({ uppercase: true })
   stateDocument: string;
 
-  @Prop({ type: WorkflowSchema, ref: 'Workflow' })
+  @Prop({ type: WorkflowSchema, ref: 'Workflow', default: null })
   workflow: Workflow;
 
   @Prop({ uppercase: true })
@@ -57,8 +72,22 @@ export class Documents {
   @Prop({ default: 'create' })
   state: string;
 
-  @Prop({ type: [{ oficinaActual: String, oficinasPorPasar: Array }] })
-  bitacoraWorkflow: { oficinaActual: string; oficinasPorPasar: string[] }[];
+  @Prop({
+    type: [
+      {
+        oficinaActual: String,
+        receivedUsers: [{ ciUser: String, idOfUser: String }],
+        oficinasPorPasar: Array,
+        motivoBack: String,
+      },
+    ],
+  })
+  bitacoraWorkflow: {
+    oficinaActual: string;
+    receivedUsers: { ciUser: string; idOfUser: string }[];
+    motivoBack: string;
+    oficinasPorPasar: string[];
+  }[];
 }
 
 export const DocumentsSchema = SchemaFactory.createForClass(Documents);

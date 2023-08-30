@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer  } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ApiModule } from './ServiceApi/api.module';
@@ -27,16 +27,30 @@ import { StepModule } from './step/step.module';
 import { DocxModule } from './docx/docx.module';
 import * as path from 'path';
 import * as ejs from 'ejs';
+import { PermissionsModule } from './permissions/permission.module';
+import { RolModule } from './rol/rol.module';
+import { UserLoginService } from './user-login/user-login.service';
+import { UserLoginModule } from './user-login/user-login.module';
+import { PersonalGetService } from './personal-get/personal-get.service';
+import { PersonalGetController } from './personal-get/personal-get.controller';
+import { PersonalGetModule } from './personal-get/personal-get.module';
+import { TemplateModule } from './template/template.module';
+import { LoggerMiddleware } from './middleware/logger.middleware';
 
 @Module({
   imports: [
+    MulterModule.register({
+      dest: './template',
+    }),
     ApiModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
     }),
     DocumentsModule,
-    MongooseModule.forRoot(getConfig().mongodb), //process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
+    MongooseModule.forRoot(getConfig().mongodb, {
+      dbName: getConfig().db_name,
+    }), //process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
     PassportModule,
     HttpModule,
     // PersonalModule,
@@ -48,24 +62,37 @@ import * as ejs from 'ejs';
     // PermissionsModule,
     OrganizationChartModule,
     DocumentationTypeModule,
+    PermissionsModule,
     WorkflowModule,
     StepModule,
     DocxModule,
+    RolModule,
+    UserLoginModule,
+    PersonalGetModule,
+    TemplateModule,
   ],
-  controllers: [AppController, /*PersonalController*/],
-  providers: [/*{provide: APP_INTERCEPTOR, useClass: ErrorsInterceptor},*/ AppService, /*PersonalService,*/],
+  controllers: [AppController, PersonalGetController /*PersonalController*/],
+  providers: [
+    /*{provide: APP_INTERCEPTOR, useClass: ErrorsInterceptor},*/ AppService,
+    UserLoginService,
+    PersonalGetService /*PersonalService,*/,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply((req, res, next) => {
       res.render = (view, options) => {
-        ejs.renderFile(path.join(__dirname, '..', 'views', view + '.ejs'), options, (err, str) => {
-          if (err) throw err;
-          res.send(str);
-        });
+        ejs.renderFile(
+          path.join(__dirname, '..', 'views', view + '.ejs'),
+          options,
+          (err, str) => {
+            if (err) throw err;
+            res.send(str);
+          },
+        );
       };
       next();
     });
-    consumer.apply(AuthMiddleware).forRoutes('*')
+    consumer.apply(AuthMiddleware).forRoutes('*');
   }
 }

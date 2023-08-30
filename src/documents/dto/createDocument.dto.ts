@@ -14,8 +14,8 @@ export class CreateDocumentDTO {
   @IsString()
   readonly stateDocument: string;
 
-  @ApiProperty({ example: 'workflow_A', })
-  workflowName: string;
+  // @ApiProperty({ example: 'workflow_A', })
+  // workflowName: string;
 
   @ApiProperty({
     example: 'contract document registration for new staff. It is on revision',
@@ -25,5 +25,4 @@ export class CreateDocumentDTO {
 
   @ApiProperty({ example: 'data:@file/jpeg;base64,/9jq' })
   file: string;
-
 }

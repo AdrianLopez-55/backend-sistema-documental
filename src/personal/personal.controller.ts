@@ -11,13 +11,14 @@
 // import getConfig from '../config/configuration';
 // import { Response } from 'express';
 
+// @ApiTags('External Data Personal')
 // @Controller('personal')
 // export class PersonalController {
 //   constructor(private readonly personalService: PersonalService) {}
 
 //   @Get('external-data-personal')
-//   @ApiOperation({ summary: 'get all personal registered' })
 //   @ApiTags('External Data Personal')
+//   @ApiOperation({ summary: 'get all personal registered' })
 //   public async getExternalData(@Res() res: Response): Promise<any> {
 //     const url = `${getConfig().api_personal_get}`;
 //     try {
@@ -31,7 +32,6 @@
 
 //   @Get('external-data-personal/:id')
 //   @ApiOperation({ summary: 'get personal by ID' })
-//   @ApiTags('External Data Personal')
 //   public async getExternalDataById(
 //     @Param('id') personalId: string,
 //   ): Promise<any> {
@@ -47,7 +47,6 @@
 
 //   @Get(':ci')
 //   @ApiOperation({ summary: 'get personal by ci' })
-//   @ApiTags('External Data Personal')
 //   async getPersonalByCi(@Param('ci') ci: string): Promise<any> {
 //     try {
 //       const personalData =

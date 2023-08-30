@@ -1,12 +1,9 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class ObtainOrganigramaDataDto {
-	@ApiProperty()
-	_id: string
+  @ApiProperty()
+  _id: string;
 
-	@ApiProperty()
-	name: string
-
-	@ApiProperty()
-	children: string[];
+  @ApiProperty()
+  name: string;
 }
