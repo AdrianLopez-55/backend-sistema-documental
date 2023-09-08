@@ -15,20 +15,20 @@ export class DocxController {
   //     return 'Document created...';
   //   }
 
-  @Get()
-  async createDocx(@Res() response: Response): Promise<void> {
-    const docxArrayBuffer = await this.docxService.createDocx();
+  // @Get()
+  // async createDocx(@Res() response: Response): Promise<void> {
+  //   const docxArrayBuffer = await this.docxService.createDocx();
 
-    response.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    );
-    // response.setHeader(
-    //   'Content-Disposition',
-    //   'attachment; filename=myDocumento.docx',
-    // );
-    response.status(200).send(Buffer.from(docxArrayBuffer));
-  }
+  //   response.setHeader(
+  //     'Content-Type',
+  //     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  //   );
+  //   // response.setHeader(
+  //   //   'Content-Disposition',
+  //   //   'attachment; filename=myDocumento.docx',
+  //   // );
+  //   response.status(200).send(Buffer.from(docxArrayBuffer));
+  // }
 
   //   @Get('download')
   //   async downloadDocx(@Res() res: Response): Promise<void> {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import * as docx from 'docx';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import * as fs from 'fs';
@@ -50,7 +50,18 @@ export class DocxService {
     if (!fs.existsSync(templateDirectory)) {
       fs.mkdirSync(templateDirectory);
     }
-    const filePath = path.join(templateDirectory, 'myDocumento.docx');
+    const filePath = path.join(templateDirectory, 'fileName');
+    const buffer = await Packer.toBuffer(doc);
+    // fs.writeFileSync(filePath, buffer);
+
+    // const dataUri = await fileToDataUri(filePath);
+    // if(!fileName){
+    //   throw new HttpException('no ay nombre', 400)
+    // }
+    // if(!DataUri){
+    //   throw new HttpException('no hay id de archivo', 400)
+    // }
+
     Packer.toBuffer(doc).then((buffer) => {
       fs.writeFileSync(filePath, buffer);
       console.log('documento creado en el directorio exitosamente');

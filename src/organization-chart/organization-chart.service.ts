@@ -34,17 +34,11 @@ export class OrganizationChartService {
     const url = `${
       process.env.API_ORGANIZATION_CHART_MAIN
     }?name=${encodeURIComponent(name)}`;
+
     try {
       const response = await this.httpService.get(url).toPromise();
-      // const response = await axios.get(url);
-      const organigramaList = response.data;
-      console.log(organigramaList);
-      // const organigramaData = organigramaList.find(
-      //   (item: ObtainOrganigramaDataDto) => item.name === name,
-      // );
-      // console.log(organigramaData);
-
-      return organigramaList;
+      const exactName = response.data.find((result) => result.name === name);
+      return exactName;
     } catch (error) {
       throw new HttpException('error al obtener los datos service', 500);
     }

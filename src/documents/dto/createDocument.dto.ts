@@ -10,13 +10,6 @@ export class CreateDocumentDTO {
   @IsString()
   documentTypeName: string;
 
-  @ApiProperty({ example: 'Revision' })
-  @IsString()
-  readonly stateDocument: string;
-
-  // @ApiProperty({ example: 'workflow_A', })
-  // workflowName: string;
-
   @ApiProperty({
     example: 'contract document registration for new staff. It is on revision',
   })

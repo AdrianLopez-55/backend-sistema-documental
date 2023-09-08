@@ -8,10 +8,13 @@ export class Comment {
   @Prop({ uppercase: true })
   comment: string;
 
+  @Prop()
+  userId: string;
+
   @Prop({ default: true })
   activeComment: boolean;
 
-  @Prop({ default: Date.now(), immutable: true})
+  @Prop({ default: Date.now(), immutable: true })
   createdAt: Date;
 
   @Prop({ default: Date.now() })

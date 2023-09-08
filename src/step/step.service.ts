@@ -31,6 +31,7 @@ export class StepService {
       try {
         const officeInfo = await this.checkOfficeValidity(oficina);
         paso.idOffice = officeInfo.id;
+
         await this.validateOffice(oficina);
       } catch (error) {
         throw new BadRequestException(
@@ -93,6 +94,11 @@ export class StepService {
     const responseOrganigramaName = await this.httpService
       .get(organigramaUrl)
       .toPromise();
+
+    const exacMatch = responseOrganigramaName.data.find(
+      (result) => result.name === oficina,
+    );
+    console.log(exacMatch.name);
     const organigramaList = responseOrganigramaName.data;
 
     try {

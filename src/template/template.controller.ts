@@ -28,87 +28,87 @@ export class TemplateController {
     private readonly httpService: HttpService,
   ) {}
 
-  @Post()
-  createTemplateCero(@Body() createTemplateDto: CreateTemplateDto) {
-    return this.templateService.create(createTemplateDto);
-  }
+  // @Post()
+  // createTemplateCero(@Body() createTemplateDto: CreateTemplateDto) {
+  //   return this.templateService.create(createTemplateDto);
+  // }
 
-  @Post('upload-template')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadTemplate(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() createTemplateDto: CreateTemplateDto,
-  ) {
-    const { fileTemplateDocx, nameTemplate } = createTemplateDto;
-    const fileName = `${nameTemplate}.docx`;
-    const datata = await this.templateService.createWithTemplateUse(
-      createTemplateDto,
-    );
-    const filePath = path.join(process.cwd(), 'template', fileName);
-    return datata;
-  }
+  // @Post('upload-template')
+  // @UseInterceptors(FileInterceptor('file'))
+  // async uploadTemplate(
+  //   @UploadedFile() file: Express.Multer.File,
+  //   @Body() createTemplateDto: CreateTemplateDto,
+  // ) {
+  //   const { fileTemplateDocx, nameTemplate } = createTemplateDto;
+  //   const fileName = `${nameTemplate}.docx`;
+  //   const datata = await this.templateService.createWithTemplateUse(
+  //     createTemplateDto,
+  //   );
+  //   const filePath = path.join(process.cwd(), 'template', fileName);
+  //   return datata;
+  // }
 
-  @Get()
-  async obtainAllTemplate() {
-    return this.templateService.findAllIdDataBase();
-  }
+  // @Get()
+  // async obtainAllTemplate() {
+  //   return this.templateService.findAllIdDataBase();
+  // }
 
-  @Get('fileNames')
-  async listTemplate(@Res() res: Response) {
-    return this.templateService.findAll(res);
-  }
+  // @Get('fileNames')
+  // async listTemplate(@Res() res: Response) {
+  //   return this.templateService.findAll(res);
+  // }
 
-  @Get(':templateId/download')
-  async downloadTemplateById(
-    @Param('templateId') templateId: string,
-    @Res() res: Response,
-  ) {
-    const documentData = await this.templateService.getDocumentData(templateId);
+  // @Get(':templateId/download')
+  // async downloadTemplateById(
+  //   @Param('templateId') templateId: string,
+  //   @Res() res: Response,
+  // ) {
+  //   const documentData = await this.templateService.getDocumentData(templateId);
 
-    const idFileTemplate = documentData.dataTemplate;
-    const responseDataTemplate = await this.httpService
-      .get(`${process.env.API_FILES_UPLOADER}/file/${idFileTemplate}`)
-      .toPromise();
+  //   const idFileTemplate = documentData.dataTemplate;
+  //   const responseDataTemplate = await this.httpService
+  //     .get(`${process.env.API_FILES_UPLOADER}/file/${idFileTemplate}`)
+  //     .toPromise();
 
-    const { mime, base64 } = responseDataTemplate.data.file;
+  //   const { mime, base64 } = responseDataTemplate.data.file;
 
-    const base64Data = base64;
-    const fileName = documentData.nameTemplate;
+  //   const base64Data = base64;
+  //   const fileName = documentData.nameTemplate;
 
-    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.send(Buffer.from(base64Data, 'base64'));
-  }
+  //   res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+  //   res.setHeader('Content-Type', 'application/octet-stream');
+  //   res.send(Buffer.from(base64Data, 'base64'));
+  // }
 
-  @Get(':fileName')
-  async downloadTemplate(
-    @Param('fileName') fileName: string,
-    @Res() res: Response,
-  ) {
-    const templatesDir = path.join(process.cwd(), 'template');
-    const filePath = path.join(templatesDir, fileName);
-    if (fs.existsSync(filePath)) {
-      res.download(filePath);
-    } else {
-      res.status(404).send('file not found');
-    }
-  }
+  // @Get(':fileName')
+  // async downloadTemplate(
+  //   @Param('fileName') fileName: string,
+  //   @Res() res: Response,
+  // ) {
+  //   const templatesDir = path.join(process.cwd(), 'template');
+  //   const filePath = path.join(templatesDir, fileName);
+  //   if (fs.existsSync(filePath)) {
+  //     res.download(filePath);
+  //   } else {
+  //     res.status(404).send('file not found');
+  //   }
+  // }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.templateService.findOne(+id);
-  }
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.templateService.findOne(+id);
+  // }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateTemplateDto: UpdateTemplateDto,
-  ) {
-    return this.templateService.update(+id, updateTemplateDto);
-  }
+  // @Patch(':id')
+  // update(
+  //   @Param('id') id: string,
+  //   @Body() updateTemplateDto: UpdateTemplateDto,
+  // ) {
+  //   return this.templateService.update(+id, updateTemplateDto);
+  // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.templateService.remove(+id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.templateService.remove(+id);
+  // }
 }

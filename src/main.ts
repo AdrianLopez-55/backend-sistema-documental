@@ -48,7 +48,6 @@ async function bootstrap() {
       'View the data of the authenticated user in the microservice',
     )
     .addTag('Documents', 'endpoints related to the CRUD of a document')
-    .addTag('Docx')
     .addTag(
       'documentation-type',
       'endpoints related to the CRUD of documentation types',

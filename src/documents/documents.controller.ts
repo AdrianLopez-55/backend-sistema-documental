@@ -75,7 +75,7 @@ import { AddWorkflowSinCiDocumentDto } from './dto/addWorkflowSinCiDocument.dto'
 
 @ApiTags('Documents')
 //---------rol user information---
-// @UseGuards(RolesGuard)
+@UseGuards(RolesGuard)
 //-------------------------------
 @Controller('documents')
 export class DocumentsController {
@@ -88,23 +88,24 @@ export class DocumentsController {
     private readonly customErrorService: CustomErrorService,
   ) {}
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Post()
   @ApiOperation({ summary: 'registry new document' })
-  @ApiCreatedResponse({
-    description: 'The document has been successfully created.',
-    type: CreateDocumentDTO,
-  })
   @ApiBadRequestResponse({ description: 'bad request response' })
   async create(
     @Res() res: Response,
     @Body() createDocumentDTO: CreateDocumentDTO,
     @Req() request: Request,
     @Req() req,
-  ): Promise<Documents> {
+  ) {
     try {
+      //--------------------------------
+      const currentYear = new Date().getFullYear();
+
+      //------------------------------------------------------
       const userId = req.user;
       const numberDocument =
         await this.sequenceService.getNextValueNumberDocument();
@@ -112,35 +113,29 @@ export class DocumentsController {
       if (createDocumentDTO.file === '') {
         createDocumentDTO.file = null;
       }
-
-      if (createDocumentDTO.title === '') {
-        throw new Error('no se puso titulo');
-      }
-      // if (!createDocumentDTO.workflowName) {
-      //   throw new HttpException('worflow no encontrado', 404);
-      // }
       const newRegisterDocument = {
         ...createDocumentDTO,
         numberDocument,
+        year: currentYear,
       };
-
-      const templatePath =
-        'E:\\adrian carrera cosas\\TALLER DE GRADO 1 Y PRACTICA LABORAL (INTERNADO ROTATORIO)\\aplicacion-sistema-next\\back-documental-test\\src\\documents\\template-base.html';
-
-      const templateSource = fs.readFileSync(templatePath, 'utf8');
-
-      res.send(newRegisterDocument);
-      return this.documentsService.create(newRegisterDocument, userId);
+      // res.send(newRegisterDocument);
+      const newDocument = await this.documentsService.create(
+        newRegisterDocument,
+        userId,
+      );
+      // console.log(newDocument);
+      res.send(newDocument);
+      // return this.documentsService.create(newRegisterDocument, userId);
+      // return newDocument;
     } catch (error) {
       throw error;
     }
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get()
-  // @ApiBearerAuth()
   @ApiOperation({
     summary: 'see all documents or search by filters',
   })
@@ -152,22 +147,18 @@ export class DocumentsController {
     return this.documentsService.findAll();
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
-  @Get('get-recieved-documents')
-  @ApiOperation({ summary: 'view received documents' })
-  async getRecievedDocuments(@Req() req): Promise<Documents[]> {
+  @Get('documents-on-hold')
+  @ApiOperation({ summary: 'see all documents that do not send anyone' })
+  async getAllDocumentsOnHold(@Req() req) {
     const userId = req.user;
-    return this.documentsService.showRecievedDocument(userId);
+    return this.documentsService.getDocumentsOnHold(userId);
   }
 
-  @Get('get-all-documents-send')
-  async getAllDocumentsSend() {
-    return this.documentsService.showAllDocumentSend();
-  }
-
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('active')
@@ -202,7 +193,8 @@ export class DocumentsController {
     return this.documentsService.findDocumentsActive(query);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('paginacion')
@@ -219,7 +211,7 @@ export class DocumentsController {
     return this.documentsService.findAllPaginate(paginationDto);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('inactive')
@@ -253,7 +245,8 @@ export class DocumentsController {
     return this.documentsService.findDocumentsInactive(query);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('filtrado')
@@ -265,7 +258,56 @@ export class DocumentsController {
     return await this.documentsService.filterParams(filter);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Get('recieved-without-workflow')
+  @ApiOperation({
+    summary: 'view all received documents directly without workflow',
+  })
+  async getRecievedWithoutWorkflowDocument(@Req() req): Promise<Documents[]> {
+    const userId = req.user;
+    return this.documentsService.showRecievedDocumentWithouWorkflow(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Get('get-recieved-documents')
+  @ApiOperation({ summary: 'view received documents' })
+  async getRecievedDocuments(@Req() req): Promise<Documents[]> {
+    const userId = req.user;
+    return this.documentsService.showRecievedDocument(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Get('documents-send-without-workflow')
+  @ApiOperation({
+    summary: 'see all documentos send to other user without workflow',
+  })
+  async getDocumentsSendWithoutWorkflow(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.showAllDocumentsSendWithoutWorkflow(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Get('get-all-documents-send')
+  @ApiOperation({ summary: 'see all documents send to other users' })
+  async getAllDocumentsSend(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.showAllDocumentSend(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get(':id')
@@ -277,7 +319,6 @@ export class DocumentsController {
   @ApiForbiddenResponse({
     description: 'document forbiden, document not use now',
   })
-  // @UseInterceptors(ResponseInterceptor)
   async findOne(
     @Param('id', ParseObjectIdPipe) id: string,
     active: boolean,
@@ -287,7 +328,6 @@ export class DocumentsController {
     try {
       // const userId = req.user;
       const document = await this.documentsService.findOne(id);
-      // return document;
       return this.documentsService.findOne(id);
     } catch (error) {
       if (error.name === 'CastError' && error.kind === 'ObjectId') {
@@ -297,7 +337,22 @@ export class DocumentsController {
     }
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Get(':userId/get-documents-user')
+  @ApiOperation({ summary: 'view all documents owned by a user by their ID' })
+  async getAllDocumentByUserId(
+    @Req() req,
+    @Param('userId') userId: string,
+  ): Promise<Documents[]> {
+    const userIdData = req.user;
+    userId = userIdData;
+    return this.documentsService.getDocumentByUserId(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get(':id/versions/:version')
@@ -311,13 +366,7 @@ export class DocumentsController {
     return this.documentsService.getDocumentVersion(id, version);
   }
 
-  // @Get('create-docx')
-  // async createDocx(): Promise<string> {
-  //   this.documentsService.createDocx();
-  //   return 'document created...';
-  // }
-
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Put(':id')
@@ -338,19 +387,7 @@ export class DocumentsController {
     return this.documentsService.update(id, updateDocumentDTO);
   }
 
-  @Put('update-only-step-workflow/:id')
-  @ApiOperation({
-    summary:
-      'update only one step in the workflow with number paso and name office',
-  })
-  async UpdateStepDocumentWorkflow(
-    @Param('id') id: string,
-    @Body() updateStepDocumentDto: UpdateSteDocumentDto,
-  ) {
-    return this.documentsService.updateWorkflowStep(id, updateStepDocumentDto);
-  }
-
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Delete(':id/inactive')
@@ -361,7 +398,7 @@ export class DocumentsController {
     return this.documentsService.inactiverDocument(id, active);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Put(':id/active')
@@ -370,48 +407,82 @@ export class DocumentsController {
     return this.documentsService.activerDocument(id, active);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Post(':id/sent-document-employeeds')
   @ApiOperation({ summary: 'sent a document a specific employeed' })
-  // @ApiBody({
-  //   description: 'Array of CI numbers of employees to send the document to.',
-  //   type: [String],
-  // })
   async enviarDocumento(
     @Param('id') documentId: string,
     @Body() addWorkflowDocumentDto: AddWorkflowDocumentDto,
+    @Req() req,
   ): Promise<Documents> {
     try {
-      return this.documentsService.enviarDocument(
+      const userId = req.user;
+      const document = this.documentsService.enviarDocument(
         documentId,
         addWorkflowDocumentDto,
+        userId,
       );
+      return document;
     } catch (error) {
-      throw error;
+      throw new HttpException(
+        `no se pudo enviar documento, error: ${error}`,
+        500,
+      );
     }
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Post(':id/sent-document-unity')
   @ApiOperation({ summary: 'send a document to all employees of the unit' })
   async sendDocumentUnity(
     @Param('id') documentId: string,
+    @Req() req,
     @Body() addWorkflowSinCiDocumentDto: AddWorkflowSinCiDocumentDto,
   ): Promise<Documents> {
     try {
+      const userId = req.user;
       return this.documentsService.sendDocumentToUnity(
         documentId,
         addWorkflowSinCiDocumentDto,
+        userId,
       );
     } catch (error) {
       throw new HttpException(`algo salio mal ${error}`, 500);
     }
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Post(':id/send-document-without-workflow')
+  @ApiOperation({ summary: 'send document directly without workflow' })
+  async sendDocumentWithoutWorkflow(
+    @Param('id') documentId: string,
+    @Body() ci: string[],
+    @Req() req,
+  ) {
+    try {
+      const userId = req.user;
+      return this.documentsService.sendDocumentSinWorkflow(
+        documentId,
+        ci,
+        userId,
+      );
+    } catch (error) {
+      throw new HttpException('no se pudo enviar', 500);
+    }
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER)
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Post(':id/derive-document-employeed')
   @ApiOperation({ summary: 'sent a document a specific employeed' })
   @ApiBody({
@@ -421,34 +492,31 @@ export class DocumentsController {
   async derivateDocumentWithCi(
     @Param('id') id: string,
     @Body() ci: string[],
+    @Req() req,
   ): Promise<Documents> {
     try {
-      return this.documentsService.derivarDocumentWithCi(id, ci);
+      const userId = req.user;
+      return this.documentsService.derivarDocumentWithCi(id, ci, userId);
     } catch (error) {
       throw new Error(error);
     }
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Post(':id/derive-document-unity-all')
   @ApiOperation({ summary: 'derive document all employee unity' })
-  async derivateDocumentAll(@Param('id') id: string): Promise<Documents> {
-    return this.documentsService.derivarDocumentAll(id);
+  async derivateDocumentAll(
+    @Param('id') id: string,
+    @Req() req,
+  ): Promise<Documents> {
+    const userId = req.user;
+    return this.documentsService.derivarDocumentAll(id, userId);
   }
 
-  // @Post('generate-pdf')
-  // async generatePDF(@Req() req, @Res() res) {
-  //   const { title, date } = req.body;
-  //   const pdfBuffer = await this.documentsService.generatePDF(title, date);
-
-  //   res.setHeader('Content-Type', 'application/pdf');
-  //   res.setHeader(
-  //     'Content-Disposition',
-  //     `attachment; filename=generated-document.pdf`,
-  //   );
-  //   res.send(pdfBuffer);
-  // }
-
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
+  // @Permissions(Permission.USER)
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Post(':id/:paso/numero-paso')
@@ -478,6 +546,9 @@ export class DocumentsController {
     }
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Post(':id/comment')
   @ApiOperation({
     summary: 'add dates from commnet document',
@@ -485,11 +556,16 @@ export class DocumentsController {
   @ApiOkResponse({ description: 'add comment into de document corectly' })
   async addComment(
     @Param('id', ParseObjectIdPipe) id: string,
+    @Req() req,
     @Body() comment: CreateCommentDto,
   ) {
-    return this.documentsService.addComment(id, comment);
+    const userId = req.user;
+    return this.documentsService.addComment(id, comment, userId);
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
   @Post(':id/milestone')
   @ApiOperation({
     summary: 'add milestone for documento',
@@ -497,9 +573,11 @@ export class DocumentsController {
   @ApiOkResponse({ description: 'milestones add into de document correctly' })
   async addMIlestone(
     @Param('id', ParseObjectIdPipe) id: string,
+    @Req() req,
     @Body() milestone: CreateMilestoneDto,
   ) {
-    return this.documentsService.addMilestones(id, milestone);
+    const userId = req.user;
+    return this.documentsService.addMilestones(id, milestone, userId);
   }
 }
 

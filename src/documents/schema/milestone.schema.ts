@@ -8,9 +8,12 @@ export class Milestone {
   @Prop({ uppercase: true })
   typeMIlestone: string;
 
+  @Prop()
+  userId: string;
+
   @Prop({ uppercase: true })
   description: string;
-  
+
   @Prop({ default: true })
   activeMilestone: boolean;
 
@@ -19,7 +22,6 @@ export class Milestone {
 
   @Prop({ default: Date.now() })
   updateAt: Date;
-
 }
 
 export const MIlestoneSchema = SchemaFactory.createForClass(Milestone);

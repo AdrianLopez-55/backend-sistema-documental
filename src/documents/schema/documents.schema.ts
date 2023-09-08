@@ -10,7 +10,7 @@ import {
 
 export type DocumentDocument = Documents & Document;
 
-@Schema({ versionKey: '__v' })
+@Schema({ versionKey: '__v', timestamps: true })
 export class Documents {
   @Prop({ default: () => `DOC-${incrementalValue(0)}` })
   numberDocument: string;
@@ -34,7 +34,7 @@ export class Documents {
   documentationType: DocumentationType;
 
   @Prop({ uppercase: true })
-  stateDocument: string;
+  stateDocumentWorkflow: string;
 
   @Prop({ type: WorkflowSchema, ref: 'Workflow', default: null })
   workflow: Workflow;
@@ -69,6 +69,9 @@ export class Documents {
   @Prop({ default: Date.now() })
   updateAt: Date;
 
+  @Prop()
+  year: string;
+
   @Prop({ default: 'create' })
   state: string;
 
@@ -76,7 +79,10 @@ export class Documents {
     type: [
       {
         oficinaActual: String,
-        receivedUsers: [{ ciUser: String, idOfUser: String }],
+        nameOficinaActual: String,
+        receivedUsers: [
+          { ciUser: String, idOfUser: String, nameOfficeUserRecieved: String },
+        ],
         oficinasPorPasar: Array,
         motivoBack: String,
       },
@@ -84,9 +90,43 @@ export class Documents {
   })
   bitacoraWorkflow: {
     oficinaActual: string;
-    receivedUsers: { ciUser: string; idOfUser: string }[];
+    nameOficinaActual: string;
+    receivedUsers: {
+      ciUser: string;
+      idOfUser: string;
+      nameOfficeUserRecieved: string;
+    }[];
     motivoBack: string;
     oficinasPorPasar: string[];
+  }[];
+
+  @Prop({
+    type: [
+      {
+        idUserSendOrigin: String,
+        idOfficeUserSend: String,
+        nameOficeUser: String,
+        recievedUsers: [
+          {
+            ciUser: String,
+            idOfUser: String,
+            idOffice: String,
+            nameOficeUserRecieved: String,
+          },
+        ],
+      },
+    ],
+  })
+  bitacoraWithoutWorkflow: {
+    idUserSendOrigin: string;
+    idOfficeUserSend: string;
+    nameOficeUser: string;
+    recievedUsers: {
+      ciUser: string;
+      idOfUser: string;
+      idOffice: string;
+      nameOficeUserRecieved: string;
+    }[];
   }[];
 }
 

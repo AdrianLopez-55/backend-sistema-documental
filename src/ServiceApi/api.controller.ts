@@ -52,32 +52,32 @@ export class ApiController {
     }
   }
 
-  @Post('login-test')
-  async authLogin(
-    @Res() res: Response,
-    @Body() loginAuthDocumentalDTO: LoginCentralAuthDTO,
-  ) {
-    const response = await this.apiService.loginAuthDocumental(
-      loginAuthDocumentalDTO,
-    );
-    return res.status(HttpStatus.OK).json({ response });
-  }
+  // @Post('login-test')
+  // async authLogin(
+  //   @Res() res: Response,
+  //   @Body() loginAuthDocumentalDTO: LoginCentralAuthDTO,
+  // ) {
+  //   const response = await this.apiService.loginAuthDocumental(
+  //     loginAuthDocumentalDTO,
+  //   );
+  //   return res.status(HttpStatus.OK).json({ response });
+  // }
 
-  @Post('login-test-test')
-  async loginCentral(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Body() loginCentralDTO: LoginCentralAuthDTO,
-  ) {
-    try {
-      console.log(loginCentralDTO);
-      const response = await this.apiService.loginAuthCentralTest(
-        loginCentralDTO,
-      );
-      return res.send(response);
-    } catch (error) {
-      console.log(error);
-      throw error;
-    }
-  }
+  // @Post('login-test-test')
+  // async loginCentral(
+  //   @Req() req: Request,
+  //   @Res() res: Response,
+  //   @Body() loginCentralDTO: LoginCentralAuthDTO,
+  // ) {
+  //   try {
+  //     console.log(loginCentralDTO);
+  //     const response = await this.apiService.loginAuthCentralTest(
+  //       loginCentralDTO,
+  //     );
+  //     return res.send(response);
+  //   } catch (error) {
+  //     console.log(error);
+  //     throw error;
+  //   }
+  // }
 }

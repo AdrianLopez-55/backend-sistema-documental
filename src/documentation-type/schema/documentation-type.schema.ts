@@ -6,9 +6,15 @@ export type DocumentationTypeDocument = DocumentationType & Document;
 @Schema({ versionKey: '__v', timestamps: false })
 export class DocumentationType {
   @Prop({
-    uppercase: true
+    uppercase: true,
   })
   typeName: string;
+
+  @Prop()
+  idTemplateDocType: string;
+
+  @Prop()
+  dataUriTemplate: string;
 
   @Prop({ default: true })
   activeDocumentType: boolean;

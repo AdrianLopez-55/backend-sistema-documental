@@ -22,13 +22,13 @@ export class RolService {
     private httpService: HttpService,
   ) {}
 
-  async setRolesDefault() {
+  async setRolDefault() {
     const count = await this.rolModel.estimatedDocumentCount();
     if (count > 0) return;
     const values = await Promise.all([
-      this.rolModel.create({ rolName: 'user' }),
-      this.rolModel.create({ rolName: 'admin' }),
-      this.rolModel.create({ rolName: 'superadmin' }),
+      this.rolModel.create({ rolName: 'USER' }),
+      this.rolModel.create({ rolName: 'ADMIN' }),
+      this.rolModel.create({ rolName: 'SUPERADMIN' }),
     ]);
     return values;
   }

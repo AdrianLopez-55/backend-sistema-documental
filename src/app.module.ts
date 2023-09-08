@@ -36,6 +36,10 @@ import { PersonalGetController } from './personal-get/personal-get.controller';
 import { PersonalGetModule } from './personal-get/personal-get.module';
 import { TemplateModule } from './template/template.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
+import { DigitalSignatureController } from './digital-signature/digital-signature.controller';
+import { DigitalSignatureService } from './digital-signature/digital-signature.service';
+import { DigitalSignatureModule } from './digital-signature/digital-signature.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -53,13 +57,12 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
     }), //process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
     PassportModule,
     HttpModule,
-    // PersonalModule,
+
     MulterModule.register({
       limits: {
         fileSize: 10485760,
       },
     }),
-    // PermissionsModule,
     OrganizationChartModule,
     DocumentationTypeModule,
     PermissionsModule,
@@ -70,12 +73,19 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
     UserLoginModule,
     PersonalGetModule,
     TemplateModule,
+    DigitalSignatureModule,
+    GatewayModule,
   ],
-  controllers: [AppController, PersonalGetController /*PersonalController*/],
+  controllers: [
+    AppController,
+    PersonalGetController,
+    // DigitalSignatureController /*PersonalController*/,
+  ],
   providers: [
     /*{provide: APP_INTERCEPTOR, useClass: ErrorsInterceptor},*/ AppService,
     UserLoginService,
-    PersonalGetService /*PersonalService,*/,
+    PersonalGetService,
+    // DigitalSignatureService /*PersonalService,*/,
   ],
 })
 export class AppModule implements NestModule {

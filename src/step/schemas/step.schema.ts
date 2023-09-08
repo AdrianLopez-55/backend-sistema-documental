@@ -18,6 +18,7 @@ export class Step {
     {
       paso: { type: Number, required: true },
       idOffice: { type: String, required: false },
+      oficina: { type: String, required: false },
       // idUser: { type: String, required: false },
       completado: { type: Boolean, default: false },
     },
@@ -25,6 +26,7 @@ export class Step {
   pasos: Array<{
     paso: number;
     idOffice: string;
+    oficina: string;
     // idUser: string;
     completado: boolean;
   }>;

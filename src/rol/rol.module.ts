@@ -7,7 +7,6 @@ import {
   Permission,
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
-import { PermissionsModule } from 'src/permissions/permission.module';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({

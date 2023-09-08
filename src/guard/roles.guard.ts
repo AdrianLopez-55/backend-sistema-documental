@@ -55,6 +55,7 @@ export class RolesGuard implements CanActivate {
       userDataRol = decodedToken.data.roles;
       console.log('esto es id del usuario');
       console.log(userDataId);
+      console.log(userDataRol);
       request['user'] = userDataId;
       request['userRol'] = userDataRol;
 
@@ -73,16 +74,11 @@ export class RolesGuard implements CanActivate {
       );
 
       const roleDetails = rolesWithDetails.map((response) => response.data);
-      // console.log('esto es roleDetails');
-      // console.log(roleDetails);
 
       const roleNames = roleDetails.map((role) => role.rolName);
       if (!roleNames) {
         throw new HttpException('no tiene los permisos necesarios', 403);
       }
-
-      // console.log('esto es el nombre del rol sacado del token');
-      // console.log(roleNames);
 
       let hasRequiredPermissions = true;
       for (const rolName of roleNames) {
