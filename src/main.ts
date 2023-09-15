@@ -9,6 +9,8 @@ import * as bodyParser from 'body-parser';
 import { AuthGuard } from './guards/auth.guard';
 import { LoggerMiddleware } from './logger.middleware';
 import { PermissionsService } from './permissions/permission.service';
+import { RolService } from './rol/rol.service';
+// import * as io from 'socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
@@ -17,6 +19,12 @@ async function bootstrap() {
 
   const permission = app.get(PermissionsService);
   permission.setPermissionDefault();
+
+  const rol = app.get(RolService);
+  rol.setRolDefault();
+
+  // const httpAdapter = app.getHttpAdapter();
+  // const ioServer = new io.Server(httpAdapter)
 
   // app.use(LoggerMiddleware);
 

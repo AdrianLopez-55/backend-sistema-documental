@@ -12,21 +12,14 @@ import {
   ParseIntPipe,
   Res,
   UseGuards,
-  UseInterceptors,
-  NotFoundException,
   BadRequestException,
-  BadGatewayException,
   HttpException,
-  HttpStatus,
-  UploadedFile,
-  Render,
   // Request,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { DocumentsService } from './documents.service';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
 import {
-  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
@@ -45,33 +38,17 @@ import { CreateMilestoneDto } from './dto/createMilestone.dto';
 import { SequenceService } from './sequenceService.service';
 import { PaginationDto } from '../common/pagination.dto';
 import { Documents } from './schema/documents.schema';
-import { ApiService } from 'src/ServiceApi/api.service';
-import { User } from '../interfaces/user.interface';
-import { FilterDto } from './dto/filter.dto';
-import { HttpService } from '@nestjs/axios';
-import { WorkflowService } from 'src/workflow/workflow.service';
-import { Workflow } from 'src/workflow/schemas/workflow.schema';
-import { LoggerMiddleware } from 'src/logger.middleware';
-import * as fs from 'fs';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { Multer } from 'multer';
-import * as handlebars from 'handlebars';
-import * as pdfkit from 'pdfkit';
-import * as PDFDocument from 'pdfkit';
-import { UploadTextDto } from './dto/uploadText.dto';
-import { NOTFOUND } from 'dns';
-import { ResponseInterceptor } from './reponseData.interceptor';
-import { updateWorkflowDocumentDto } from './dto/updateWorkflo..dtt';
 import { DocumentsFilter } from './dto/documents-filter.dto';
 import { CustomErrorService } from 'src/error.service';
 import { RolesGuard } from 'src/guard/roles.guard';
-// import { Permission } from 'src/permissions/schemas/permission.schema';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
-import { UpdateSteDocumentDto } from './dto/updatesteDocument.dto';
 import { AddWorkflowDocumentDto } from './dto/addWorkflowDocument.dto';
 import { AddWorkflowSinCiDocumentDto } from './dto/addWorkflowSinCiDocument.dto';
-// import { RolesGuard } from 'src/guard/roles.guard';
+import {
+  DeriveDocumentEmployedDto,
+  SendDocumentWithoutWorkflowDto,
+} from './dto/sendDocumentWithoutWorkflow.dto';
 
 @ApiTags('Documents')
 //---------rol user information---
@@ -82,9 +59,6 @@ export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
     private readonly sequenceService: SequenceService,
-    private readonly apiService: ApiService,
-    private readonly httpService: HttpService,
-    private readonly workflowService: WorkflowService,
     private readonly customErrorService: CustomErrorService,
   ) {}
 
@@ -93,8 +67,10 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Post()
-  @ApiOperation({ summary: 'registry new document' })
-  @ApiBadRequestResponse({ description: 'bad request response' })
+  @ApiOperation({
+    summary: 'registry new document',
+    description: 'this endpoint is used to register a new document',
+  })
   async create(
     @Res() res: Response,
     @Body() createDocumentDTO: CreateDocumentDTO,
@@ -118,15 +94,11 @@ export class DocumentsController {
         numberDocument,
         year: currentYear,
       };
-      // res.send(newRegisterDocument);
       const newDocument = await this.documentsService.create(
         newRegisterDocument,
         userId,
       );
-      // console.log(newDocument);
       res.send(newDocument);
-      // return this.documentsService.create(newRegisterDocument, userId);
-      // return newDocument;
     } catch (error) {
       throw error;
     }
@@ -138,12 +110,10 @@ export class DocumentsController {
   @Get()
   @ApiOperation({
     summary: 'see all documents or search by filters',
+    description:
+      'this endpoint is used to view all documents registered for all personnel.',
   })
-  @ApiNotFoundResponse({ description: 'The documents cant find' })
-  @ApiOkResponse({ description: 'documents finds', type: CreateDocumentDTO })
-  @ApiNotFoundResponse({ description: 'documents not founds' })
-  findAll(@Req() request: Request, @Req() req) {
-    // const userId = req.user;
+  findAll() {
     return this.documentsService.findAll();
   }
 
@@ -152,7 +122,11 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('documents-on-hold')
-  @ApiOperation({ summary: 'see all documents that do not send anyone' })
+  @ApiOperation({
+    summary: 'see all documents that do not send anyone',
+    description:
+      'this endpoint is used to view all your documents that do not have a worklfow and have not yet been sent to any other employee.',
+  })
   async getAllDocumentsOnHold(@Req() req) {
     const userId = req.user;
     return this.documentsService.getDocumentsOnHold(userId);
@@ -162,7 +136,11 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('active')
-  @ApiOperation({ summary: 'see only documents actives' })
+  @ApiOperation({
+    summary: 'see only documents actives',
+    description:
+      'this endpoint is used to view all documents of all personnel that have not been archived.',
+  })
   @ApiQuery({
     name: 'numberDocument',
     example: 'DOC-001',
@@ -178,7 +156,6 @@ export class DocumentsController {
   async findDocumentActive(
     @Query('numberDocument') numberDocument: string,
     @Query('title') title: string,
-    // @Req() request: Request,
     @Req() req,
   ): Promise<Documents[]> {
     const query: any = { active: true };
@@ -188,7 +165,6 @@ export class DocumentsController {
     if (title) {
       query.title = title;
     }
-    // const userId = req.user;
 
     return this.documentsService.findDocumentsActive(query);
   }
@@ -200,7 +176,8 @@ export class DocumentsController {
   @Get('paginacion')
   @ApiOperation({
     summary: 'get records by pagination',
-    description: 'Gets the records of documents by pagination',
+    description:
+      'Gets the records of documents by pagination all documentos from all personnel',
   })
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
   @ApiQuery({ name: 'offset', type: Number, example: 0, required: false })
@@ -215,7 +192,11 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('inactive')
-  @ApiOperation({ summary: 'see only documents inactives' })
+  @ApiOperation({
+    summary: 'see only documents inactives',
+    description:
+      'this endpoint is used to view all documents of all personnel that were archived or deleted.',
+  })
   @ApiQuery({
     name: 'numberDocument',
     example: 'DOC-001',
@@ -265,6 +246,8 @@ export class DocumentsController {
   @Get('recieved-without-workflow')
   @ApiOperation({
     summary: 'view all received documents directly without workflow',
+    description:
+      'this endpoint is used to view all documents received directly to your person without workflow.',
   })
   async getRecievedWithoutWorkflowDocument(@Req() req): Promise<Documents[]> {
     const userId = req.user;
@@ -276,7 +259,11 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('get-recieved-documents')
-  @ApiOperation({ summary: 'view received documents' })
+  @ApiOperation({
+    summary: 'view received documents',
+    description:
+      'this endpoint is used to view all documents received by your person and that follow a defined work flow.',
+  })
   async getRecievedDocuments(@Req() req): Promise<Documents[]> {
     const userId = req.user;
     return this.documentsService.showRecievedDocument(userId);
@@ -289,6 +276,8 @@ export class DocumentsController {
   @Get('documents-send-without-workflow')
   @ApiOperation({
     summary: 'see all documentos send to other user without workflow',
+    description:
+      'this endpoint is used to view all documents sent to other and other staff members but without defined worklfow',
   })
   async getDocumentsSendWithoutWorkflow(@Req() req) {
     const userId = req.user;
@@ -300,11 +289,38 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get('get-all-documents-send')
-  @ApiOperation({ summary: 'see all documents send to other users' })
+  @ApiOperation({
+    summary: 'see all documents send to other users',
+    description:
+      'this endpoint is used to view all documents sent with a predefined worklfow, it is also used to track these documents.',
+  })
   async getAllDocumentsSend(@Req() req) {
     const userId = req.user;
     return this.documentsService.showAllDocumentSend(userId);
   }
+
+  // @ApiBearerAuth()
+  // @Permissions(Permission.USER)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @Get(':id')
+  // @ApiOperation({
+  //   summary: 'search document by id',
+  //   description:
+  //     'this endpoint is used to search for any document by its document ID',
+  // })
+  // async findOne(@Param('id', ParseObjectIdPipe) id: string, active: boolean) {
+  //   try {
+  //     // const userId = req.user;
+  //     const document = await this.documentsService.findOne(id);
+  //     return this.documentsService.findOne(id);
+  //   } catch (error) {
+  //     if (error.name === 'CastError' && error.kind === 'ObjectId') {
+  //       throw new BadRequestException('ID de documento inválido');
+  //     }
+  //     throw error;
+  //   }
+  // }
 
   @ApiBearerAuth()
   @Permissions(Permission.USER)
@@ -313,22 +329,18 @@ export class DocumentsController {
   @Get(':id')
   @ApiOperation({
     summary: 'search document by id',
+    description:
+      'this endpoint is used to search for any document by its document ID',
   })
-  @ApiOkResponse({ description: 'document find' })
-  @ApiNotFoundResponse({ description: 'document not found or not exist' })
-  @ApiForbiddenResponse({
-    description: 'document forbiden, document not use now',
-  })
-  async findOne(
+  async findOneUserDoc(
     @Param('id', ParseObjectIdPipe) id: string,
-    active: boolean,
     @Req() req,
-    // @Res() response: Response,
+    active: boolean,
   ) {
     try {
-      // const userId = req.user;
-      const document = await this.documentsService.findOne(id);
-      return this.documentsService.findOne(id);
+      const userId = req.user;
+      const document = await this.documentsService.findOne(id, userId);
+      return document;
     } catch (error) {
       if (error.name === 'CastError' && error.kind === 'ObjectId') {
         throw new BadRequestException('ID de documento inválido');
@@ -341,7 +353,11 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get(':userId/get-documents-user')
-  @ApiOperation({ summary: 'view all documents owned by a user by their ID' })
+  @ApiOperation({
+    summary: 'view all documents owned by a user by their ID',
+    description:
+      'this endpoint is used to search for all documents held by a staff member using his or her ID',
+  })
   async getAllDocumentByUserId(
     @Req() req,
     @Param('userId') userId: string,
@@ -356,13 +372,16 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Get(':id/versions/:version')
-  @ApiOperation({ summary: 'show the varsion a choise from documento' })
+  @ApiOperation({
+    summary: 'show the varsion a choise from documento',
+    description:
+      'this endpoint is used to search for previous versions of any document.',
+  })
   async getDocumentVersion(
     @Req() req,
     @Param('id') id: string,
     @Param('version', ParseIntPipe) version: number,
   ): Promise<Documents> {
-    // const userId = req.user;
     return this.documentsService.getDocumentVersion(id, version);
   }
 
@@ -370,21 +389,36 @@ export class DocumentsController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Put(':id')
-  @ApiOperation({ summary: 'update document by id' })
-  @ApiOkResponse({ description: 'document update correctly' })
-  @ApiNotFoundResponse({ description: 'document not found' })
-  @ApiForbiddenResponse({ description: 'document not use now' })
+  @ApiOperation({
+    summary: 'update document by id',
+    description:
+      'this endpoint is used to update any document by means of its id',
+  })
   async update(
     @Param('id') id: string,
     @Body() updateDocumentDTO: UpdateDocumentDTO,
     @Req() req,
   ): Promise<Documents> {
-    // const userId = req.user;
-    const document = await this.documentsService.findOne(id);
-    if (!document.active) {
-      throw new ForbiddenException('documento inactivo');
-    }
-    return this.documentsService.update(id, updateDocumentDTO);
+    const userId = req.user;
+    return this.documentsService.update(id, updateDocumentDTO, userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.ADMIN)
+  @Permissions(Permission.SUPERADMIN)
+  @Put(':id')
+  @ApiOperation({
+    summary: 'update document by id',
+    description:
+      'this endpoint is used to update any document by means of its id',
+  })
+  async updateUserDoc(
+    @Param('id') id: string,
+    @Body() updateDocumentDTO: UpdateDocumentDTO,
+    @Req() req,
+  ): Promise<Documents> {
+    const userId = req.user;
+    return this.documentsService.update(id, updateDocumentDTO, userId);
   }
 
   @ApiBearerAuth()
@@ -464,11 +498,12 @@ export class DocumentsController {
   @ApiOperation({ summary: 'send document directly without workflow' })
   async sendDocumentWithoutWorkflow(
     @Param('id') documentId: string,
-    @Body() ci: string[],
+    @Body() sendDocumentWithoutWorkflowDto: SendDocumentWithoutWorkflowDto,
     @Req() req,
   ) {
     try {
       const userId = req.user;
+      const { ci } = sendDocumentWithoutWorkflowDto;
       return this.documentsService.sendDocumentSinWorkflow(
         documentId,
         ci,
@@ -485,16 +520,13 @@ export class DocumentsController {
   @Permissions(Permission.SUPERADMIN)
   @Post(':id/derive-document-employeed')
   @ApiOperation({ summary: 'sent a document a specific employeed' })
-  @ApiBody({
-    description: 'Array of CI numbers of employees to send the document to.',
-    type: [String],
-  })
   async derivateDocumentWithCi(
     @Param('id') id: string,
-    @Body() ci: string[],
+    @Body() deriveDocumentEmployedDto: DeriveDocumentEmployedDto,
     @Req() req,
   ): Promise<Documents> {
     try {
+      const { ci } = deriveDocumentEmployedDto;
       const userId = req.user;
       return this.documentsService.derivarDocumentWithCi(id, ci, userId);
     } catch (error) {

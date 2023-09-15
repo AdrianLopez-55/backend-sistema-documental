@@ -34,9 +34,9 @@ import { Permission } from 'src/guard/constants/Permission';
 export class RolController {
   constructor(private readonly rolService: RolService) {}
 
-  @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @ApiBearerAuth()
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Post()
   @ApiOperation({ summary: 'create a new role' })
   create(@Body() createRolDto: CreateRolDto) {
@@ -91,9 +91,9 @@ export class RolController {
     return await this.rolService.updateRol(id, updateRolDto);
   }
 
-  @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @ApiBearerAuth()
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Put('set-perission-to-rol/:id')
   @ApiOperation({
     summary: 'set permissions to a role using role id and permission name',

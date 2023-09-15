@@ -36,6 +36,36 @@ export class Documents {
   @Prop({ uppercase: true })
   stateDocumentWorkflow: string;
 
+  // para hacer seguimiento del documento pero sin datos, solo saber si
+  // el documento esta en espera, fue enviado, hubo alguna observacion, finalizo
+  // 'INICIADO', 'CONCLUIDO', 'OBSERVADO', 'SIN INICIAR'
+  // @Prop({ uppercase: true })
+  // stateDocumentWorkflowUserSend: string;
+
+  // este dato es solo para saber en que estado del documento esta la persona que
+  //recibio el documento y lo derivara, no puede ver el dato stateDocumetWorkflowUserSend
+  // 'RECIBIDO', 'REVISADO', 'DERIVADO', 'OBSERVADO', 'COMPLETADO'
+  // @Prop({ uppercase: true })
+  // steateDocumetUser: string;
+
+  //solo para ver el estado de un documento que fue enviado a una persona
+  //especifica pero sin workflow
+  // 'ENVIADO SIN WORKFLOW'
+  // @Prop({ uppercase: true })
+  // stateDocumentSentWitoutworkflow: string;
+
+  //dato de seguimiento mas detallado para la persona que envio un documento
+  // @Prop({
+  //   userRecieved: String,
+  //   nameOfficeUserRecieved: String,
+  //   stateDocumentUser: String,
+  // })
+  // infoStateDocument: {
+  //   userRecieved: string;
+  //   nameOfficeUserRecieved: string;
+  //   stateDocumentUser: string;
+  // };
+
   @Prop({ type: WorkflowSchema, ref: 'Workflow', default: null })
   workflow: Workflow;
 

@@ -1,6 +1,7 @@
 import { Controller, Get, Param, HttpException } from '@nestjs/common';
 import { OrganizationChartService } from './organization-chart.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import getConfig from '../config/configuration';
 
 @Controller('organization-chart')
 @ApiTags('external-organization-chart-data')
@@ -12,7 +13,7 @@ export class OrganizationChartController {
   @Get()
   @ApiOperation({ summary: 'Obtain all organization chart' })
   public async findAll(): Promise<any> {
-    const url = `${process.env.API_ORGANIZATION_CHART_MAIN}`;
+    const url = `${getConfig().api_organization_chart_main}`;
     try {
       const data = await this.organizationChartService.findAll(url);
       return data;

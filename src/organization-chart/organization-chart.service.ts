@@ -2,16 +2,25 @@ import { HttpException, Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { ObtainOrganigramaDataDto } from './dto/organigrama-resultt.dto';
 import { HttpService } from '@nestjs/axios';
+import getConfig from '../config/configuration';
 
 @Injectable()
 export class OrganizationChartService {
   constructor(private readonly httpService: HttpService) {}
-  private readonly baseUrl: string = `${process.env.API_ORGANIZATION_CHART_MAIN}`;
-  private readonly baseUrlId: string = `${process.env.API_ORGANIZATION_CHART_ID}`;
+  private readonly apiOrganizationChartMain =
+    getConfig().api_organization_chart_main;
+  private readonly apiOrganizationChartId =
+    getConfig().api_organization_chart_id;
+  private readonly baseUrl: string = `${
+    getConfig().api_organization_chart_main
+  }`;
+  private readonly baseUrlId: string = `${
+    getConfig().api_organization_chart_id
+  }`;
 
   public async findAll(url: string): Promise<any> {
     try {
-      const response = await axios.get(this.baseUrl);
+      const response = await axios.get(this.apiOrganizationChartMain);
       return response.data;
     } catch (error) {
       throw new Error('Error al obtener los datos de organization chart');
@@ -20,7 +29,7 @@ export class OrganizationChartService {
 
   public async findById(id: string): Promise<any> {
     try {
-      const response = await axios.get(`${this.baseUrlId}/${id}`);
+      const response = await axios.get(`${this.apiOrganizationChartId}/${id}`);
       if (!response) {
         throw new HttpException(`no se encontro la oficina: ${id}`, 404);
       }
@@ -31,9 +40,9 @@ export class OrganizationChartService {
   }
 
   public async findByName(name: string): Promise<any> {
-    const url = `${
-      process.env.API_ORGANIZATION_CHART_MAIN
-    }?name=${encodeURIComponent(name)}`;
+    const url = `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
+      name,
+    )}`;
 
     try {
       const response = await this.httpService.get(url).toPromise();

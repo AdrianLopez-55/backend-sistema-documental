@@ -2,7 +2,6 @@ import {
   HttpException,
   Injectable,
   NotFoundException,
-  GatewayTimeoutException,
   BadRequestException,
 } from '@nestjs/common';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
@@ -18,10 +17,8 @@ import {
   DocumentationType,
   DocumentationTypeDocument,
 } from 'src/documentation-type/schema/documentation-type.schema';
-import { ObtainDataDocumentationTypeDto } from './dto/documentation-type-result.dto';
 import getConfig from '../config/configuration';
 import { ApiService } from 'src/ServiceApi/api.service';
-import { FilterDto } from './dto/filter.dto';
 import { WorkflowService } from 'src/workflow/workflow.service';
 import {
   Workflow,
@@ -32,37 +29,26 @@ import { DocumentsFilter } from './dto/documents-filter.dto';
 import { Observable } from 'rxjs';
 import { AxiosResponse } from 'axios';
 import { map } from 'rxjs/operators';
-
-import { Document, Packer, Paragraph, TextRun } from 'docx';
 import * as fs from 'fs';
 import { TemplateHandler } from 'easy-template-x';
-import * as path from 'path';
 import { CustomErrorService } from 'src/error.service';
-import { SendToEmployeedDto } from './dto/sendToEmployeed.dto';
-import { SendOptionsDto } from './dto/sendOption.dto';
-import { PersonalGetService } from 'src/personal-get/personal-get.service';
-import { UpdateSteDocumentDto } from './dto/updatesteDocument.dto';
 import { StepService } from 'src/step/step.service';
 import { AddWorkflowDocumentDto } from './dto/addWorkflowDocument.dto';
 import { AddWorkflowSinCiDocumentDto } from './dto/addWorkflowSinCiDocument.dto';
-import * as officegen from 'officegen';
-import * as pdfkit from 'pdfkit';
-// import * as libre from 'libreoffice-convert'
-// import * as path from 'path';
-// import * as fs from 'fs/promises';
-import { promisify } from 'util';
-import * as libre from 'libreoffice-convert';
-// declare module 'libreoffice-convert' {
-//   export const convertAsync: (options: any) => Promise<any>;
-// }
-
-// libre.convertAsync = promisify(libre.convert);
+import * as docxConverter from 'docx-pdf';
+import { FindDocumentationTypeService } from './findDocumentationType.service';
 
 @Injectable()
 export class DocumentsService {
   private defaultLimit: number;
   private readonly apiFilesUploader = getConfig().api_files_uploader;
   private readonly apiFilesTemplate = getConfig().api_files_template;
+  private readonly apiPersonalGetCi = getConfig().api_personal_get_ci;
+  private readonly apiOrganizationChartMain =
+    getConfig().api_organization_chart_main;
+  private readonly apiOrganizationChartId =
+    getConfig().api_organization_chart_id;
+  private readonly apiPersonalGet = getConfig().api_personal_get;
 
   constructor(
     @InjectModel(Documents.name)
@@ -77,31 +63,33 @@ export class DocumentsService {
     private readonly workflowService: WorkflowService,
     private readonly customErrorService: CustomErrorService, // private personalGetService: PersonalGetService,
     private readonly stepService: StepService,
+    private readonly findDocumentationTypeService: FindDocumentationTypeService,
   ) {}
 
   //---------------------------- create new document ---------------
   async create(
     createDocumentDTO: CreateDocumentDTO,
-    //---------------------id user -------
     userId: string,
-    //-------------------------------------
   ): Promise<Documents> {
     try {
-      //--------------------------------------------------------------------------
+      // const file = createDocumentDTO.file;
+      const { file, documentTypeName } = createDocumentDTO;
+      // const documentationTypeData = await this.documentationTypeModel.findOne({
+      //   typeName: documentTypeName,
+      // });
 
-      const file = createDocumentDTO.file;
-      //--------------------------------------------------------------------------------------------------------
-      const { title, documentTypeName, description } = createDocumentDTO;
-      const documentationTypeData = await this.documentationTypeModel.findOne({
-        typeName: documentTypeName,
-      });
-      if (!documentationTypeData) {
-        throw new HttpException(
-          'no se encontro nombre del tipo de documento',
-          404,
+      // if (!documentationTypeData) {
+      //   throw new HttpException(
+      //     'no se encontro nombre del tipo de documento',
+      //     404,
+      //   );
+      // }
+
+      const documentationTypeData =
+        await this.findDocumentationTypeService.findDocumentationType(
+          documentTypeName,
         );
-      }
-      //--------------------------------------------------------------------------------------------------------
+
       if (file != undefined && file !== null) {
         return this.createDocumentWithFile(
           createDocumentDTO,
@@ -117,7 +105,7 @@ export class DocumentsService {
         );
       }
     } catch (error) {
-      throw new HttpException('algo salio mal', 400);
+      throw error;
     }
   }
 
@@ -203,35 +191,59 @@ export class DocumentsService {
     const handler = new TemplateHandler();
     const doc = await handler.process(templatefile, data);
     const fileNameDoc = `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.docx`;
+    const fileNamePdf = `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`;
 
     const templateDirectorySave = path.join(process.cwd(), 'template');
     const filePathDoc = path.join(templateDirectorySave, fileNameDoc);
 
     fs.writeFileSync(filePathDoc, doc);
 
-    const rutaDocGenerated = path.join(
+    //------------ convert to pdf ===============
+    const destinoDocumet = path.join(
+      process.cwd(),
+      'template',
+      `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`,
+    );
+
+    // const imputDocumentTemplate = fs.readFileSync(lugarDocument);
+    const inputPath = path.join(
       process.cwd(),
       'template',
       `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.docx`,
     );
-    const resultFile = fs.readFileSync(rutaDocGenerated);
+
+    const outPutDocumentTemplate = path.join(process.cwd(), 'template');
+    const outPUthFileName = `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`;
+    const outputhPathTemplate = path.join(
+      outPutDocumentTemplate,
+      outPUthFileName,
+    );
+
+    await this.convertDocxToPdf(inputPath, outputhPathTemplate);
+
+    const rutaPdfGenerated = path.join(
+      process.cwd(),
+      'template',
+      `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`,
+    );
+    const resultFile = fs.readFileSync(rutaPdfGenerated);
     const base64String = resultFile.toString('base64');
     const fileExtension = path
       .extname(
-        `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.docx`,
+        `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`,
       )
       .substring(1);
-    const mimeTypeDoc = `application/${fileExtension}`;
+    const mimeTypePdf = `application/${fileExtension}`;
 
-    const dataDocx = {
-      mime: mimeTypeDoc,
+    const dataPdf = {
+      mime: mimeTypePdf,
       base64: base64String,
     };
 
     const sentDataDocx = await this.httpService
       .post(`${this.apiFilesTemplate}/files/upload-template-docx`, {
-        templateName: fileNameDoc,
-        file: dataDocx,
+        templateName: fileNamePdf,
+        file: dataPdf,
       })
       .toPromise();
 
@@ -245,9 +257,15 @@ export class DocumentsService {
           console.log('Archivo temporal eliminado: ', filePathDoc);
         }
       });
+
+      fs.unlink(outputhPathTemplate, (err) => {
+        if (err) {
+          console.error('Error al eliminar archivo temporal PDF: ', err);
+        } else {
+          console.log('Archivo temporal PDF eliminado: ', outputhPathTemplate);
+        }
+      });
     }, timeToLiveInMIlliseconds);
-    console.log('datos recividos del servicio file enviado de template');
-    console.log(sentDataDocx.data.file._id);
     newDocument.idTemplate = sentDataDocx.data.file._id;
     //-----------------------------------------------------
     return newDocument.save();
@@ -337,7 +355,7 @@ export class DocumentsService {
     };
 
     const sentDataDocx = await this.httpService
-      .post(`${process.env.API_FILES_TEMPLATE}/files/upload-template-docx`, {
+      .post(`${this.apiFilesTemplate}/files/upload-template-docx`, {
         templateName: fileNameDoc,
         file: dataDocx,
       })
@@ -359,10 +377,30 @@ export class DocumentsService {
     return newDocument.save();
   }
 
+  //---------------------------------------------------------------
+
+  //---------- funcion para convertir docx a pdf ---------------------
+  async convertDocxToPdf(inputPath: Buffer, outputPath: Buffer) {
+    return new Promise<string>((resolve, reject) => {
+      docxConverter(inputPath, outputPath, (err: any, result: string) => {
+        if (err) {
+          console.error(err);
+          reject(err);
+        } else {
+          console.log('Result: ' + result);
+          resolve(result);
+        }
+      });
+    });
+  }
+
+  //------------------------------------------------
+
   //---------------------------------- update -------------------------
   async update(
     id: string,
     updateDocumentDTO: UpdateDocumentDTO,
+    userId: string,
   ): Promise<Documents> {
     const findDocument = await this.documentModel.findById(id).exec();
     if (!findDocument) {
@@ -461,9 +499,7 @@ export class DocumentsService {
     const idTemplateFromDoc =
       updateNewDocument.documentationType.idTemplateDocType;
     const getBase64Template = await this.httpService
-      .get(
-        `${process.env.API_FILES_TEMPLATE}/file/template/${idTemplateFromDoc}`,
-      )
+      .get(`${this.apiFilesTemplate}/file/template/${idTemplateFromDoc}`)
       .toPromise();
     const base64TemplateDoc = getBase64Template.data.file.base64;
     //--decodificar base64 a dats binarios
@@ -541,13 +577,11 @@ export class DocumentsService {
     };
 
     const sentDataDocx = await this.httpService
-      .post(`${process.env.API_FILES_TEMPLATE}/files/upload-template-docx`, {
+      .post(`${this.apiFilesTemplate}/files/upload-template-docx`, {
         templateName: fileNameDoc,
         file: dataDocx,
       })
       .toPromise();
-    console.log('datos recividos del servicio file enviado de template');
-    console.log(sentDataDocx.data.file._id);
     updateNewDocument.idTemplate = sentDataDocx.data.file._id;
     //---------------------------------------------------------
 
@@ -673,7 +707,7 @@ export class DocumentsService {
     if (pasoActual < pasos.length) {
       const unityUserPromises = ci.map(async (ci) => {
         const user = await this.httpService
-          .get(`${process.env.API_PERSONAL_GET_CI}/${ci}`)
+          .get(`${this.apiPersonalGetCi}/${ci}`)
           .toPromise();
         if (user.data._id === userId) {
           throw new HttpException('No se puede enviar archivo a si mismo', 400);
@@ -684,9 +718,9 @@ export class DocumentsService {
         const unityUser = user.data.unity;
         const dataOficeUser = await this.httpService
           .get(
-            `${
-              process.env.API_ORGANIZATION_CHART_MAIN
-            }?name=${encodeURIComponent(unityUser)}`,
+            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
+              unityUser,
+            )}`,
           )
           .toPromise();
         const exacMatch = dataOficeUser.data.find(
@@ -712,9 +746,7 @@ export class DocumentsService {
       workflow.oficinaActual = workflow.steps[0][0].pasos[pasoActual].oficina;
       let newBitacora = [];
       const nameOfTheOffice = await this.httpService
-        .get(
-          `${process.env.API_ORGANIZATION_CHART_ID}/${pasos[pasoActual].idOffice}`,
-        )
+        .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
         .toPromise();
       const nameOffce = nameOfTheOffice.data.name;
       newBitacora.push({
@@ -757,7 +789,6 @@ export class DocumentsService {
         404,
       );
     }
-
     const { workflowName } = addWorkflowSinCiDocumentDto;
 
     const workflowData = await this.findWorkflowByName(workflowName);
@@ -795,12 +826,18 @@ export class DocumentsService {
     //---- obtener info de la persona logeada y evitar su registro si trabja en
     //---- misma oficina
     const loggedUser = await this.httpService
-      .get(`${process.env.API_PERSONAL_GET}/${userId}`)
+      .get(`${this.apiPersonalGet}/${userId}`)
       .toPromise();
     const userOficce = loggedUser.data.unity;
+    const oficinaUserDentroBitacora =
+      document.workflow.steps[0][0].pasos.filter(
+        (dat) => dat.oficina === userOficce,
+      );
+
+    const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
     const loggedUserOffice = await this.httpService
       .get(
-        `${process.env.API_ORGANIZATION_CHART_MAIN}?name=${encodeURIComponent(
+        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
           userOficce,
         )}`,
       )
@@ -810,7 +847,7 @@ export class DocumentsService {
     );
 
     const personalList = await this.httpService
-      .get(`${process.env.API_PERSONAL_GET}`)
+      .get(`${this.apiPersonalGet}`)
       .toPromise();
 
     const personalListData = personalList.data;
@@ -829,19 +866,24 @@ export class DocumentsService {
       filteredUnitysPersonal.map(async (idOfice) => ({
         info: await this.httpService
           .get(
-            `${
-              process.env.API_ORGANIZATION_CHART_MAIN
-            }?name=${encodeURIComponent(idOfice.unity)}`,
+            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
+              idOfice.unity,
+            )}`,
           )
           .toPromise(),
         idOfUser: idOfice.idOfUser,
         ci: idOfice.ci,
       })),
     );
-    console.log('esto es obtainDatos');
-    console.log(obtainDatos.map((data) => data.ci));
 
     if (pasoActual < pasos.length) {
+      if (nextPasoUserState.completado === true) {
+        throw new HttpException(
+          'usted ya no puede derivar el documento porque ya fue enviado',
+          400,
+        );
+      }
+
       const reeeee = obtainDatos.map((response) => ({
         nameUnity: response.info.data[0].name,
         idOficce: response.info.data[0]._id,
@@ -855,8 +897,6 @@ export class DocumentsService {
       // const matchingUsers = filteredUnitysPersonal.filter(
       //   (datata) => datata.idOficce === pasos[pasoActual].idOffice,
       // );
-      console.log('esto es matchingUsers');
-      console.log(matchingUsers);
 
       const receivedUsers = matchingUsers.map((data) => ({
         ciUser: data.ci,
@@ -869,9 +909,7 @@ export class DocumentsService {
         workflow.pasoActual = pasoActual + 1;
         workflow.oficinaActual = workflow.steps[0][0].pasos[pasoActual].oficina;
         const nameOfTheOffice = await this.httpService
-          .get(
-            `${process.env.API_ORGANIZATION_CHART_ID}/${pasos[pasoActual].idOffice}`,
-          )
+          .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
           .toPromise();
         const nameOffce = nameOfTheOffice.data.name;
 
@@ -921,6 +959,20 @@ export class DocumentsService {
         404,
       );
     }
+
+    // Buscar el usuario actual en receivedUsers dentro de bitacoraWorkflow
+    const usuarioEnBitacora = document.bitacoraWorkflow.find((entry) =>
+      entry.receivedUsers.some((user) => user.idOfUser === userId),
+    );
+
+    if (!usuarioEnBitacora) {
+      throw new HttpException(
+        'Usted no tiene permisos para derivar el documento porque no lo recibio',
+        403,
+      );
+    }
+
+    // verificar el estado del siguiente paso
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
     const pasos = workflow.steps[0][0].pasos;
@@ -928,19 +980,29 @@ export class DocumentsService {
     //------- obtener lista con todos los usuarios ---
     //---------
     const loggedUser = await this.httpService
-      .get(`${process.env.API_PERSONAL_GET}/${userId}`)
+      .get(`${this.apiPersonalGet}/${userId}`)
       .toPromise();
     const userOficce = loggedUser.data.unity;
+
+    // verificar la oficina actual de usuario lodgeado
+    //  const oficinaActualUsuario = userOficce;
+    const oficinaUserDentroBitacora =
+      document.workflow.steps[0][0].pasos.filter(
+        (dat) => dat.oficina === userOficce,
+      );
+
+    const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
+
     const loggedUserOffice = await this.httpService
       .get(
-        `${process.env.API_ORGANIZATION_CHART_MAIN}?name=${encodeURIComponent(
+        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
           userOficce,
         )}`,
       )
       .toPromise();
 
     const personalList = await this.httpService
-      .get(`${process.env.API_PERSONAL_GET}`)
+      .get(`${this.apiPersonalGet}`)
       .toPromise();
 
     const personalListData = personalList.data;
@@ -958,9 +1020,9 @@ export class DocumentsService {
       filteredUnitysPersonal.map(async (idOfice) => ({
         info: await this.httpService
           .get(
-            `${
-              process.env.API_ORGANIZATION_CHART_MAIN
-            }?name=${encodeURIComponent(idOfice.unity)}`,
+            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
+              idOfice.unity,
+            )}`,
           )
           .toPromise(),
         idOfUser: idOfice.idOfUser,
@@ -969,6 +1031,13 @@ export class DocumentsService {
     );
 
     if (pasoActual < pasos.length) {
+      if (nextPasoUserState.completado === true) {
+        throw new HttpException(
+          'usted ya no puede derivar el documento porque ya fue enviado',
+          400,
+        );
+      }
+
       const reeeee = obtainDatos.map((response) => ({
         nameUnity: response.info.data[0].name,
         idOficce: response.info.data[0]._id,
@@ -994,9 +1063,7 @@ export class DocumentsService {
         workflow.oficinaActual = workflow.steps[0][0].pasos[pasoActual].oficina;
 
         const nameOfTheOffice = await this.httpService
-          .get(
-            `${process.env.API_ORGANIZATION_CHART_ID}/${pasos[pasoActual].idOffice}`,
-          )
+          .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
           .toPromise();
         const nameOffce = nameOfTheOffice.data.name;
 
@@ -1050,7 +1117,7 @@ export class DocumentsService {
     if (pasoActual < pasos.length) {
       const unityUserPromises = ci.map(async (ci) => {
         const user = await this.httpService
-          .get(`${process.env.API_PERSONAL_GET_CI}/${ci}`)
+          .get(`${this.apiPersonalGetCi}/${ci}`)
           .toPromise();
         if (user.data._id === userId) {
           throw new HttpException('No se puede enviar archivo a si mismo', 400);
@@ -1061,9 +1128,9 @@ export class DocumentsService {
         const unityUser = user.data.unity;
         const dataOficeUser = await this.httpService
           .get(
-            `${
-              process.env.API_ORGANIZATION_CHART_MAIN
-            }?name=${encodeURIComponent(unityUser)}`,
+            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
+              unityUser,
+            )}`,
           )
           .toPromise();
         const exacMatch = dataOficeUser.data.find(
@@ -1090,12 +1157,9 @@ export class DocumentsService {
       workflow.oficinaActual = workflow.steps[0][0].pasos[pasoActual].oficina;
 
       const nameOfTheOffice = await this.httpService
-        .get(
-          `${process.env.API_ORGANIZATION_CHART_ID}/${pasos[pasoActual].idOffice}`,
-        )
+        .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
         .toPromise();
       const nameOffce = nameOfTheOffice.data.name;
-      // console.log(nameOffce);
 
       document.bitacoraWorkflow.push({
         oficinaActual: pasos[pasoActual].idOffice,
@@ -1154,12 +1218,12 @@ export class DocumentsService {
     }
 
     const loggedUser = await this.httpService
-      .get(`${process.env.API_PERSONAL_GET}/${userId}`)
+      .get(`${this.apiPersonalGet}/${userId}`)
       .toPromise();
     const userOficce = loggedUser.data.unity;
     const loggedUserOffice = await this.httpService
       .get(
-        `${process.env.API_ORGANIZATION_CHART_MAIN}?name=${encodeURIComponent(
+        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
           userOficce,
         )}`,
       )
@@ -1170,7 +1234,7 @@ export class DocumentsService {
 
     const unityUserPromises = ci.map(async (ci) => {
       const user = await this.httpService
-        .get(`${process.env.API_PERSONAL_GET_CI}/${ci}`)
+        .get(`${this.apiPersonalGetCi}/${ci}`)
         .toPromise();
       if (user.data._id === userId) {
         throw new HttpException(
@@ -1185,7 +1249,7 @@ export class DocumentsService {
       const unityUser = user.data.unity;
       const dataOficeUser = await this.httpService
         .get(
-          `${process.env.API_ORGANIZATION_CHART_MAIN}?name=${encodeURIComponent(
+          `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
             unityUser,
           )}`,
         )
@@ -1209,14 +1273,6 @@ export class DocumentsService {
     );
 
     const idUsersToSend = unityUsers.map((data) => data.idOfUser);
-    // for (const row of infoIdUsers) {
-    //   for (const item of row) {
-    //     if (idUsersToSend.map((data) => data === item)) {
-    //       console.log('hay repetido');
-    //       throw new HttpException('documento ya enviado a usuario', 400);
-    //     }
-    //   }
-    // }
 
     document.bitacoraWithoutWorkflow.push({
       idUserSendOrigin: userId,
@@ -1251,13 +1307,10 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
 
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
         }
@@ -1265,13 +1318,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1279,7 +1328,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1323,13 +1372,10 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
 
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
         }
@@ -1337,13 +1383,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1351,7 +1393,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1365,70 +1407,27 @@ export class DocumentsService {
         }
       }
 
-      const idUserLogged = idUser;
+      const matchingBitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+        return entry.receivedUsers.some((user) => user.idOfUser === idUser);
+      });
 
-      const bitacoraEntries = document.bitacoraWorkflow;
-      const userIdsAndOffices = bitacoraEntries.map((entry) => ({
-        userId: entry.receivedUsers.map((dat) => dat.idOfUser),
-        office: entry.oficinaActual,
-      }));
-      // console.log('esto es userIdsAndOffices');
-      // console.log(userIdsAndOffices);
+      if (matchingBitacoraEntry && document.workflow) {
+        const matchingStep = document.workflow.steps[0][0].pasos.find(
+          (paso) => paso.idOffice === matchingBitacoraEntry.oficinaActual,
+        );
 
-      const filteredResult = userIdsAndOffices.filter((entry) =>
-        entry.userId.map((dat) => dat === idUser),
-      );
-      // console.log('esto es filteredRestul');
-      // console.log(filteredResult);
-
-      const matchingEntry = document.bitacoraWorkflow.find((entry) =>
-        filteredResult.some((result) =>
-          entry.receivedUsers.some((user) =>
-            result.userId.map((dat) => dat === user.idOfUser),
-          ),
-        ),
-      );
-
-      // console.log('esto es matchingEntry');
-      // console.log(matchingEntry);
-
-      if (matchingEntry) {
-        if (document.workflow) {
-          const usersInBitacora = matchingEntry.receivedUsers.map(
-            (user) => user.idOfUser,
+        if (matchingStep) {
+          const nextStepIndex = document.workflow.steps[0][0].pasos.findIndex(
+            (paso) => paso === matchingStep,
           );
-          if (usersInBitacora.includes(idUser)) {
-            const matchingStep = document.workflow.steps[0][0].pasos.find(
-              (paso) => paso.idOffice === matchingEntry.oficinaActual,
-            );
-            // console.log('esto es marchingStep');
-            // console.log(matchingStep);
-            if (matchingStep) {
-              const nextStepIndex =
-                document.workflow.steps[0][0].pasos.findIndex(
-                  (paso) => paso === matchingStep,
-                );
-              // console.log('esto es nextStepINdex');
-              // console.log(nextStepIndex);
-              if (
-                nextStepIndex <
-                document.workflow.steps[0][0].pasos.length - 1
-              ) {
-                const nextStep =
-                  document.workflow.steps[0][0].pasos[nextStepIndex + 1];
-                const stateSend = nextStep.completado ? 'enviado' : 'recibido';
-                document.stateDocumentWorkflow = stateSend;
-                filteredDocumentsWithSteps.push({
-                  document,
-                });
-              } else {
-                (document.stateDocumentWorkflow = 'COMPLETADO'),
-                  filteredDocumentsWithSteps.push({
-                    document,
-                  });
-              }
-            }
-          }
+
+          const stateSend =
+            nextStepIndex < document.workflow.steps[0][0].pasos.length - 1
+              ? 'enviado'
+              : 'recibido';
+
+          document.stateDocumentWorkflow = stateSend;
+          filteredDocumentsWithSteps.push({ document });
         }
       }
     }
@@ -1450,12 +1449,9 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
         }
@@ -1463,13 +1459,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1477,7 +1469,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1525,12 +1517,9 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
         }
@@ -1538,13 +1527,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1552,7 +1537,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1592,12 +1577,9 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
         }
@@ -1605,13 +1587,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1619,7 +1597,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1667,7 +1645,6 @@ export class DocumentsService {
 
     workflow.pasoActual = numberPaso;
     workflow.oficinaActual = selectedPaso.idOffice;
-    console.log(selectedPaso);
 
     const matchingEntry = document.bitacoraWorkflow.find(
       (entry) => entry.oficinaActual === selectedPaso.idOffice,
@@ -1677,9 +1654,7 @@ export class DocumentsService {
       const receivedUsers = matchingEntry.receivedUsers;
 
       const nameOfTheOffice = await this.httpService
-        .get(
-          `${process.env.API_ORGANIZATION_CHART_ID}/${selectedPaso.idOffice}`,
-        )
+        .get(`${this.apiOrganizationChartId}/${selectedPaso.idOffice}`)
         .toPromise();
       const nameOffce = nameOfTheOffice.data.name;
 
@@ -1739,12 +1714,9 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
           // throw new HttpException('no se encontro base64 del archivo', 404);
@@ -1753,19 +1725,15 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {}
       }
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1796,12 +1764,9 @@ export class DocumentsService {
         };
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
         }
@@ -1809,13 +1774,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1823,7 +1784,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1852,17 +1813,13 @@ export class DocumentsService {
         const fileRegisterObject = document.fileRegister as unknown as {
           _idFile: string;
         };
-        console.log(fileRegisterObject._idFile);
+
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          console.log('esto es base64 del servidor');
-          console.log(res.data.file.base64);
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
           // throw new HttpException('no se encontro base64 del archivo', 404);
@@ -1871,13 +1828,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1885,7 +1838,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1914,17 +1867,13 @@ export class DocumentsService {
         const fileRegisterObject = document.fileRegister as unknown as {
           _idFile: string;
         };
-        console.log(fileRegisterObject._idFile);
+
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          console.log('esto es base64 del servidor');
-          console.log(res.data.file.base64);
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           document.fileBase64 = null;
           // throw new HttpException('no se encontro base64 del archivo', 404);
@@ -1933,13 +1882,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            // 'data:' + res.data.file.mime + ';base64,' +
-            res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -1947,7 +1892,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -1976,15 +1921,12 @@ export class DocumentsService {
         const fileRegisterObject = document.fileRegister as unknown as {
           _idFile: string;
         };
-        console.log(fileRegisterObject._idFile);
+
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
             .toPromise();
-          document.fileBase64 =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.fileBase64 = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro base64 del archivo', 404);
         }
@@ -1992,12 +1934,9 @@ export class DocumentsService {
       if (document.idTemplate) {
         try {
           const res = await this.httpService
-            .get(
-              `${process.env.API_FILES_UPLOADER}/file/${document.idTemplate}`,
-            )
+            .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
             .toPromise();
-          document.base64Template =
-            'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+          document.base64Template = res.data.file.base64;
         } catch (error) {
           throw new HttpException('no se encontro datos', 404);
         }
@@ -2005,7 +1944,7 @@ export class DocumentsService {
       if (document.userId) {
         try {
           const res = await this.httpService
-            .get(`${process.env.API_PERSONAL_GET}/${document.userId}`)
+            .get(`${this.apiPersonalGet}/${document.userId}`)
             .toPromise();
           document.userInfo = {
             name: res.data.name,
@@ -2022,8 +1961,11 @@ export class DocumentsService {
     return documents;
   }
 
-  async findOne(id: string): Promise<Documents> {
+  async findOne(id: string, userId: string): Promise<Documents> {
     const documents = await this.documentModel.findOne({ _id: id }).exec();
+    if (!documents) {
+      throw new HttpException('this document not exist', 400);
+    }
     if (documents.active === false) {
       throw new HttpException(`documento con id: ${id} fue eliminado`, 404);
     }
@@ -2033,15 +1975,12 @@ export class DocumentsService {
       const fileRegisterObject = documents.fileRegister as unknown as {
         _idFile: string;
       };
-      // console.log(fileRegisterObject._idFile);
+
       try {
         const res = await this.httpService
-          .get(
-            `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-          )
+          .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
           .toPromise();
-        documents.fileBase64 =
-          'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+        documents.fileBase64 = res.data.file.base64;
       } catch (error) {
         throw new HttpException('no se encontro base64 del archivo', 404);
       }
@@ -2049,7 +1988,7 @@ export class DocumentsService {
     if (documents.idTemplate) {
       try {
         const res = await this.httpService
-          .get(`${process.env.API_FILES_UPLOADER}/file/${documents.idTemplate}`)
+          .get(`${this.apiFilesUploader}/file/${documents.idTemplate}`)
           .toPromise();
         documents.base64Template = res.data.file.base64;
       } catch (error) {
@@ -2059,7 +1998,7 @@ export class DocumentsService {
     if (documents.userId) {
       try {
         const res = await this.httpService
-          .get(`${process.env.API_PERSONAL_GET}/${documents.userId}`)
+          .get(`${this.apiPersonalGet}/${documents.userId}`)
           .toPromise();
         documents.userInfo = {
           name: res.data.name,
@@ -2073,6 +2012,57 @@ export class DocumentsService {
       }
     }
     // }
+    return documents;
+  }
+
+  async findOneUser(id: string, userId: string): Promise<Documents> {
+    const documents = await this.documentModel.findOne({ _id: id }).exec();
+    if (documents.active === false) {
+      throw new HttpException(`documento con id: ${id} fue eliminado`, 404);
+    }
+    if (documents.userId !== userId) {
+      throw new HttpException('not is your document', 400);
+    }
+    if (documents.fileRegister && typeof documents.fileRegister === 'object') {
+      const fileRegisterObject = documents.fileRegister as unknown as {
+        _idFile: string;
+      };
+
+      try {
+        const res = await this.httpService
+          .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
+          .toPromise();
+        documents.fileBase64 = res.data.file.base64;
+      } catch (error) {
+        throw new HttpException('no se encontro base64 del archivo', 404);
+      }
+    }
+    if (documents.idTemplate) {
+      try {
+        const res = await this.httpService
+          .get(`${this.apiFilesUploader}/file/${documents.idTemplate}`)
+          .toPromise();
+        documents.base64Template = res.data.file.base64;
+      } catch (error) {
+        throw new HttpException('no se encontro datos', 404);
+      }
+    }
+    if (documents.userId) {
+      try {
+        const res = await this.httpService
+          .get(`${this.apiPersonalGet}/${documents.userId}`)
+          .toPromise();
+        documents.userInfo = {
+          name: res.data.name,
+          lastName: res.data.lastName,
+          ci: res.data.ci,
+          email: res.data.email,
+          unity: res.data.unity,
+        };
+      } catch (error) {
+        documents.userId = 'no se encontraron datos del usuario';
+      }
+    }
     return documents;
   }
 
@@ -2093,15 +2083,12 @@ export class DocumentsService {
       const fileRegisterObject = documents.fileRegister as unknown as {
         _idFile: string;
       };
-      console.log(fileRegisterObject._idFile);
+
       try {
         const res = await this.httpService
-          .get(
-            `${process.env.API_FILES_UPLOADER}/file/${fileRegisterObject._idFile}`,
-          )
+          .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
           .toPromise();
-        documents.fileBase64 =
-          'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+        documents.fileBase64 = res.data.file.base64;
       } catch (error) {
         throw new HttpException('no se encontro base64 del archivo', 404);
       }
@@ -2109,10 +2096,9 @@ export class DocumentsService {
     if (documents.idTemplate) {
       try {
         const res = await this.httpService
-          .get(`${process.env.API_FILES_UPLOADER}/file/${documents.idTemplate}`)
+          .get(`${this.apiFilesUploader}/file/${documents.idTemplate}`)
           .toPromise();
-        documents.base64Template =
-          'data:' + res.data.file.mime + ';base64,' + res.data.file.base64;
+        documents.base64Template = res.data.file.base64;
       } catch (error) {
         throw new HttpException('no se encontro datos', 404);
       }
@@ -2120,7 +2106,7 @@ export class DocumentsService {
     if (documents.userId) {
       try {
         const res = await this.httpService
-          .get(`${process.env.API_PERSONAL_GET}/${documents.userId}`)
+          .get(`${this.apiPersonalGet}/${documents.userId}`)
           .toPromise();
         documents.userInfo = {
           name: res.data.name,
@@ -2184,7 +2170,7 @@ export class DocumentsService {
   }
 
   fetchAdditionalData(id: string): Observable<any> {
-    const url = `${process.env.API_FILES_UPLOADER}/file/${id}`;
+    const url = `${this.apiFilesUploader}/file/${id}`;
     return this.httpService.get(url).pipe(
       map((response: AxiosResponse) => {
         const formattedData = {

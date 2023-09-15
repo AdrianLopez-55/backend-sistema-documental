@@ -15,9 +15,13 @@ import { HttpService } from '@nestjs/axios';
 import { Request } from 'express';
 import { UpdateStepDto } from './dto/updateStep.dto';
 import { updateOnlyPasoDto } from './dto/updateOnlyPaso.dto';
+import getConfig from '../config/configuration';
 
 @Injectable()
 export class StepService {
+  private readonly apiOrganizationChartMain =
+    getConfig().api_organization_chart_main;
+
   constructor(
     @InjectModel(Step.name) private stepModel: Model<StepDocuments>,
     private readonly httpService: HttpService,
@@ -89,7 +93,7 @@ export class StepService {
     oficina: string,
   ): Promise<{ id: string; name: string }> {
     const organigramaUrl = `${
-      process.env.API_ORGANIZATION_CHART_MAIN
+      this.apiOrganizationChartMain
     }?name=${encodeURIComponent(oficina)}`;
     const responseOrganigramaName = await this.httpService
       .get(organigramaUrl)

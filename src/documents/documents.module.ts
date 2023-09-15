@@ -26,6 +26,7 @@ import {
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
 import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
+import { FindDocumentationTypeService } from './findDocumentationType.service';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
     AuthGuard,
     WorkflowService,
     CustomErrorService,
+    FindDocumentationTypeService,
   ],
 })
 export class DocumentsModule {}

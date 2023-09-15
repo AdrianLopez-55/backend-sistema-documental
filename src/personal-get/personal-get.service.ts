@@ -6,6 +6,8 @@ import { ObtainDataPersonalGetDto } from './dto/personal-get-result.dto';
 
 @Injectable()
 export class PersonalGetService {
+  private readonly apiPersonalGet = getConfig().api_personal_get;
+
   constructor(private readonly httpService: HttpService) {}
 
   public async fetchDataFromPersonalServer(url: string): Promise<any> {
@@ -23,7 +25,7 @@ export class PersonalGetService {
   public async fetchDataFromPersonalServerById(
     personalId: string,
   ): Promise<any> {
-    const url = `${process.env.API_PERSONAL_GET}/${personalId}`;
+    const url = `${this.apiPersonalGet}/${personalId}`;
     try {
       const data = await this.fetchDataFromPersonalServer(url);
       const { _id, name, lastName, ci, email, unity } = data;
@@ -46,9 +48,7 @@ export class PersonalGetService {
   public async fetchDataFromPersonalServerByCi(
     personalCi: string,
   ): Promise<any> {
-    const url = `${process.env.API_PERSONAL_GET}?ci=${encodeURIComponent(
-      personalCi,
-    )}`;
+    const url = `${this.apiPersonalGet}?ci=${encodeURIComponent(personalCi)}`;
     try {
       const response = await this.httpService.get(url).toPromise();
       const personalDataList = response.data;

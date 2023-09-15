@@ -15,6 +15,7 @@ import {
   Permission as PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
 import { Rol, RolDocument } from 'src/rol/schema/rol.schema';
+import getConfig from '../config/configuration';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -48,7 +49,7 @@ export class RolesGuard implements CanActivate {
     let userDataRol;
     try {
       const decodedToken = await this.httpService
-        .post(`${process.env.API_CENTRAL}/auth/decoded`, { token })
+        .post(`${getConfig().api_central}/auth/decoded`, { token })
         .toPromise();
       //-------------usuarios
       userDataId = decodedToken.data.idUser;
@@ -68,7 +69,7 @@ export class RolesGuard implements CanActivate {
       const rolesWithDetails = await Promise.all(
         decodedToken.data.roles.map((roleId) =>
           this.httpService
-            .get(`${process.env.API_CENTRAL}/rol/${roleId}`)
+            .get(`${getConfig().api_central}/rol/${roleId}`)
             .toPromise(),
         ),
       );

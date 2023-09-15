@@ -57,7 +57,6 @@ import { GatewayModule } from './gateway/gateway.module';
     }), //process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
     PassportModule,
     HttpModule,
-
     MulterModule.register({
       limits: {
         fileSize: 10485760,

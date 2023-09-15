@@ -9,7 +9,7 @@ import { AxiosResponse } from 'axios';
 
 @Injectable()
 export class ApiService {
-  private readonly apiSeguridad = process.env.API_CENTRAL;
+  private readonly apiSeguridad = getConfig().api_central;
   private authenticatedUser: User;
   constructor(private readonly httpService: HttpService) {}
 

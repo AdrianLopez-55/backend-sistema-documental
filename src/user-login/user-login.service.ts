@@ -1,14 +1,18 @@
 import { HttpService } from '@nestjs/axios';
 import { HttpException, Injectable } from '@nestjs/common';
+import getConfig from '../config/configuration';
 
 @Injectable()
 export class UserLoginService {
+  private readonly apiPersonalGet = getConfig().api_personal_get;
+  private readonly apiRolId = getConfig().api_rol_id;
+
   constructor(private readonly httpService: HttpService) {}
 
   async getUserLogged(userId: string, userRol: string[]) {
     try {
       const urlPersonal = await this.httpService
-        .get(`${process.env.API_PERSONAL_GET}/${userId}`)
+        .get(`${this.apiPersonalGet}/${userId}`)
         .toPromise();
       // console.log('esto es userRol');
       // console.log(userRol);
@@ -44,9 +48,7 @@ export class UserLoginService {
   async getMultipleDataByIds(ids: string[]): Promise<any[]> {
     const dataPromise = ids.map(
       async (id) =>
-        await this.httpService
-          .get(`${process.env.API_ROL_ID}/${id}`)
-          .toPromise(),
+        await this.httpService.get(`${this.apiRolId}/${id}`).toPromise(),
     );
     return Promise.all(dataPromise);
   }

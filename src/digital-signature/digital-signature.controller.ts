@@ -52,4 +52,16 @@ export class DigitalSignatureController {
     const userId = req.user;
     return this.digitalSignatureService.getUserWithDigitalSignature(userId);
   }
+
+  // @ApiBearerAuth()
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @Post('upload-private-key')
+  // async uploadPrivateKey(@Body() requestBody, @Req() req){
+  //   const userId = req.user;
+  //   const userPrivateKey = await this.digitalSignatureService.getUserWithDigitalSignature(userId)
+
+  //   const privateKey = userPrivateKey.privateKey;
+  //   const signedDocument = DigiSignLib.sign_pdf
+  // }
 }

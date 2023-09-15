@@ -11,6 +11,7 @@ import {
   DocumentDocument,
   Documents,
 } from 'src/documents/schema/documents.schema';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class DigitalSignatureService {
@@ -19,6 +20,7 @@ export class DigitalSignatureService {
     private readonly digitalSignatureModel: Model<DigitalSignatureDocument>,
     @InjectModel(Documents.name)
     private readonly documentsModel: Model<DocumentDocument>,
+    private readonly httpService: HttpService,
   ) {}
 
   async createKeys(userId: string) {
@@ -100,9 +102,26 @@ export class DigitalSignatureService {
   }
 
   async getUserWithDigitalSignature(userId: string): Promise<DigitalSignature> {
-    const digitalSignature = await this.digitalSignatureModel
-      .findOne({ userId: userId })
-      .exec();
-    return digitalSignature;
+    try {
+      const digitalSignature = await this.digitalSignatureModel
+        .findOne({ userId: userId })
+        .exec();
+      if (!digitalSignature) {
+        throw new HttpException('usted no cuenta con claves', 404);
+      }
+      return digitalSignature;
+    } catch (error) {
+      throw new HttpException('algo salio mal', 500);
+    }
   }
+
+  // async signDocumentWithPrivateKey(privateKey: string, document: Buffer){
+  //   try {
+  //     const privateKeyResponse = await this.httpService.post('http://localhost:8091/api/sign/document', {
+  //       document
+  //     })
+  //   } catch (error) {
+
+  //   }
+  // }
 }
