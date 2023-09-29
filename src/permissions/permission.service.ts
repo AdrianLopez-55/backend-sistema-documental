@@ -41,7 +41,7 @@ export class PermissionsService {
       this.permissionModel.create({ permissionName: 'ELIMINAR_PERMISO_DOC' }),
       this.permissionModel.create({ permissionName: 'USER' }),
       this.permissionModel.create({ permissionName: 'ADMIN' }),
-      this.permissionModel.create({ permissionName: 'SUPERADIN' }),
+      this.permissionModel.create({ permissionName: 'SUPERADMIN' }),
     ]);
     return values;
   }

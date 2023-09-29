@@ -1,3 +1,4 @@
+import { ExecutionContext, SetMetadata, UseGuards } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -7,20 +8,37 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { Request } from 'express';
+import { RolesGuard } from 'src/guard/roles.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { Permissions } from 'src/guard/decorators/permissions.decorator';
+import { Permission } from 'src/guard/constants/Permission';
 
-@WebSocketGateway(81, {
+// @UseGuards(RolesGuard)
+// @ApiBearerAuth()
+// @Permissions(Permission.USER)
+@WebSocketGateway({
   cors: { origin: '*' },
 })
 export class MessageGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer() server: Server;
-
   afterInit(server: any) {
     console.log('al encender esto se muestra');
   }
 
-  handleConnection(client: any, ...args: any[]) {
+  async handleConnection(client: Socket, ...args: any[]) {
+    // const request = args[0] as Request;
+    // const user = request.user;
+
+    // if (user) {
+    //   console.log(`Usuario conectado: ${user}`);
+    // } else {
+    //   console.log('usuario no autenticado');
+    //   client.disconnect(true);
+    // }
+    console.log(client.id);
     console.log('alguien se conecto al socket XD');
   }
 

@@ -5,37 +5,57 @@ import { Model } from 'mongoose';
 
 @Injectable()
 export class SequenceService {
-  private currentYear: number = new Date().getFullYear();
-  private documentCounter: number = 1;
+  private globalCounter: number = 0;
+  private contadorLock: boolean = false;
 
   constructor(
     @InjectModel(Documents.name) private documentModel: Model<Documents>,
   ) {}
 
+  // async getNextValueNumberDocument(): Promise<string> {
+  //   let currentYear = new Date().getFullYear().toString();
+  //   let year = await this.documentModel.findOne({ year: currentYear }).exec();
+  //   const yearNow = new Date().getFullYear().toString();
+  //   if (yearNow !== currentYear) {
+  //     currentYear = yearNow; // Actualiza el año almacenado
+  //     this.globalCounter = 1; // Reinicia el contador a 1
+  //   }
+  //   this.globalCounter += 1;
+  //   const count = await this.documentModel.countDocuments({}).exec();
+  //   const incrementValue = String(this.globalCounter).padStart(7, '0');
+  //   return `DOC-${incrementValue}-${currentYear}`;
+  // }
+
   async getNextValueNumberDocument(): Promise<string> {
     const currentYear = new Date().getFullYear().toString();
-    const count = await this.documentModel.countDocuments({}).exec();
-    const incrementValue = String(count + 1).padStart(3, '0');
+    let count = await this.documentModel.countDocuments({}).exec();
+    const incrementValue = String(count + 1).padStart(7, '0');
     return `DOC-${incrementValue}-${currentYear}`;
   }
 
-  async getNextValueNumberDocumentDD(): Promise<string> {
-    const currentYear = new Date().getFullYear().toString();
-    let year = await this.documentModel
-      .findOne({ year: currentYear })
-      .select('year')
-      .exec();
+  // async getNextValueNumberDocument(): Promise<string> {
+  //   if (!this.contadorLock) {
+  //     this.contadorLock = true;
 
-    if (!year) {
-      // Si no hay ningún documento registrado para el año actual, reinicia el contador.
-      year.year = currentYear;
-    }
+  //     try {
+  //       const currentYear = new Date().getFullYear().toString();
+  //       let count = await this.documentModel.countDocuments({}).exec();
+  //       const incrementValue = String(count + 1).padStart(7, '0');
 
-    const count = await this.documentModel
-      .countDocuments({ year: year })
-      .exec();
+  //       // Crear el nuevo documento con el número de documento generado
+  //       await this.documentModel.create({
+  //         numberDocument: `DOC-${incrementValue}-${currentYear}`,
+  //         // Otros campos del documento
+  //       });
 
-    const incrementValue = String(count + 1).padStart(3, '0');
-    return `DOC-${incrementValue}-${year}`;
-  }
+  //       return `DOC-${incrementValue}-${currentYear}`;
+  //     } finally {
+  //       this.contadorLock = false;
+  //     }
+  //   } else {
+  //     // Esperar un breve período y luego intentar nuevamente (puedes ajustar el tiempo según tus necesidades)
+  //     await new Promise((resolve) => setTimeout(resolve, 100));
+  //     return this.getNextValueNumberDocument();
+  //   }
+  // }
 }

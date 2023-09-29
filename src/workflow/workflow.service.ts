@@ -40,7 +40,7 @@ export class WorkflowService {
     const nuevoWorkflow = new this.workflowModel({
       nombre: nombre,
       descriptionWorkflow: descriptionWorkflow,
-      steps: [step],
+      step: step,
       oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
     });
 
@@ -103,106 +103,45 @@ export class WorkflowService {
       throw new NotFoundException(`Paso "${stepName}" no encontrado`);
     }
     if (stepName !== undefined && stepName !== '') {
-      existingWorkflow.steps = [step];
+      existingWorkflow.step = step;
     }
 
     const updatedWorkflow = await existingWorkflow.save();
     return updatedWorkflow;
   }
 
-  async updateOnlyPasoInWorkflow(
-    id: string,
-    updatePasoWorkflowDto: UpdatePasoWorkflowDto,
-  ) {
-    const workflow = await this.workflowModel.findOne({ _id: id }).exec();
-    if (!workflow) {
-      throw new HttpException(`el workflow con id: ${id} no existe`, 404);
-    }
-    if (workflow.activeWorkflow === false) {
-      throw new HttpException(`el workflow con id: ${id} fue eliminado`, 400);
-    }
+  // async updateOnlyPasoInWorkflow(
+  //   id: string,
+  //   updatePasoWorkflowDto: UpdatePasoWorkflowDto,
+  //   tokenDat: string,
+  // ) {
+  //   const workflow = await this.workflowModel.findOne({ _id: id }).exec();
+  //   if (!workflow) {
+  //     throw new HttpException(`el workflow con id: ${id} no existe`, 404);
+  //   }
+  //   if (workflow.activeWorkflow === false) {
+  //     throw new HttpException(`el workflow con id: ${id} fue eliminado`, 400);
+  //   }
 
-    const { paso, nameOfice } = updatePasoWorkflowDto;
-    const pasoSearch = paso;
-    const nameOficeVal = nameOfice;
-    const validateOffice = await this.stepService.checkOfficeValidity(
-      nameOficeVal,
-    );
+  //   const { paso, nameOfice } = updatePasoWorkflowDto;
+  //   const pasoSearch = paso;
+  //   const nameOficeVal = nameOfice;
+  //   const validateOffice = await this.stepService.checkOfficeValidity(
+  //     nameOficeVal,
+  //     tokenDat,
+  //   );
 
-    await this.stepService.validateOffice(nameOficeVal);
+  //   await this.stepService.validateOffice(nameOficeVal, tokenDat);
 
-    if (pasoSearch <= 0 || pasoSearch > workflow.steps[0][0].pasos.length) {
-      throw new HttpException('el paso no existe', 400);
-    }
-    const selectedStep = workflow.steps[0][0].pasos[pasoSearch - 1];
+  //   if (pasoSearch <= 0 || pasoSearch > workflow.steps[0][0].pasos.length) {
+  //     throw new HttpException('el paso no existe', 400);
+  //   }
+  //   const selectedStep = workflow.steps[0][0].pasos[pasoSearch - 1];
 
-    selectedStep.idOffice = validateOffice.id;
-    await workflow.save();
-    return workflow;
-  }
-
-  async updateAddpasoWorkflow(
-    id: string,
-    updatePasoWorkflowDto: UpdatePasoWorkflowDto,
-  ) {
-    const workflow = await this.workflowModel.findById(id).exec();
-    if (!workflow) {
-      throw new NotFoundException(
-        `El workflow con ID "${id}" no fue encontrado`,
-      );
-    }
-    if (workflow.activeWorkflow === false) {
-      throw new HttpException('documento eliminado', 400);
-    }
-    const { nameOfice, paso } = updatePasoWorkflowDto;
-
-    if (!paso || !nameOfice) {
-      throw new BadRequestException(
-        'Se requiere proporcionar el número de paso y el nombre de la oficina',
-      );
-    }
-
-    const validateOffice = await this.stepService.checkOfficeValidity(
-      nameOfice,
-    );
-    await this.stepService.validateOffice(nameOfice);
-    const newStep = {
-      paso: paso,
-      idOffice: validateOffice.id,
-      completado: false,
-      _id: new mongoose.Types.ObjectId(),
-    };
-
-    const steps = workflow.steps[0][0].pasos;
-
-    if (paso <= 0 || paso > steps.length + 1) {
-      throw new BadRequestException('El número de paso no es válido');
-    }
-
-    const existingStepIndex = steps.findIndex((step) => step.paso === paso);
-
-    if (steps[existingStepIndex - 1].step === paso) {
-      console.log('entroooo');
-      steps.splice(paso - 1, 0, newStep);
-      steps[existingStepIndex].step + 1;
-      return workflow;
-    }
-
-    const dttt = steps.splice(paso - 1, 0, newStep);
-    console.log(dttt);
-
-    if (existingStepIndex !== -1) {
-      // console.log(steps[existingStepIndex].paso);
-      // console.log(steps[existingStepIndex].paso + 1);
-      for (let i = existingStepIndex; i < steps.lenght; i++) {
-        // console.log(steps[i].paso + 1);
-        i + 1;
-      }
-    }
-
-    // await workflow.save();
-    return workflow;
-  }
+  //   selectedStep.idOffice = validateOffice.id;
+  //   await workflow.save();
+  //   return workflow;
+  // }
 
   async inactiverWorkflow(id: string, activeWorkflow: boolean) {
     const workflowData: WorkflowDocuments = await this.workflowModel.findById(

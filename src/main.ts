@@ -50,7 +50,6 @@ async function bootstrap() {
       'Validate Token',
       'Verify that the token and validation are correct',
     )
-
     .addTag(
       'user-logedd-info',
       'View the data of the authenticated user in the microservice',

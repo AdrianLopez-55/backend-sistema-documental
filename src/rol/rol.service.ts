@@ -29,6 +29,9 @@ export class RolService {
       this.rolModel.create({ rolName: 'USER' }),
       this.rolModel.create({ rolName: 'ADMIN' }),
       this.rolModel.create({ rolName: 'SUPERADMIN' }),
+      this.rolModel.create({ rolName: 'user' }),
+      this.rolModel.create({ rolName: 'admin' }),
+      this.rolModel.create({ rolName: 'superadmin' }),
     ]);
     return values;
   }

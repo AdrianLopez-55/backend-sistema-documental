@@ -5,7 +5,7 @@ export type RolDocument = HydratedDocument<Rol>;
 
 @Schema()
 export class Rol {
-  @Prop({ required: true, set: (value) => value.toUpperCase() })
+  @Prop({ required: true })
   rolName: string;
 
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Permission' }] })

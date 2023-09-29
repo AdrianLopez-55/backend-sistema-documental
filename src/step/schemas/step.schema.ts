@@ -34,7 +34,7 @@ export class Step {
   @Prop({ default: false })
   completado: boolean;
 
-  @Prop({ default: Date.now() })
+  @Prop({ default: Date.now(), immutable: true })
   createdAt: Date;
 
   @Prop({ default: Date.now() })

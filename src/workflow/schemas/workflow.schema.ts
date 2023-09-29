@@ -6,14 +6,14 @@ export type WorkflowDocuments = Workflow & Document;
 
 @Schema()
 export class Workflow {
-  @Prop({ required: true, uppercase: true })
+  @Prop({ uppercase: true })
   nombre: string;
 
   @Prop({ uppercase: true })
   descriptionWorkflow: string;
 
-  @Prop({ type: [{ type: [StepSchema], ref: 'Step' }] })
-  steps: Step[];
+  @Prop({ type: StepSchema, ref: 'Step' })
+  step: Step;
 
   @Prop({ default: 0 })
   pasoActual: number;

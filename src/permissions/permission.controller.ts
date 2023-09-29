@@ -121,7 +121,7 @@ export class PermissionsController {
   // @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
-  @Put(':id/activer')
+  @Put('activer/:id')
   @ApiOperation({ summary: 'reactivate permission by id' })
   activerPermission(@Param('id') id: string, active: boolean) {
     return this.permissionsService.activerPermission(id, active);

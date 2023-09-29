@@ -43,9 +43,6 @@ export class RolController {
     return this.rolService.createNewRol(createRolDto);
   }
 
-  @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
   @Get()
   @ApiOperation({ summary: 'obtain all rol' })
   async findAll() {
@@ -83,8 +80,7 @@ export class RolController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Put(':id')
   @ApiOperation({ summary: 'update rol by id' })
   async update(@Param('id') id: string, @Body() updateRolDto: UpdateRolDto) {
@@ -106,8 +102,7 @@ export class RolController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Delete(':id')
   @ApiOperation({ summary: 'inactivate a role by id' })
   async remove(@Param('id') id: string, activeRol: boolean) {
@@ -115,9 +110,8 @@ export class RolController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Put(':id/activer')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Put('activer/:id')
   @ApiOperation({ summary: 'reactivate rol by id' })
   activeRol(@Param('id') id: string, activeRol: boolean) {
     return this.rolService.activerRol(id, activeRol);

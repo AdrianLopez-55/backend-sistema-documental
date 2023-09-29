@@ -11,6 +11,9 @@ export class DigitalSignature {
   @Prop()
   publicKey: string;
 
+  @Prop({ unique: true })
+  hasPin: string;
+
   @Prop()
   privateKey: string;
 

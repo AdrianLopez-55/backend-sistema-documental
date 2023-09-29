@@ -1,22 +1,23 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
+// import { AppController } from './app.controller';
+// import { AppService } from './app.service';
 import { ApiModule } from './ServiceApi/api.module';
 import { ConfigModule } from '@nestjs/config';
 import { DocumentsModule } from './documents/documents.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { HttpModule } from '@nestjs/axios';
-// import { PersonalModule } from './personal/personal.module';
-// import { PersonalController } from './personal/personal.controller';
-// import { PersonalService } from './personal/personal.service';
 import configuration from './config/configuration';
 import getConfig from './config/configuration';
 import { MulterModule } from '@nestjs/platform-express';
-// import { PermissionsModule } from './permissions/permissions.module';
 import { OrganizationChartModule } from './organization-chart/organization-chart.module';
 import { DocumentationTypeModule } from './documentation-type/documentation-type.module';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ErrorsInterceptor } from './interceptors/error-format.interceptor';
 import { AuthMiddleware } from './auth.middleware';
 import { User } from './interfaces/user.interface';
@@ -40,6 +41,15 @@ import { DigitalSignatureController } from './digital-signature/digital-signatur
 import { DigitalSignatureService } from './digital-signature/digital-signature.service';
 import { DigitalSignatureModule } from './digital-signature/digital-signature.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { RolesGuard } from './guard/roles.guard';
+import { RoadmapModule } from './roadmap/roadmap.module';
+// import { StateDocumentModule } from './state-document/state-document.module';
+import { BitacoraService } from './bitacora/bitacora.service';
+import { BitacoraModule } from './bitacora/bitacora.module';
+import { Bitacora, BitacoraSchema } from './bitacora/schema/bitacora.schema';
+import { CustomErrorService } from './error.service';
+import { EmailService } from './email/email.service';
+import { EmailController } from './email/email.controller';
 
 @Module({
   imports: [
@@ -55,6 +65,9 @@ import { GatewayModule } from './gateway/gateway.module';
     MongooseModule.forRoot(getConfig().mongodb, {
       dbName: getConfig().db_name,
     }), //process.env.MONGO_URI, {dbName: process.env.DB_NAME}),
+    MongooseModule.forFeature([
+      { name: Bitacora.name, schema: BitacoraSchema },
+    ]),
     PassportModule,
     HttpModule,
     MulterModule.register({
@@ -74,21 +87,47 @@ import { GatewayModule } from './gateway/gateway.module';
     TemplateModule,
     DigitalSignatureModule,
     GatewayModule,
+    RoadmapModule,
+    BitacoraModule,
   ],
-  controllers: [
-    AppController,
-    PersonalGetController,
-    // DigitalSignatureController /*PersonalController*/,
-  ],
-  providers: [
-    /*{provide: APP_INTERCEPTOR, useClass: ErrorsInterceptor},*/ AppService,
-    UserLoginService,
-    PersonalGetService,
-    // DigitalSignatureService /*PersonalService,*/,
-  ],
+  controllers: [PersonalGetController, EmailController],
+  providers: [PersonalGetService, CustomErrorService, EmailService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes(
+      { path: '/documents', method: RequestMethod.POST },
+      { path: '/documents/*', method: RequestMethod.POST },
+      { path: '/documents/*', method: RequestMethod.DELETE },
+      { path: '/documents/*', method: RequestMethod.PUT },
+
+      { path: '/documentation-type', method: RequestMethod.POST },
+      { path: '/documentation-type/*', method: RequestMethod.PUT },
+      { path: '/documentation-type/*', method: RequestMethod.DELETE },
+
+      { path: '/workflow', method: RequestMethod.POST },
+      { path: '/workflow/*', method: RequestMethod.PUT },
+      { path: '/workflow/*', method: RequestMethod.DELETE },
+
+      { path: '/step', method: RequestMethod.POST },
+      { path: '/step/*', method: RequestMethod.PUT },
+      { path: '/step/*', method: RequestMethod.DELETE },
+
+      // { path: '/rol/*', method: RequestMethod.PUT },
+      // { path: '/rol/*', method: RequestMethod.DELETE },
+
+      // { path: '/permissions/*', method: RequestMethod.PUT },
+      // { path: '/permissions/*', method: RequestMethod.DELETE },
+
+      { path: '/roadmap', method: RequestMethod.POST },
+      { path: '/roadmap/*', method: RequestMethod.PUT },
+      { path: '/roadmap/*', method: RequestMethod.DELETE },
+
+      { path: '/digital-signature', method: RequestMethod.POST },
+      { path: '/digital-signature/*', method: RequestMethod.PUT },
+      { path: '/digital-signature/*', method: RequestMethod.DELETE },
+    );
+
     consumer.apply((req, res, next) => {
       res.render = (view, options) => {
         ejs.renderFile(

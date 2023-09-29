@@ -12,7 +12,9 @@ export class PersonalGetService {
 
   public async fetchDataFromPersonalServer(url: string): Promise<any> {
     try {
-      const response = await axios.get(url);
+      const response = await this.httpService
+        .get(`${this.apiPersonalGet}`)
+        .toPromise();
       return response.data;
     } catch (error) {
       throw new HttpException(

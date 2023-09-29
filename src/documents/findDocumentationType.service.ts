@@ -20,7 +20,7 @@ export class FindDocumentationTypeService {
     });
     if (!documentationTypeData) {
       throw new HttpException(
-        'No se encontro nombre del tipo de documento',
+        `No se encontro nombre del tipo de documento ${documentTypeName}`,
         404,
       );
     }

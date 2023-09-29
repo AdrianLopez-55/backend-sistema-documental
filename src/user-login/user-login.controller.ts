@@ -23,9 +23,7 @@ export class UserLoginController {
   ) {}
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('profile')
   @ApiOperation({ summary: 'see data of the logged in user' })
   async getUserLogged(@Request() req) {

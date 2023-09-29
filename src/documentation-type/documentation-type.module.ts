@@ -13,6 +13,7 @@ import {
   Permission,
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
+import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import {
       { name: DocumentationType.name, schema: DocumentationTypeSchema },
       { name: Rol.name, schema: RolSchema },
       { name: Permission.name, schema: PermissionSchema },
+      { name: Bitacora.name, schema: BitacoraSchema },
     ]),
     HttpModule,
   ],

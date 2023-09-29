@@ -27,6 +27,8 @@ import {
 } from 'src/permissions/schemas/permission.schema';
 import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
 import { FindDocumentationTypeService } from './findDocumentationType.service';
+import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { FindDocumentationTypeService } from './findDocumentationType.service';
       { name: Step.name, schema: StepSchema },
       { name: Permission.name, schema: PermissionSchema },
       { name: Rol.name, schema: RolSchema },
+      { name: Bitacora.name, schema: BitacoraSchema },
     ]),
     HttpModule,
     WorkflowModule,
@@ -54,6 +57,7 @@ import { FindDocumentationTypeService } from './findDocumentationType.service';
     WorkflowService,
     CustomErrorService,
     FindDocumentationTypeService,
+    EmailService,
   ],
 })
 export class DocumentsModule {}

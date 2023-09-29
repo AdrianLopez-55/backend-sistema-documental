@@ -12,7 +12,7 @@ export type DocumentDocument = Documents & Document;
 
 @Schema({ versionKey: '__v', timestamps: true })
 export class Documents {
-  @Prop({ default: () => `DOC-${incrementalValue(0)}` })
+  @Prop()
   numberDocument: string;
 
   @Prop()
@@ -33,26 +33,19 @@ export class Documents {
   @Prop({ type: DocumentationTypeSchema, ref: 'DocumentationType' })
   documentationType: DocumentationType;
 
-  @Prop({ uppercase: true })
-  stateDocumentWorkflow: string;
-
   // para hacer seguimiento del documento pero sin datos, solo saber si
   // el documento esta en espera, fue enviado, hubo alguna observacion, finalizo
-  // 'INICIADO', 'CONCLUIDO', 'OBSERVADO', 'SIN INICIAR'
-  // @Prop({ uppercase: true })
-  // stateDocumentWorkflowUserSend: string;
+  // 'INICIADO', 'CONCLUIDO', 'OBSERVADO', 'EN ESPERA', 'ARCHIVADO'
+  // en caso de que el documento se envie sin workflow, este dato debe mostrar lo siguiente:
+  // 'ENVIADO DIRECTO'
+  @Prop({ uppercase: true })
+  stateDocumentUserSend: string;
 
   // este dato es solo para saber en que estado del documento esta la persona que
   //recibio el documento y lo derivara, no puede ver el dato stateDocumetWorkflowUserSend
   // 'RECIBIDO', 'REVISADO', 'DERIVADO', 'OBSERVADO', 'COMPLETADO'
-  // @Prop({ uppercase: true })
-  // steateDocumetUser: string;
-
-  //solo para ver el estado de un documento que fue enviado a una persona
-  //especifica pero sin workflow
-  // 'ENVIADO SIN WORKFLOW'
-  // @Prop({ uppercase: true })
-  // stateDocumentSentWitoutworkflow: string;
+  @Prop({ uppercase: true })
+  stateDocumetUser: string;
 
   //dato de seguimiento mas detallado para la persona que envio un documento
   // @Prop({
@@ -75,7 +68,7 @@ export class Documents {
   @Prop({ default: null })
   fileRegister: mongoose.Schema.Types.Mixed;
 
-  @Prop({ default: null })
+  @Prop()
   fileBase64: string;
 
   @Prop()
@@ -93,11 +86,11 @@ export class Documents {
   @Prop({ default: true })
   active: boolean;
 
-  @Prop({ default: Date.now(), immutable: true })
-  createdAt: Date;
+  // @Prop({ default: Date.now(), immutable: true })
+  // createdAt: Date;
 
-  @Prop({ default: Date.now() })
-  updateAt: Date;
+  // @Prop({ default: Date.now() })
+  // updateAt: Date;
 
   @Prop()
   year: string;
@@ -105,15 +98,35 @@ export class Documents {
   @Prop({ default: 'create' })
   state: string;
 
+  @Prop()
+  counter: number;
+
   @Prop({
     type: [
       {
         oficinaActual: String,
         nameOficinaActual: String,
+        userSend: String,
+        dateSend: Date,
+        userDerived: String,
+        datedDerived: Date,
         receivedUsers: [
-          { ciUser: String, idOfUser: String, nameOfficeUserRecieved: String },
+          {
+            ciUser: String,
+            idOfUser: String,
+            nameOfficeUserRecieved: String,
+            dateRecived: Date,
+            observado: { type: Boolean, default: false },
+          },
         ],
-        oficinasPorPasar: Array,
+        oficinasPorPasar: [
+          {
+            paso: Number,
+            idOffice: String,
+            oficina: String,
+            completado: Boolean,
+          },
+        ],
         motivoBack: String,
       },
     ],
@@ -121,13 +134,24 @@ export class Documents {
   bitacoraWorkflow: {
     oficinaActual: string;
     nameOficinaActual: string;
+    userSend: string;
+    dateSend: Date;
+    userDerived: string;
+    datedDerived: Date;
     receivedUsers: {
       ciUser: string;
       idOfUser: string;
       nameOfficeUserRecieved: string;
+      dateRecived: Date;
+      observado: boolean;
     }[];
     motivoBack: string;
-    oficinasPorPasar: string[];
+    oficinasPorPasar: {
+      paso: number;
+      idOffice: string;
+      oficina: string;
+      completado: boolean;
+    }[];
   }[];
 
   @Prop({
@@ -158,6 +182,20 @@ export class Documents {
       nameOficeUserRecieved: string;
     }[];
   }[];
+
+  @Prop({
+    default: [],
+    type: [
+      {
+        digitalSignature: String,
+        userDigitalSignature: String,
+      },
+    ],
+  })
+  digitalSignatureDocument: {
+    digitalSignature: string;
+    userDigitalSignature: string;
+  }[];
 }
 
 export const DocumentsSchema = SchemaFactory.createForClass(Documents);
@@ -165,6 +203,6 @@ export type DocumentsModel = Model<Documents>;
 
 function incrementalValue(count: number): string {
   const nextValue = count + 1;
-  const paddedValue = String(nextValue).padStart(3, '0');
+  const paddedValue = String(nextValue).padStart(7, '0');
   return `DOC-${paddedValue}`;
 }

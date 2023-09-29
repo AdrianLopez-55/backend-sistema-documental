@@ -27,16 +27,16 @@ export class StepService {
     private readonly httpService: HttpService,
   ) {}
 
-  async crearStep(stepDto: StepDto): Promise<Step> {
+  async crearStep(stepDto: StepDto, tokenDat: string): Promise<Step> {
     const { step, descriptionStep, pasos } = stepDto;
     let prevPaso = 0;
     for (const paso of pasos) {
       const oficina = paso.oficina;
       try {
-        const officeInfo = await this.checkOfficeValidity(oficina);
+        const officeInfo = await this.checkOfficeValidity(oficina, tokenDat);
         paso.idOffice = officeInfo.id;
 
-        await this.validateOffice(oficina);
+        await this.validateOffice(oficina, tokenDat);
       } catch (error) {
         throw new BadRequestException(
           `Oficina no válida en el paso ${paso.paso}: ${error.message}`,
@@ -82,8 +82,8 @@ export class StepService {
     return true;
   }
 
-  async validateOffice(oficina: string): Promise<void> {
-    const isValid = await this.checkOfficeValidity(oficina);
+  async validateOffice(oficina: string, tokenDat: string): Promise<void> {
+    const isValid = await this.checkOfficeValidity(oficina, tokenDat);
     if (!isValid) {
       throw new HttpException('Oficina no válida', 400);
     }
@@ -91,19 +91,21 @@ export class StepService {
 
   async checkOfficeValidity(
     oficina: string,
+    tokenDat: string,
   ): Promise<{ id: string; name: string }> {
-    const organigramaUrl = `${
-      this.apiOrganizationChartMain
-    }?name=${encodeURIComponent(oficina)}`;
-    const responseOrganigramaName = await this.httpService
-      .get(organigramaUrl)
+    const response = await this.httpService
+      .get(
+        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(oficina)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${tokenDat}`,
+          },
+        },
+      )
       .toPromise();
 
-    const exacMatch = responseOrganigramaName.data.find(
-      (result) => result.name === oficina,
-    );
-    console.log(exacMatch.name);
-    const organigramaList = responseOrganigramaName.data;
+    const exacMatch = response.data.find((result) => result.name === oficina);
+    const organigramaList = response.data;
 
     try {
       const officeInfo = this.searchInTree(organigramaList, oficina);
@@ -174,7 +176,11 @@ export class StepService {
     return findOneStepId;
   }
 
-  async updateOnlyStep(id: string, updateOnlyPasoDto: updateOnlyPasoDto) {
+  async updateOnlyStep(
+    id: string,
+    updateOnlyPasoDto: updateOnlyPasoDto,
+    tokenDat: string,
+  ) {
     const findOneStepId = await this.stepModel.findOne({ _id: id }).exec();
     if (!findOneStepId) {
       throw new HttpException(`el step con id: ${id} no se encotro`, 404);
@@ -186,9 +192,11 @@ export class StepService {
     const { nameOfice, numberPaso } = updateOnlyPasoDto;
     const oficeSearch = nameOfice;
     const pasoSearch = numberPaso;
-    const validateNewOfice = await this.checkOfficeValidity(oficeSearch);
-    console.log(validateNewOfice.id);
-    await this.validateOffice(oficeSearch);
+    const validateNewOfice = await this.checkOfficeValidity(
+      oficeSearch,
+      tokenDat,
+    );
+    await this.validateOffice(oficeSearch, tokenDat);
 
     const stepFind = findOneStepId.pasos.find(
       (paso) => paso.paso == pasoSearch,
@@ -196,6 +204,7 @@ export class StepService {
 
     if (stepFind) {
       stepFind.idOffice = validateNewOfice.id;
+      stepFind.oficina = validateNewOfice.name;
       await findOneStepId.save();
       return findOneStepId;
     } else {
@@ -206,7 +215,11 @@ export class StepService {
     }
   }
 
-  async update(id: string, updateStepDto: UpdateStepDto): Promise<Step> {
+  async update(
+    id: string,
+    updateStepDto: UpdateStepDto,
+    tokenDat,
+  ): Promise<Step> {
     const existingStep = await this.stepModel.findById(id).exec();
     if (!existingStep) {
       throw new NotFoundException(`Step con ID "${id}" no encontrado`);
@@ -225,9 +238,9 @@ export class StepService {
       for (const paso of pasos) {
         const oficina = paso.oficina;
         try {
-          const officeInfo = await this.checkOfficeValidity(oficina);
+          const officeInfo = await this.checkOfficeValidity(oficina, tokenDat);
           paso.idOffice = officeInfo.id;
-          await this.validateOffice(oficina);
+          await this.validateOffice(oficina, tokenDat);
         } catch (error) {
           throw new BadRequestException(
             `Oficina no válida en el paso ${paso.paso}: ${error.message}`,

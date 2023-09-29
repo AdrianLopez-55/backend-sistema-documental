@@ -116,7 +116,7 @@ export class WorkflowController {
     return nombreWorkflow;
   }
 
-  @Get(':id/versions/:version')
+  @Get('versions/:id/:version')
   @ApiOperation({ summary: 'show the varsion a choise from documento' })
   async getDocumentVersion(
     @Param('id') id: string,
@@ -137,34 +137,25 @@ export class WorkflowController {
     return this.workflowService.update(id, workflowDto);
   }
 
-  @Put('update-add-stepe-anywhere/:id')
-  @ApiOperation({ summary: 'add step anywhere in step list' })
-  async updateAddStepWorkflow(
-    @Param('id') id: string,
-    @Body() updatePasoWorkflowDto: UpdatePasoWorkflowDto,
-  ) {
-    return this.workflowService.updateAddpasoWorkflow(
-      id,
-      updatePasoWorkflowDto,
-    );
-  }
-
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Put('update-only-paso/:id')
-  @ApiOperation({
-    summary: 'update only a especific paso by number in the workflow',
-  })
-  async updateOnlyPasoWorkflow(
-    @Param('id') id: string,
-    @Body() updatePasoWorkflowDto: UpdatePasoWorkflowDto,
-  ) {
-    return this.workflowService.updateOnlyPasoInWorkflow(
-      id,
-      updatePasoWorkflowDto,
-    );
-  }
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @Put('update-only-paso/:id')
+  // @ApiOperation({
+  //   summary: 'update only a especific paso by number in the workflow',
+  // })
+  // async updateOnlyPasoWorkflow(
+  //   @Param('id') id: string,
+  //   @Body() updatePasoWorkflowDto: UpdatePasoWorkflowDto,
+  //   @Req() req,
+  // ) {
+  //   const tokenDat = req.token;
+  //   return this.workflowService.updateOnlyPasoInWorkflow(
+  //     id,
+  //     updatePasoWorkflowDto,
+  //     tokenDat,
+  //   );
+  // }
 
   // @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
@@ -178,7 +169,7 @@ export class WorkflowController {
   // @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
-  @Put(':id/activer')
+  @Put('activer/:id')
   @ApiOperation({ summary: 'Activer workflow by ID' })
   activerWorkflow(@Param('id') id: string, activeWorflow: boolean) {
     return this.workflowService.activerWorkflow(id, activeWorflow);

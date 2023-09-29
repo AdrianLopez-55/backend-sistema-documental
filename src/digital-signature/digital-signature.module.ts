@@ -16,14 +16,23 @@ import {
   Documents,
   DocumentsSchema,
 } from 'src/documents/schema/documents.schema';
+import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
+import {
+  CredentialUser,
+  CredentialUserSchema,
+} from './schemas/credentialUser.schema';
+import { PinUser, PinUserSchema } from './schemas/pinUser.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: DigitalSignature.name, schema: DigitalSignatureSchema },
+      { name: CredentialUser.name, schema: CredentialUserSchema },
+      { name: PinUser.name, schema: PinUserSchema },
       { name: Rol.name, schema: RolSchema },
       { name: Permission.name, schema: PermissionSchema },
       { name: Documents.name, schema: DocumentsSchema },
+      { name: Bitacora.name, schema: BitacoraSchema },
     ]),
     HttpModule,
   ],

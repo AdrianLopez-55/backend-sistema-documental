@@ -10,6 +10,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  // Request,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -31,14 +32,13 @@ import { Permission } from 'src/guard/constants/Permission';
 import { updateOnlyPasoDto } from './dto/updateOnlyPaso.dto';
 
 @Controller('step')
-// @UseGuards(RolesGuard)
+@UseGuards(RolesGuard)
 @ApiTags('step')
 export class StepController {
   constructor(private readonly stepsService: StepService) {}
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @ApiResponse({ status: 201, description: 'Step creado exitosamente' })
   @ApiBody({
     type: StepDto,
@@ -60,13 +60,14 @@ export class StepController {
   })
   @Post()
   @ApiOperation({ summary: 'create a new step' })
-  async crearStep(@Body() stepDto: StepDto) {
-    return this.stepsService.crearStep(stepDto);
+  async crearStep(@Body() stepDto: StepDto, @Req() req) {
+    const tokenDat = req.token;
+    return this.stepsService.crearStep(stepDto, tokenDat);
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Get()
   @ApiOperation({ summary: 'Get all steps' })
   async findAllSteps() {
@@ -74,8 +75,8 @@ export class StepController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Get('filter')
   @ApiOperation({
     summary: 'Get records by parameter filtering',
@@ -92,8 +93,8 @@ export class StepController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Get('active')
   @ApiOperation({ summary: 'see only steps actives' })
   async findStepActives(): Promise<Step[]> {
@@ -101,8 +102,8 @@ export class StepController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Get('inactive')
   @ApiOperation({ summary: 'see only steps inactives' })
   async findStepInactives(): Promise<Step[]> {
@@ -110,8 +111,8 @@ export class StepController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Get(':id')
   @ApiOperation({ summary: 'Obtain step by ID' })
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
@@ -119,8 +120,7 @@ export class StepController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('step-name/:step')
   @ApiOperation({ summary: 'search document type by name' })
   async getStepByName(@Param('step') step: string) {
@@ -131,9 +131,8 @@ export class StepController {
     return stepName;
   }
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Put(':id')
   @ApiOperation({ summary: 'update step by ID' })
   @ApiBody({
@@ -153,25 +152,26 @@ export class StepController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() stepDto: StepDto) {
-    return this.stepsService.update(id, stepDto);
+  update(@Param('id') id: string, @Body() stepDto: StepDto, @Req() req) {
+    const tokenDat = req.token;
+    return this.stepsService.update(id, stepDto, tokenDat);
   }
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Put('update-only-paso/:id')
   @ApiOperation({ summary: 'update only a specific paso by number' })
   async updateONlyPaso(
     @Param('id') id: string,
     @Body() updateOnlyPasoDto: updateOnlyPasoDto,
+    @Req() req,
   ) {
-    return this.stepsService.updateOnlyStep(id, updateOnlyPasoDto);
+    const tokenDat = req.token;
+    return this.stepsService.updateOnlyStep(id, updateOnlyPasoDto, tokenDat);
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Delete(':id')
   @ApiOperation({ summary: 'Inactiver step by ID' })
   remove(@Param('id') id: string, activeStep: boolean) {
@@ -179,9 +179,8 @@ export class StepController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Put(':id/activer')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Put('activer/:id')
   @ApiOperation({ summary: 'reactivate step by id' })
   activerStep(@Param('id') id: string, activeStep: boolean) {
     return this.stepsService.activerStep(id, activeStep);

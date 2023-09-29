@@ -12,6 +12,7 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { DocumentationTypeService } from './documentation-type.service';
 import { CreateDocumentationTypeDto } from './dto/create-documentation-type.dto';
@@ -30,6 +31,7 @@ import { DocumentationTypeFilter } from './dto/documentType-filter.dto';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
 import { RolesGuard } from 'src/guard/roles.guard';
+import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
 
 @Controller('documentation-type')
 // @UseGuards(RolesGuard)
@@ -40,8 +42,9 @@ export class DocumentationTypeController {
   ) {}
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @UseInterceptors(LoggerInterceptor)
   @Post()
   @ApiOperation({ summary: 'Create a new documentation type' })
   create(@Body() createDocumentationTypeDto: CreateDocumentationTypeDto) {
@@ -51,10 +54,6 @@ export class DocumentationTypeController {
     return newDocumentationType;
   }
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
   @Get()
   @ApiOperation({ summary: 'see all documentation type in the database' })
   @ApiOkResponse({ description: 'document Types finds in the database' })
@@ -63,10 +62,6 @@ export class DocumentationTypeController {
     return this.documentationTypeService.findAll();
   }
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
   @Get('filtrado')
   @ApiOperation({
     summary: 'Get records by parameter filtering',
@@ -77,20 +72,12 @@ export class DocumentationTypeController {
     return await this.documentationTypeService.filterParams(filter);
   }
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
   @Get('active')
   @ApiOperation({ summary: 'see only document type actives' })
   async findDocumentTypeActive(): Promise<DocumentationType[]> {
     return this.documentationTypeService.findDocumentsTypeActive();
   }
 
-  // @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
   @Get(':id')
   @ApiOperation({ summary: 'see documentation type in the database by ID' })
   findOne(@Param('id') id: string) {
@@ -98,9 +85,9 @@ export class DocumentationTypeController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.USER)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
   @Get('document-type/:typeName')
   @ApiOperation({ summary: 'search document type by name' })
   async getDocumentTypeByName(@Param('typeName') typeName: string) {
@@ -113,8 +100,9 @@ export class DocumentationTypeController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @UseInterceptors(LoggerInterceptor)
   @Put(':id')
   @ApiOperation({ summary: 'update document by ID' })
   update(
@@ -125,8 +113,9 @@ export class DocumentationTypeController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @UseInterceptors(LoggerInterceptor)
   @Delete(':id')
   @ApiOperation({ summary: 'Inactiver document type by ID' })
   remove(@Param('id') id: string, activeDocumentType: boolean) {
@@ -137,9 +126,10 @@ export class DocumentationTypeController {
   }
 
   // @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Put(':id/activer')
+  // @Permissions(Permission.ADMIN)
+  // @Permissions(Permission.SUPERADMIN)
+  // @UseInterceptors(LoggerInterceptor)
+  @Put('activer/:id')
   @ApiOperation({ summary: 'reactivate document type by id' })
   activeTypeDocument(@Param('id') id: string, activeDocumentType: boolean) {
     return this.documentationTypeService.activerTypeDocument(

@@ -9,8 +9,11 @@ export default () => ({
   api_files_template: process.env.API_FILES_TEMPLATE,
   api_personal: process.env.API_PERSONAL,
   api_personal_get: process.env.API_PERSONAL_GET,
-  api_organization_chart_main: process.env.API_ORGANIZATION_CHART_MAIN,
-  api_organization_chart_id: process.env.API_ORGANIZATION_CHART_ID,
+  api_organization_chart_main: process.env.API_ORGANIZATION_CHART_MAIN_V2,
+  // api_organization_chart_main: process.env.API_ORGANIZATION_CHART_MAIN,
+  api_organization_chart_id: process.env.API_ORGANIZATION_CHART_ID_V2,
+  // api_organization_chart_id: process.env.API_ORGANIZATION_CHART_ID,
   api_personal_get_ci: process.env.API_PERSONAL_GET_CI,
+  api_document: process.env.API_DOCUMENT,
   api_rol_id: process.env.API_ROL_ID,
 });

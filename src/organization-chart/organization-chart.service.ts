@@ -18,18 +18,26 @@ export class OrganizationChartService {
     getConfig().api_organization_chart_id
   }`;
 
-  public async findAll(url: string): Promise<any> {
+  public async findAll(url: string, tokenDat: string): Promise<any> {
     try {
-      const response = await axios.get(this.apiOrganizationChartMain);
+      const response = await axios.get(this.apiOrganizationChartMain, {
+        headers: {
+          Authorization: `Bearer ${tokenDat}`,
+        },
+      });
       return response.data;
     } catch (error) {
-      throw new Error('Error al obtener los datos de organization chart');
+      throw new Error(`Error al obtener datos: ${error}`);
     }
   }
 
-  public async findById(id: string): Promise<any> {
+  public async findById(id: string, tokenDat: string): Promise<any> {
     try {
-      const response = await axios.get(`${this.apiOrganizationChartId}/${id}`);
+      const response = await axios.get(`${this.apiOrganizationChartId}/${id}`, {
+        headers: {
+          Authorization: `Bearer ${tokenDat}`,
+        },
+      });
       if (!response) {
         throw new HttpException(`no se encontro la oficina: ${id}`, 404);
       }
@@ -39,17 +47,22 @@ export class OrganizationChartService {
     }
   }
 
-  public async findByName(name: string): Promise<any> {
-    const url = `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-      name,
-    )}`;
-
+  public async findByName(name: string, tokenDat: string): Promise<any> {
     try {
-      const response = await this.httpService.get(url).toPromise();
+      const response = await this.httpService
+        .get(
+          `${this.apiOrganizationChartMain}?name=${encodeURIComponent(name)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${tokenDat}`,
+            },
+          },
+        )
+        .toPromise();
       const exactName = response.data.find((result) => result.name === name);
       return exactName;
     } catch (error) {
-      throw new HttpException('error al obtener los datos service', 500);
+      throw new HttpException('error al obtener los datos', 500);
     }
   }
 }

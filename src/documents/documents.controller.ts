@@ -14,7 +14,7 @@ import {
   UseGuards,
   BadRequestException,
   HttpException,
-  // Request,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { DocumentsService } from './documents.service';
@@ -49,23 +49,23 @@ import {
   DeriveDocumentEmployedDto,
   SendDocumentWithoutWorkflowDto,
 } from './dto/sendDocumentWithoutWorkflow.dto';
+import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
+import { EmailService } from 'src/email/email.service';
 
 @ApiTags('Documents')
-//---------rol user information---
 @UseGuards(RolesGuard)
-//-------------------------------
 @Controller('documents')
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
     private readonly sequenceService: SequenceService,
     private readonly customErrorService: CustomErrorService,
+    private readonly emailService: EmailService,
   ) {}
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
   @Post()
   @ApiOperation({
     summary: 'registry new document',
@@ -94,19 +94,21 @@ export class DocumentsController {
         numberDocument,
         year: currentYear,
       };
+
       const newDocument = await this.documentsService.create(
         newRegisterDocument,
         userId,
       );
+
       res.send(newDocument);
+      return newDocument;
     } catch (error) {
       throw error;
     }
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get()
   @ApiOperation({
     summary: 'see all documents or search by filters',
@@ -118,14 +120,12 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('documents-on-hold')
   @ApiOperation({
     summary: 'see all documents that do not send anyone',
     description:
-      'this endpoint is used to view all your documents that do not have a worklfow and have not yet been sent to any other employee.',
+      'this endpoint is used to view all your documents that do not have a worklfow and have not yet been send to any other employee.',
   })
   async getAllDocumentsOnHold(@Req() req) {
     const userId = req.user;
@@ -133,8 +133,7 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('active')
   @ApiOperation({
     summary: 'see only documents actives',
@@ -170,9 +169,7 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('paginacion')
   @ApiOperation({
     summary: 'get records by pagination',
@@ -189,8 +186,7 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('inactive')
   @ApiOperation({
     summary: 'see only documents inactives',
@@ -227,9 +223,7 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('filtrado')
   @ApiOperation({
     summary: 'Get records by parameter filtering',
@@ -240,9 +234,7 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('recieved-without-workflow')
   @ApiOperation({
     summary: 'view all received documents directly without workflow',
@@ -255,14 +247,12 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Get('get-recieved-documents')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('obtain-received-and-derived-documents')
   @ApiOperation({
-    summary: 'view received documents',
+    summary: 'view received and derived documents',
     description:
-      'this endpoint is used to view all documents received by your person and that follow a defined work flow.',
+      'this endpoint is used to view all documents received and derived by your person and that follow a defined work flow.',
   })
   async getRecievedDocuments(@Req() req): Promise<Documents[]> {
     const userId = req.user;
@@ -270,14 +260,12 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('documents-send-without-workflow')
   @ApiOperation({
     summary: 'see all documentos send to other user without workflow',
     description:
-      'this endpoint is used to view all documents sent to other and other staff members but without defined worklfow',
+      'this endpoint is used to view all documents send to other and other staff members but without defined worklfow',
   })
   async getDocumentsSendWithoutWorkflow(@Req() req) {
     const userId = req.user;
@@ -285,47 +273,62 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Get('get-all-documents-send')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('obtain-documents-send-with-workflow')
   @ApiOperation({
-    summary: 'see all documents send to other users',
+    summary: 'see all documents send to other users using workflow',
     description:
-      'this endpoint is used to view all documents sent with a predefined worklfow, it is also used to track these documents.',
+      'this endpoint is used to view all documents send with a predefined worklfow, it is also used to track these documents.',
   })
   async getAllDocumentsSend(@Req() req) {
     const userId = req.user;
     return this.documentsService.showAllDocumentSend(userId);
   }
 
-  // @ApiBearerAuth()
-  // @Permissions(Permission.USER)
-  // @Permissions(Permission.ADMIN)
-  // @Permissions(Permission.SUPERADMIN)
-  // @Get(':id')
-  // @ApiOperation({
-  //   summary: 'search document by id',
-  //   description:
-  //     'this endpoint is used to search for any document by its document ID',
-  // })
-  // async findOne(@Param('id', ParseObjectIdPipe) id: string, active: boolean) {
-  //   try {
-  //     // const userId = req.user;
-  //     const document = await this.documentsService.findOne(id);
-  //     return this.documentsService.findOne(id);
-  //   } catch (error) {
-  //     if (error.name === 'CastError' && error.kind === 'ObjectId') {
-  //       throw new BadRequestException('ID de documento inválido');
-  //     }
-  //     throw error;
-  //   }
-  // }
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-documents-completed')
+  @ApiOperation({
+    summary: 'get documents completed',
+    description:
+      'This endpoint is used to view all your submitted documents that were completed',
+  })
+  async getDocumentsCompleted(@Req() req) {
+    try {
+      const userId = req.user;
+      return this.documentsService.showAllDocumentsCompleted(userId);
+    } catch (error) {}
+  }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-documents-observed')
+  @ApiOperation({
+    summary: 'get documents observed',
+    description: 'get all documents observed',
+  })
+  async getDocumentsObserved(@Req() req) {
+    try {
+      const userId = req.user;
+      return this.documentsService.findDocumentsByUserIdAndObservation(userId);
+    } catch (error) {}
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-documents-archived-user')
+  @ApiOperation({
+    summary: 'see all yours documents achived',
+    description:
+      'this endpoint is used to view all yours documents that were archived',
+  })
+  async getDocumetsArchivedUser(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.findDocumentsArchivedUser(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get(':id')
   @ApiOperation({
     summary: 'search document by id',
@@ -350,9 +353,22 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Get(':userId/get-documents-user')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-base64-document/:id')
+  async getBase64Document(@Param('id') id: string) {
+    return this.documentsService.getBase64Documents(id);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-base64-template-document/:id')
+  async getBase64TemplateDocument(@Param('id') id: string) {
+    return this.documentsService.showBase64TemplateDoc(id);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-documents-user/:userId')
   @ApiOperation({
     summary: 'view all documents owned by a user by their ID',
     description:
@@ -368,10 +384,25 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Get(':id/versions/:version')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('send-email/:id')
+  async sendEmail(@Param('documentId') documentId: string) {
+    // Lógica para obtener la dirección de correo electrónico del usuario destinatario
+    const userEmail = 'adriplev@gmail.com'; // Debes obtener la dirección de correo electrónico del usuario de alguna manera
+
+    // Datos para el correo electrónico
+    const subject = 'Nuevo documento enviado';
+    const text = 'Has recibido un nuevo documento.';
+
+    // Envía el correo electrónico
+    await this.emailService.sendEmail(userEmail, subject, text);
+
+    return 'Correo electrónico enviado con éxito';
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('versions/:id/:version')
   @ApiOperation({
     summary: 'show the varsion a choise from documento',
     description:
@@ -386,8 +417,8 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
   @Put(':id')
   @ApiOperation({
     summary: 'update document by id',
@@ -404,8 +435,8 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
   @Put(':id')
   @ApiOperation({
     summary: 'update document by id',
@@ -422,9 +453,9 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Delete(':id/inactive')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Delete('inactive/:id')
   @ApiOkResponse({ description: 'document converted to inactive successfully' })
   @ApiNotFoundResponse({ description: 'document not found or not exist' })
   @ApiOperation({ summary: 'assign a document record to inactive using id' })
@@ -433,20 +464,19 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Put(':id/active')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Put('active/:id')
   @ApiOperation({ summary: 'reactivate a document record' })
   async reactiverDocument(@Param('id') id: string, active: boolean) {
     return this.documentsService.activerDocument(id, active);
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/sent-document-employeeds')
-  @ApiOperation({ summary: 'sent a document a specific employeed' })
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('send-document-employeeds/:id')
+  @ApiOperation({ summary: 'send a document a specific employeed' })
   async enviarDocumento(
     @Param('id') documentId: string,
     @Body() addWorkflowDocumentDto: AddWorkflowDocumentDto,
@@ -469,9 +499,9 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/sent-document-unity')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('send-document-unity/:id')
   @ApiOperation({ summary: 'send a document to all employees of the unit' })
   async sendDocumentUnity(
     @Param('id') documentId: string,
@@ -491,10 +521,9 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/send-document-without-workflow')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('send-document-without-workflow/:id')
   @ApiOperation({ summary: 'send document directly without workflow' })
   async sendDocumentWithoutWorkflow(
     @Param('id') documentId: string,
@@ -515,11 +544,10 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/derive-document-employeed')
-  @ApiOperation({ summary: 'sent a document a specific employeed' })
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('derive-document-employeed/:id')
+  @ApiOperation({ summary: 'send a document a specific employeed' })
   async derivateDocumentWithCi(
     @Param('id') id: string,
     @Body() deriveDocumentEmployedDto: DeriveDocumentEmployedDto,
@@ -535,9 +563,9 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/derive-document-unity-all')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('derive-document-unity-all/:id')
   @ApiOperation({ summary: 'derive document all employee unity' })
   async derivateDocumentAll(
     @Param('id') id: string,
@@ -548,10 +576,9 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  // @Permissions(Permission.USER)
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/:paso/numero-paso')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('mark-document-observed/:id/:paso')
   @ApiOperation({ summary: 'return to a previous step in the workflow' })
   @ApiBody({
     type: String,
@@ -567,21 +594,56 @@ export class DocumentsController {
   })
   async volverPasoAnteior(
     @Param('id') id: string,
-    @Param('paso') paso: number,
+    @Param('paso') numberPaso: number,
     @Body() data: { motivo: string },
+    @Req() req,
   ): Promise<Documents> {
     try {
       const { motivo } = data;
-      return this.documentsService.selectPasoAnterior(id, paso, motivo);
+      const userId = req.user;
+      return this.documentsService.selectPasoAnterior(
+        id,
+        numberPaso,
+        motivo,
+        userId,
+      );
     } catch (error) {
       throw new HttpException('algo salio mal' + error, 500);
     }
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/comment')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('mark-document-reviewed/:id')
+  @ApiOperation({
+    summary: 'mark document completed',
+    description:
+      'This endpoint is used to mark a document that has completed its workflow.',
+  })
+  async markDocumentReviewed(@Param('id') id: string, @Req() req) {
+    const userId = req.user;
+    return this.documentsService.markDocumentReviewed(id, userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('mark-document-completed/:id')
+  @ApiOperation({
+    summary: 'mark document completed',
+    description:
+      'This endpoint is used to mark a document that has completed its workflow.',
+  })
+  async markDocumentCompleted(@Param('id') id: string, @Req() req) {
+    const userId = req.user;
+    return this.documentsService.markDocumentcompleted(id, userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('comment/:id')
   @ApiOperation({
     summary: 'add dates from commnet document',
   })
@@ -596,9 +658,9 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.ADMIN)
-  @Permissions(Permission.SUPERADMIN)
-  @Post(':id/milestone')
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @UseInterceptors(LoggerInterceptor)
+  @Post('milestone/:id')
   @ApiOperation({
     summary: 'add milestone for documento',
   })
