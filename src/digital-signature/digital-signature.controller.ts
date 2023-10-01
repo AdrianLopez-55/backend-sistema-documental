@@ -35,6 +35,7 @@ export class DigitalSignatureController {
   generateKeys(@Req() req, @Body() createCredentialDto: CredentialUserDto) {
     const userId = req.user;
     const passwordUser = req.password;
+
     return this.digitalSignatureService.createKeys(
       userId,
       createCredentialDto,

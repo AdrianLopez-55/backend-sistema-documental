@@ -143,33 +143,12 @@ export class RolesGuard implements CanActivate {
       if (!hasRequiredPermissions) {
         throw new HttpException('el rol no tiene los permisos requeridos', 403);
       }
-
-      //-----------uso de permisos del token
-      // userPermission = roleDetails.map((index) => index.permissionName).flat();
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
       }
       throw error.response?.data;
     }
-
-    //---------- listar los permisos y comparlo con local, ya no usar ---
-    // const findAllPermission = await this.permissionModel.find();
-    // const filteredPermissions = findAllPermission.filter((permission) =>
-    //   userPermission.includes(permission._id.toString()),
-    // );
-    // console.log(findAllPermission);
-    // console.log(userPermission);
-    // console.log('asfsadfdasf', filteredPermissions);
-
-    // for (const permission of filteredPermissions) {
-    //   if (requiredPermission[0] == permission.permissionName) {
-    //     return true;
-    //   }
-    // }
-    // throw new UnauthorizedException(
-    //   'NO tiene permisos para ejecutar esta accion',
-    // );
   }
 
   private extractTokenFromHeader(

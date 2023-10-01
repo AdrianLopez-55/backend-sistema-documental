@@ -110,39 +110,6 @@ export class WorkflowService {
     return updatedWorkflow;
   }
 
-  // async updateOnlyPasoInWorkflow(
-  //   id: string,
-  //   updatePasoWorkflowDto: UpdatePasoWorkflowDto,
-  //   tokenDat: string,
-  // ) {
-  //   const workflow = await this.workflowModel.findOne({ _id: id }).exec();
-  //   if (!workflow) {
-  //     throw new HttpException(`el workflow con id: ${id} no existe`, 404);
-  //   }
-  //   if (workflow.activeWorkflow === false) {
-  //     throw new HttpException(`el workflow con id: ${id} fue eliminado`, 400);
-  //   }
-
-  //   const { paso, nameOfice } = updatePasoWorkflowDto;
-  //   const pasoSearch = paso;
-  //   const nameOficeVal = nameOfice;
-  //   const validateOffice = await this.stepService.checkOfficeValidity(
-  //     nameOficeVal,
-  //     tokenDat,
-  //   );
-
-  //   await this.stepService.validateOffice(nameOficeVal, tokenDat);
-
-  //   if (pasoSearch <= 0 || pasoSearch > workflow.steps[0][0].pasos.length) {
-  //     throw new HttpException('el paso no existe', 400);
-  //   }
-  //   const selectedStep = workflow.steps[0][0].pasos[pasoSearch - 1];
-
-  //   selectedStep.idOffice = validateOffice.id;
-  //   await workflow.save();
-  //   return workflow;
-  // }
-
   async inactiverWorkflow(id: string, activeWorkflow: boolean) {
     const workflowData: WorkflowDocuments = await this.workflowModel.findById(
       id,

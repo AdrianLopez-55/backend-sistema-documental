@@ -3,24 +3,18 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConsoleLogger,
 } from '@nestjs/common';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
 import { CreateDocumentDTO } from './dto/createDocument.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { DocumentDocument, Documents } from './schema/documents.schema';
 import { Model } from 'mongoose';
-import { Request } from 'express';
+// import { Request } from 'express';
 import { PaginationDto } from '../common/pagination.dto';
 import { HttpService } from '@nestjs/axios';
 import { DocumentationTypeService } from 'src/documentation-type/documentation-type.service';
-import {
-  DocumentationType,
-  DocumentationTypeDocument,
-} from 'src/documentation-type/schema/documentation-type.schema';
+import { DocumentationType } from 'src/documentation-type/schema/documentation-type.schema';
 import getConfig from '../config/configuration';
-import { ApiService } from 'src/ServiceApi/api.service';
-import { WorkflowService } from 'src/workflow/workflow.service';
 import {
   Workflow,
   WorkflowDocuments,
@@ -33,13 +27,10 @@ import { map } from 'rxjs/operators';
 import * as fs from 'fs';
 import { TemplateHandler } from 'easy-template-x';
 import { CustomErrorService } from 'src/error.service';
-import { StepService } from 'src/step/step.service';
 import { AddWorkflowDocumentDto } from './dto/addWorkflowDocument.dto';
 import { AddWorkflowSinCiDocumentDto } from './dto/addWorkflowSinCiDocument.dto';
 import * as docxConverter from 'docx-pdf';
 import { FindDocumentationTypeService } from './findDocumentationType.service';
-import { createUnzip } from 'zlib';
-import * as path from 'path';
 
 @Injectable()
 export class DocumentsService {
@@ -58,18 +49,12 @@ export class DocumentsService {
     private readonly documentModel: Model<DocumentDocument>,
     private readonly httpService: HttpService,
     @InjectModel(DocumentationType.name)
-    private documentationTypeModel: Model<DocumentationTypeDocument>,
     private readonly documentationTypeService: DocumentationTypeService,
-    // private readonly documentationTypesModel: Model<DocumentationTypeDocument>,
-    private readonly apiService: ApiService,
     @InjectModel(Workflow.name) private workflowModel: Model<WorkflowDocuments>,
-    private readonly workflowService: WorkflowService,
-    private readonly customErrorService: CustomErrorService, // private personalGetService: PersonalGetService,
-    private readonly stepService: StepService,
+    // private readonly customErrorService: CustomErrorService, // private personalGetService: PersonalGetService,
     private readonly findDocumentationTypeService: FindDocumentationTypeService,
   ) {}
 
-  //---------------------------- create new document ---------------
   async create(
     createDocumentDTO: CreateDocumentDTO,
     userId: string,
@@ -81,7 +66,7 @@ export class DocumentsService {
           documentTypeName,
         );
 
-      if (file /*!= undefined && file !== null*/) {
+      if (file) {
         return this.createDocumentWithFile(
           createDocumentDTO,
           documentationTypeData,
@@ -127,7 +112,6 @@ export class DocumentsService {
       stateDocumentUserSend: 'EN ESPERA',
       userId: userId,
     });
-    // newDocument.counter = +1;
     return newDocument.save();
   }
 
@@ -142,7 +126,6 @@ export class DocumentsService {
       stateDocumentUserSend: 'EN ESPERA',
       userId: userId,
     });
-    // newDocument.counter = +1;
     return newDocument.save();
   }
 
@@ -173,7 +156,6 @@ export class DocumentsService {
     const fileBase64 = document.fileBase64;
     const showDocument = { idDocument, fileBase64 };
     return showDocument;
-    //-----------------------------------------------------
   }
 
   async showBase64TemplateDoc(id: string) {
@@ -198,10 +180,8 @@ export class DocumentsService {
     const fileName = `${document.documentationType.typeName}_template.docx`;
     const filePathTemplateDoc = path.join(tempFolder, fileName);
     fs.writeFileSync(filePathTemplateDoc, binaryData);
-
     //---borrar el template descargado
     const timeToLiveInMIllisecondsTemplate = 1 * 60 * 1000;
-
     setTimeout(() => {
       fs.unlink(filePathTemplateDoc, (err) => {
         if (err) {
@@ -212,15 +192,12 @@ export class DocumentsService {
       });
     }, timeToLiveInMIllisecondsTemplate);
 
-    //--------------------------------------------
-
     const rutaTemplate = path.join(
       process.cwd(),
       'template',
       `${document.documentationType.typeName}_template.docx`,
     );
     const templatefile = fs.readFileSync(rutaTemplate);
-
     const data = {
       numberDocumentTag: document.numberDocument,
       title: document.title,
@@ -238,12 +215,6 @@ export class DocumentsService {
     fs.writeFileSync(filePathDoc, doc);
 
     //------------ convert to pdf ===============
-    const destinoDocumet = path.join(
-      process.cwd(),
-      'template',
-      `${document.documentationType.typeName}_${document.numberDocument}.pdf`,
-    );
-
     // const imputDocumentTemplate = fs.readFileSync(lugarDocument);
     const inputPath = path.join(
       process.cwd(),
@@ -324,7 +295,6 @@ export class DocumentsService {
     return showDocument;
   }
 
-  //---------------------------------- update -------------------------
   async update(
     id: string,
     updateDocumentDTO: UpdateDocumentDTO,
@@ -354,6 +324,7 @@ export class DocumentsService {
     if (documentTypeName !== undefined && documentTypeName !== '') {
       findDocument.documentationType = documentationType;
     }
+
     if (updateDocumentDTO.file && updateDocumentDTO.file.startsWith('data')) {
       return this.updateDocumentWithFile(
         id,
@@ -422,98 +393,6 @@ export class DocumentsService {
     const updateNewDocument = await this.documentModel
       .findOneAndUpdate({ _id: id }, updateDocument, { new: true })
       .exec();
-    /*
-    //---------- template -----------------
-    //---DOWNLOAD TEMPLATE FROM TYPE DOCUMENT ------
-    const idTemplateFromDoc =
-      updateNewDocument.documentationType.idTemplateDocType;
-    const getBase64Template = await this.httpService
-      .get(`${this.apiFilesTemplate}/file/template/${idTemplateFromDoc}`)
-      .toPromise();
-    const base64TemplateDoc = getBase64Template.data.file.base64;
-    //--decodificar base64 a dats binarios
-    const binaryData = Buffer.from(base64TemplateDoc, 'base64');
-    //--especificar ruta y nombre del archivo temporal
-    const path = require('path');
-    const tempFolder = path.join(process.cwd(), 'template');
-    const fileName = `${updateNewDocument.documentationType.typeName}_template.docx`;
-    const filePathTemplateDoc = path.join(tempFolder, fileName);
-    fs.writeFileSync(filePathTemplateDoc, binaryData);
-
-    //---borrar el template descargado
-    const timeToLiveInMIllisecondsTemplate = 1 * 60 * 1000;
-
-    setTimeout(() => {
-      fs.unlink(filePathTemplateDoc, (err) => {
-        if (err) {
-          console.error('error al eliminar archivo temporal: ', err);
-        } else {
-          console.log('Archivo temporal eliminado: ', filePathTemplateDoc);
-        }
-      });
-    }, timeToLiveInMIllisecondsTemplate);
-    //------------------------------------------
-
-    const rutaTemplate = path.join(
-      process.cwd(),
-      'template',
-      `${updateNewDocument.documentationType.typeName}_template.docx`,
-    );
-    const templatefile = fs.readFileSync(rutaTemplate);
-
-    const data = {
-      numberDocumentTag: updateNewDocument.numberDocument,
-      title: updateNewDocument.title,
-      descriptionTag: updateNewDocument.description,
-    };
-
-    const handler = new TemplateHandler();
-    const doc = await handler.process(templatefile, data);
-    const fileNameDoc = `${updateNewDocument.documentationType.typeName}_${updateNewDocument.numberDocument}.docx`;
-
-    const templateDirectorySave = path.join(process.cwd(), 'template');
-    const filePathDoc = path.join(templateDirectorySave, fileNameDoc);
-
-    fs.writeFileSync(filePathDoc, doc);
-    const timeToLiveInMIlliseconds = 1 * 60 * 1000;
-
-    setTimeout(() => {
-      fs.unlink(filePathDoc, (err) => {
-        if (err) {
-          console.error('error al eliminar archivo temporal: ', err);
-        } else {
-          console.log('Archivo temporal eliminado: ', filePathDoc);
-        }
-      });
-    }, timeToLiveInMIlliseconds);
-    const rutaDocGenerated = path.join(
-      process.cwd(),
-      'template',
-      `${updateNewDocument.documentationType.typeName}_${updateNewDocument.numberDocument}.docx`,
-    );
-    const resultFile = fs.readFileSync(rutaDocGenerated);
-    const base64String = resultFile.toString('base64');
-    const fileExtension = path
-      .extname(
-        `${updateNewDocument.documentationType.typeName}_${updateNewDocument.numberDocument}.docx`,
-      )
-      .substring(1);
-    const mimeTypeDoc = `application/${fileExtension}`;
-
-    const dataDocx = {
-      mime: mimeTypeDoc,
-      base64: base64String,
-    };
-
-    const sentDataDocx = await this.httpService
-      .post(`${this.apiFilesTemplate}/files/upload-template-docx`, {
-        templateName: fileNameDoc,
-        file: dataDocx,
-      })
-      .toPromise();
-    updateNewDocument.idTemplate = sentDataDocx.data.file._id;
-    //---------------------------------------------------------
-*/
     const {
       _id,
       numberDocument,
@@ -532,16 +411,14 @@ export class DocumentsService {
       description,
       fileRegister: updateNewDocument.fileRegister,
       active,
-
       state,
       idTemplate,
     };
-
     return showNewDocumet;
   }
 
   private createFileRegister(fileData: any): any {
-    const { _id, status, category, extension, base64 } = fileData;
+    const { _id, status, category, extension } = fileData;
     return {
       _idFile: _id,
       status,
@@ -969,21 +846,11 @@ export class DocumentsService {
         );
       }
     }
-
     //------------------------------------------
-
     const workflowData = await this.findWorkflowByName(workflowName);
     if (!workflowData) {
       throw new HttpException('no se encontro el workflow', 400);
     }
-    const {
-      descriptionWorkflow,
-      step,
-      createdAt,
-      activeWorkflow,
-      oficinaActual,
-      updateAt,
-    } = workflowData;
 
     const workDt: Workflow = {
       nombre: workflowData.nombre,
@@ -997,9 +864,6 @@ export class DocumentsService {
     };
 
     document.workflow = workDt;
-    console.log('esto es document con nuevo workflow');
-    console.log(document);
-
     //---------paso actual del documento ---
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
@@ -1016,8 +880,6 @@ export class DocumentsService {
     const oficinaUserDentroBitacora = document.workflow.step.pasos.filter(
       (dat) => dat.oficina === userOficce,
     );
-    console.log('esto es oficinauserdentro bitacora');
-    console.log(oficinaUserDentroBitacora);
     if (oficinaUserDentroBitacora.length > 0) {
       const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
       if (nextPasoUserState) {
@@ -1220,8 +1082,6 @@ export class DocumentsService {
       .exec();
     return workflowData;
   }
-
-  //-----------------------------------------------------------------
 
   async derivarDocumentAll(
     documentId: string,
@@ -1655,23 +1515,6 @@ export class DocumentsService {
         403,
       );
     }
-    // const receivedUsers = bitacoraEntry.receivedUsers;
-    // const lastReceivedUser = receivedUsers[receivedUsers.length - 1];
-
-    // if (
-    //   lastReceivedUser.idOfUser === userId &&
-    //   document.stateDocumetUser === 'RECIBIDO'
-    // ) {
-    //   // El usuario actual es el último en recibir el documento
-    //   document.stateDocumetUser = 'REVISADO';
-    //   await document.save();
-    //   return document;
-    // } else {
-    //   throw new HttpException(
-    //     `Usuario con ID: ${userId} no es el último en recibir el documento`,
-    //     403,
-    //   );
-    // }
   }
 
   //---------------------------------
@@ -1715,17 +1558,6 @@ export class DocumentsService {
           400,
         );
       }
-      // if (document.stateDocumentUserSend === 'INICIADO') {
-      //   // Actualiza el estado del documento a 'CONCLUIDO'
-      //   document.stateDocumentUserSend = 'CONCLUIDO';
-      //   await document.save();
-      //   return document;
-      // } else {
-      //   throw new HttpException(
-      //     `Documento con ID: ${id} no se puede marcar como completado en su estado actual`,
-      //     400,
-      //   );
-      // }
     } else {
       throw new HttpException(
         `Usuario con ID: ${userId} no es el último en recibir el documento`,
@@ -1745,30 +1577,6 @@ export class DocumentsService {
     const userLogged = idUser;
     let filteredDocuments = [];
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -1870,30 +1678,6 @@ export class DocumentsService {
       .exec();
 
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -1923,29 +1707,6 @@ export class DocumentsService {
       .exec();
 
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -1985,35 +1746,6 @@ export class DocumentsService {
     const filteredDocuments = [];
 
     for (const document of documents) {
-      // const matchingEntry = document.bitacoraWithoutWorkflow.filter((entry) =>
-      //   entry.recievedUsers.some((user) => user.idOfUser === userId),
-      // );
-
-      // if (matchingEntry.length > 0) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2050,30 +1782,6 @@ export class DocumentsService {
       })
       .exec();
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2266,29 +1974,6 @@ export class DocumentsService {
       .exec();
 
     for (const document of filteredDocuments) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //     // throw new HttpException('no se encontro base64 del archivo', 404);
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {}
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2316,30 +2001,6 @@ export class DocumentsService {
       .setOptions({ sanitizeFilter: true })
       .exec();
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2367,33 +2028,6 @@ export class DocumentsService {
       .setOptions({ sanitizeFilter: true })
       .exec();
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //     // throw new HttpException('no se encontro base64 del archivo', 404);
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2421,33 +2055,6 @@ export class DocumentsService {
       .setOptions({ sanitizeFilter: true })
       .exec();
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     document.fileBase64 = null;
-      //     // throw new HttpException('no se encontro base64 del archivo', 404);
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2482,31 +2089,6 @@ export class DocumentsService {
       .limit(limit)
       .skip(offset);
     for (const document of documents) {
-      // if (document.fileRegister && typeof document.fileRegister === 'object') {
-      //   // const idFile = document.fileRegister._idFile;
-      //   const fileRegisterObject = document.fileRegister as unknown as {
-      //     _idFile: string;
-      //   };
-
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-      //       .toPromise();
-      //     document.fileBase64 = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro base64 del archivo', 404);
-      //   }
-      // }
-      // if (document.idTemplate) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-      //       .toPromise();
-      //     document.base64Template = res.data.file.base64;
-      //   } catch (error) {
-      //     throw new HttpException('no se encontro datos', 404);
-      //   }
-      // }
       if (document.userId) {
         try {
           const res = await this.httpService
@@ -2535,32 +2117,6 @@ export class DocumentsService {
     if (documents.active === false) {
       throw new HttpException(`documento con id: ${id} fue eliminado`, 404);
     }
-    // for(const document of documents){
-    // if (documents.fileRegister && typeof documents.fileRegister === 'object') {
-    //   // const idFile = document.fileRegister._idFile;
-    //   const fileRegisterObject = documents.fileRegister as unknown as {
-    //     _idFile: string;
-    //   };
-
-    //   try {
-    //     const res = await this.httpService
-    //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-    //       .toPromise();
-    //     documents.fileBase64 = res.data.file.base64;
-    //   } catch (error) {
-    //     throw new HttpException('no se encontro base64 del archivo', 404);
-    //   }
-    // }
-    // if (documents.idTemplate) {
-    //   try {
-    //     const res = await this.httpService
-    //       .get(`${this.apiFilesUploader}/file/${documents.idTemplate}`)
-    //       .toPromise();
-    //     documents.base64Template = res.data.file.base64;
-    //   } catch (error) {
-    //     throw new HttpException('no se encontro datos', 404);
-    //   }
-    // }
     if (documents.userId) {
       try {
         const res = await this.httpService
@@ -2577,7 +2133,6 @@ export class DocumentsService {
         documents.userId = 'no se encontraron datos del usuario';
       }
     }
-    // }
     return documents;
   }
 
@@ -2589,30 +2144,6 @@ export class DocumentsService {
     if (documents.userId !== userId) {
       throw new HttpException('not is your document', 400);
     }
-    // if (documents.fileRegister && typeof documents.fileRegister === 'object') {
-    //   const fileRegisterObject = documents.fileRegister as unknown as {
-    //     _idFile: string;
-    //   };
-
-    //   try {
-    //     const res = await this.httpService
-    //       .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-    //       .toPromise();
-    //     documents.fileBase64 = res.data.file.base64;
-    //   } catch (error) {
-    //     throw new HttpException('no se encontro base64 del archivo', 404);
-    //   }
-    // }
-    // if (documents.idTemplate) {
-    //   try {
-    //     const res = await this.httpService
-    //       .get(`${this.apiFilesUploader}/file/${documents.idTemplate}`)
-    //       .toPromise();
-    //     documents.base64Template = res.data.file.base64;
-    //   } catch (error) {
-    //     throw new HttpException('no se encontro datos', 404);
-    //   }
-    // }
     if (documents.userId) {
       try {
         const res = await this.httpService
@@ -2634,6 +2165,12 @@ export class DocumentsService {
 
   async getDocumentByUserId(userId: string): Promise<Documents[]> {
     const documents = this.documentModel.find({ userId: userId }).exec();
+    if (!documents) {
+      throw new HttpException(
+        `no se encontro documentos de usuario ${userId}`,
+        404,
+      );
+    }
     return documents;
   }
 
@@ -2643,9 +2180,7 @@ export class DocumentsService {
       .select('__v')
       .lean()
       .exec();
-    // for(const document of documents){
     if (documents.fileRegister && typeof documents.fileRegister === 'object') {
-      // const idFile = document.fileRegister._idFile;
       const fileRegisterObject = documents.fileRegister as unknown as {
         _idFile: string;
       };
@@ -2685,7 +2220,6 @@ export class DocumentsService {
         documents.userId = 'no se encontraron datos del usuario';
       }
     }
-    // }
     if (!documents) {
       throw new NotFoundException('Versión del documento no encontrada');
     }
@@ -2796,44 +2330,6 @@ export class DocumentsService {
       .toPromise();
   }
 
-  private async downloadAndSaveTemplate(
-    idTemplateFromDoc,
-    newDocument,
-  ): Promise<string> {
-    const response = await this.httpService
-      .get(`${this.apiFilesUploader}/file/template/${idTemplateFromDoc}`)
-      .toPromise();
-    const base64TemplateDoc = response.data.file.base64;
-    const binaryData = Buffer.from(base64TemplateDoc, 'base64');
-
-    const tempFolder = path.join(process.cwd(), 'template');
-    const fileName = `${newDocument.documentationType.typeName}_template.docx`;
-
-    const filePathTemplateDoc = path.join(tempFolder, fileName);
-    fs.writeFileSync(filePathTemplateDoc, binaryData);
-    // this.cleanupTempFiles(filePathTemplateDoc);
-    return filePathTemplateDoc;
-  }
-
-  // private async generateDocxFile(
-  //   newDocument,
-  //   filePathTemplateDoc,
-  // ): Promise<void> {
-  //   const templatefile = fs.readFileSync(filePathTemplateDoc);
-  //   const data = {
-  //     numberDocumentTag: newDocument.numberDocument,
-  //     title: newDocument.title,
-  //     descriptionTag: newDocument.description,
-  //   };
-  //   const handler = new TemplateHandler();
-  //   const doc = await handler.process(templatefile, data);
-  //   const fileNameDoc = `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.docx`;
-  //   const templateDirectorySave = path.join(process.cwd(), 'template');
-  //   const filePathDoc = path.join(templateDirectorySave, fileNameDoc);
-  //   fs.writeFileSync(filePathDoc, doc);
-  //   this.deleteTemporaryFiles(filePathTemplateDoc, filePathDoc, outputhPathTemplate);
-  // }
-
   private async convertDocxToPdf(inputPath: Buffer, outputPath: Buffer) {
     return new Promise<string>((resolve, reject) => {
       docxConverter(inputPath, outputPath, (err: any, result: string) => {
@@ -2846,59 +2342,5 @@ export class DocumentsService {
         }
       });
     });
-  }
-
-  // private async convertDocxToPdf(inputPath: string): Promise<string> {
-  //   const outputPath = path.join(process.cwd(), 'template', `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`);
-  //   return await this.convertDocxToPdfAsync(inputPath, outputPath);
-  // }
-
-  private async convertDocxToPdfAsync(
-    inputPath: string,
-    outputPath: string,
-  ): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-      docxConverter(inputPath, outputPath, (err: any, result: string) => {
-        if (err) {
-          console.error(err);
-          reject(err);
-        } else {
-          console.log('Result: ' + result);
-          resolve(result);
-        }
-      });
-    });
-  }
-
-  private readAndEncodePdf(pdfFilePath: string): string {
-    const resultFile = fs.readFileSync(pdfFilePath);
-    return resultFile.toString('base64');
-  }
-
-  private async uploadPdfTemplate(newDocument, base64Pdf): Promise<string> {
-    const fileNamePdf = `${newDocument.documentationType.typeName}_${newDocument.numberDocument}.pdf`;
-    const dataPdf = { mime: `application/pdf`, base64: base64Pdf };
-    const response = await this.httpService
-      .post(`${this.apiFilesTemplate}/files/upload-template-docx`, {
-        templateName: fileNamePdf,
-        file: dataPdf,
-      })
-      .toPromise();
-    return response.data.file._id;
-  }
-
-  private cleanupTempFiles(...filePaths: string[]): void {
-    const timeToLiveInMilliseconds = 1 * 60 * 1000;
-    for (const filePath of filePaths) {
-      setTimeout(() => {
-        fs.unlink(filePath, (err) => {
-          if (err) {
-            console.error('Error al eliminar archivo temporal: ', err);
-          } else {
-            console.log('Archivo temporal eliminado: ', filePath);
-          }
-        });
-      }, timeToLiveInMilliseconds);
-    }
   }
 }

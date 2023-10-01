@@ -39,7 +39,7 @@ export class StepService {
         await this.validateOffice(oficina, tokenDat);
       } catch (error) {
         throw new BadRequestException(
-          `Oficina no válida en el paso ${paso.paso}: ${error.message}`,
+          `Oficína no válida en el paso ${paso.paso}: ${error.message}`,
         );
       }
       if (paso.paso <= prevPaso) {

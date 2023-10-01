@@ -6,8 +6,6 @@ import {
   Param,
   Delete,
   Put,
-  BadRequestException,
-  InternalServerErrorException,
   HttpException,
   Query,
   Req,

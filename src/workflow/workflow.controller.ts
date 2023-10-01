@@ -138,26 +138,6 @@ export class WorkflowController {
   }
 
   // @ApiBearerAuth()
-  // @Permissions(Permission.ADMIN)
-  // @Permissions(Permission.SUPERADMIN)
-  // @Put('update-only-paso/:id')
-  // @ApiOperation({
-  //   summary: 'update only a especific paso by number in the workflow',
-  // })
-  // async updateOnlyPasoWorkflow(
-  //   @Param('id') id: string,
-  //   @Body() updatePasoWorkflowDto: UpdatePasoWorkflowDto,
-  //   @Req() req,
-  // ) {
-  //   const tokenDat = req.token;
-  //   return this.workflowService.updateOnlyPasoInWorkflow(
-  //     id,
-  //     updatePasoWorkflowDto,
-  //     tokenDat,
-  //   );
-  // }
-
-  // @ApiBearerAuth()
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Delete(':id')

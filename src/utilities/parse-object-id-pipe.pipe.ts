@@ -8,7 +8,7 @@ export class ParseObjectIdPipe
   transform(value: any): mongoose.Types.ObjectId {
     const validObjectId: boolean = mongoose.isObjectIdOrHexString(value);
     if (!validObjectId) {
-      throw new BadRequestException('Invalid ObjectId');
+      throw new BadRequestException('Objeto ID no válido');
     }
     return value;
   }

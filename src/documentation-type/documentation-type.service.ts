@@ -72,27 +72,21 @@ export class DocumentationTypeService {
       alignment: AlignmentType.CENTER,
       heading: HeadingLevel.HEADING_1,
     });
-
     const separatorLineParagraph = new Paragraph({
       text: '---------------------------------------------',
     });
-
     const numberDocumentParagraph = new Paragraph({
       text: `Número de Documento: ${documentData.numberDocumentTag}`,
     });
-
     const referenceTitleParagraph = new Paragraph({
       text: `Asunto: ${documentData.title}`,
     });
-
     const dateTitleParagraph = new Paragraph({
       text: `Fecha: ${documentData.createdAtTag}`,
     });
-
     const titleContenidoParagraph = new Paragraph({
       text: 'Contenido:',
     });
-
     const descriptionParagraph = new Paragraph({
       text: `${documentData.descriptionTag}`,
     });
@@ -129,7 +123,6 @@ export class DocumentationTypeService {
       throw new HttpException('no hay id de archivo', 400);
     }
 
-    // fs.unlinkSync(filePath);
     const timeToLive = 1 * 60 * 1000;
     setTimeout(() => {
       fs.unlink(filePath, (err) => {
@@ -141,8 +134,6 @@ export class DocumentationTypeService {
       });
     }, timeToLive);
 
-    //-------------------------------------------
-
     const newDocument = new this.documentationTypeModel({
       typeName,
       idTemplateDocType: dataUri._idFile,
@@ -152,24 +143,24 @@ export class DocumentationTypeService {
   }
 
   //--------funcion convertir a pdf ------------
-  async convertDocxToPdf(docxFilePath: string): Promise<Buffer> {
-    return new Promise<Buffer>((resolve, reject) => {
-      const docxStream = fs.createReadStream(docxFilePath);
-      const pdfStream = new pdfkit();
-      const buffers: Buffer[] = [];
+  // async convertDocxToPdf(docxFilePath: string): Promise<Buffer> {
+  //   return new Promise<Buffer>((resolve, reject) => {
+  //     const docxStream = fs.createReadStream(docxFilePath);
+  //     const pdfStream = new pdfkit();
+  //     const buffers: Buffer[] = [];
 
-      pdfStream.on('data', (data: Buffer) => {
-        buffers.push(data);
-      });
+  //     pdfStream.on('data', (data: Buffer) => {
+  //       buffers.push(data);
+  //     });
 
-      pdfStream.on('end', () => {
-        const pdfBuffer = Buffer.concat(buffers);
-        resolve(pdfBuffer);
-      });
+  //     pdfStream.on('end', () => {
+  //       const pdfBuffer = Buffer.concat(buffers);
+  //       resolve(pdfBuffer);
+  //     });
 
-      docxStream.pipe(officegen('pdfstream')).pipe(pdfStream);
-    });
-  }
+  //     docxStream.pipe(officegen('pdfstream')).pipe(pdfStream);
+  //   });
+  // }
   //-------------------------------------------------
 
   async findAll() {

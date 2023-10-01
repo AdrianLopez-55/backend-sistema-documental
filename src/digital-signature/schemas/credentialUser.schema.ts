@@ -11,9 +11,6 @@ export class CredentialUser {
   @Prop()
   publicKey: string;
 
-  //   @Prop({ unique: true })
-  //   hasPin: string;
-
   @Prop()
   privateKey: string;
 

@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as bodyParser from 'body-parser';
 // import { ErrorManager } from './documents/error.interceptor';
 import { AuthGuard } from './guards/auth.guard';
-import { LoggerMiddleware } from './logger.middleware';
+// import { LoggerMiddleware } from './logger.middleware';
 import { PermissionsService } from './permissions/permission.service';
 import { RolService } from './rol/rol.service';
 // import * as io from 'socket.io';

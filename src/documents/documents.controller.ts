@@ -8,7 +8,6 @@ import {
   Req,
   Query,
   Put,
-  ForbiddenException,
   ParseIntPipe,
   Res,
   UseGuards,
@@ -78,10 +77,7 @@ export class DocumentsController {
     @Req() req,
   ) {
     try {
-      //--------------------------------
       const currentYear = new Date().getFullYear();
-
-      //------------------------------------------------------
       const userId = req.user;
       const numberDocument =
         await this.sequenceService.getNextValueNumberDocument();
@@ -378,9 +374,11 @@ export class DocumentsController {
     @Req() req,
     @Param('userId') userId: string,
   ): Promise<Documents[]> {
-    const userIdData = req.user;
-    userId = userIdData;
-    return this.documentsService.getDocumentByUserId(userId);
+    try {
+      return this.documentsService.getDocumentByUserId(userId);
+    } catch (error) {
+      throw new Error(error);
+    }
   }
 
   @ApiBearerAuth()

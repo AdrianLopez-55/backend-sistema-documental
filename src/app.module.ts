@@ -40,7 +40,7 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
 import { DigitalSignatureController } from './digital-signature/digital-signature.controller';
 import { DigitalSignatureService } from './digital-signature/digital-signature.service';
 import { DigitalSignatureModule } from './digital-signature/digital-signature.module';
-import { GatewayModule } from './gateway/gateway.module';
+// import { GatewayModule } from './gateway/gateway.module';
 import { RolesGuard } from './guard/roles.guard';
 import { RoadmapModule } from './roadmap/roadmap.module';
 // import { StateDocumentModule } from './state-document/state-document.module';
@@ -86,7 +86,7 @@ import { EmailController } from './email/email.controller';
     PersonalGetModule,
     TemplateModule,
     DigitalSignatureModule,
-    GatewayModule,
+    // GatewayModule,
     RoadmapModule,
     BitacoraModule,
   ],

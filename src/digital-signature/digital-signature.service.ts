@@ -43,11 +43,16 @@ export class DigitalSignatureService {
     createCredentialDto: CredentialUserDto,
     passwordUser: string,
   ) {
-    const userData = await this.digitalSignatureModel
+    const userData = await this.credentialUserModel
       .findOne({ userId: userId })
       .exec();
     if (userData) {
       throw new HttpException('usted ya cuenta con credenciales validos', 400);
+    }
+
+    const userPin = await this.pinUserModel.findOne({ userId: userId }).exec();
+    if (userPin) {
+      throw new HttpException('usted ya cuenta con pin valido', 400);
     }
 
     const { password, pin } = createCredentialDto;
@@ -56,11 +61,13 @@ export class DigitalSignatureService {
     if (!checkPassword) {
       throw new UnauthorizedException('Credenciales invalidas');
     }
-    // const allUser = await this.digitalSignatureModel.find().exec();
-    // const dataAllUser = allUser.find((dat) => dat.hasPin);
 
-    // console.log('todos los pin de los usuarios');
-    // console.log(dataAllUser.hasPin);
+    const pinInUse = await this.isPinUse(pin);
+
+    if (pinInUse) {
+      throw new HttpException(`el pin ${pin} ya esta en uso`, 400);
+    }
+
     if (await this.validatePin(pin)) {
       const hasPin = await this.createPINHash(pin);
       const { publicKey, privateKey } = generateKeyPairSync('rsa', {
@@ -96,13 +103,6 @@ export class DigitalSignatureService {
     privateKey: string,
     hasPin: string,
   ): Promise<any> {
-    const key = new this.digitalSignatureModel({
-      userId,
-      publicKey,
-      privateKey,
-      hasPin,
-    });
-
     const credentialUser = new this.credentialUserModel({
       userId,
       publicKey,
@@ -115,13 +115,23 @@ export class DigitalSignatureService {
     });
     await credentialUser.save();
     await pinUser.save();
-    await key.save();
-    return { key, credentialUser, pinUser };
+    return { credentialUser, pinUser };
   }
 
   private async validatePin(pin: string) {
     const regex = /^[A-Z0-9]{5}$/;
     return regex.test(pin);
+  }
+
+  async isPinUse(pin: string): Promise<Boolean> {
+    const pins = await this.pinUserModel.find().exec();
+    for (const hasPin of pins) {
+      const isMatch = await compare(pin, hasPin.hasPin);
+      if (isMatch) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async signatureDocument(
@@ -202,10 +212,12 @@ export class DigitalSignatureService {
   }
 
   async getKeysUser(userId: string) {
-    const digitalSignatureUser = await this.digitalSignatureModel
+    const credentialUser = await this.credentialUserModel
       .find({ userId })
       .exec();
-    return digitalSignatureUser;
+    const pinUser = await this.pinUserModel.find({ userId }).exec();
+
+    return { credentialUser, pinUser };
   }
 
   async getDocumentsWithDigitalSignatureUser(
@@ -218,21 +230,31 @@ export class DigitalSignatureService {
   }
 
   async getUsersDigitalSignatures() {
-    const digitalSignatures = await this.digitalSignatureModel.find().exec();
-    return digitalSignatures;
+    const credentialUsers = await this.credentialUserModel.find().exec();
+    const pinUsers = await this.pinUserModel.find().exec();
+    return { credentialUsers, pinUsers };
   }
 
-  async getUserWithDigitalSignature(userId: string): Promise<DigitalSignature> {
+  async getUserWithDigitalSignature(userId: string) {
     try {
-      const digitalSignature = await this.digitalSignatureModel
+      const credentialUser = await this.credentialUserModel
         .findOne({ userId: userId })
         .exec();
-      if (!digitalSignature) {
-        throw new HttpException('usted no cuenta con claves', 404);
+
+      const pinUserModel = await this.pinUserModel
+        .findOne({ userId: userId })
+        .exec();
+
+      if (!credentialUser) {
+        throw new HttpException('usted no cuenta con credenciales', 404);
       }
-      return digitalSignature;
+      if (!pinUserModel) {
+        throw new HttpException('usted no cuenta con pin', 404);
+      }
+
+      return { credentialUser, pinUserModel };
     } catch (error) {
-      throw new HttpException('algo salio mal', 500);
+      throw new HttpException(`algo salio mal: ${error}`, 500);
     }
   }
 
@@ -240,6 +262,9 @@ export class DigitalSignatureService {
     const document = await this.documentsModel.findById(id).exec();
     if (!document) {
       throw new NotFoundException(`Documento con ID "${id}" no encontrado`);
+    }
+    if (document.active === false) {
+      throw new HttpException('documento eliminado', 400);
     }
     const removeDigitalSignatureDocument =
       document.digitalSignatureDocument.filter(
