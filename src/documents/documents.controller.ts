@@ -257,6 +257,17 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('obtain-documents-reviewed')
+  @ApiOperation({
+    summary: 'get all documents viewed for you',
+  })
+  async obtainDocumentsReviewed(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.getDocumentsReviewed(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('documents-send-without-workflow')
   @ApiOperation({
     summary: 'see all documentos send to other user without workflow',

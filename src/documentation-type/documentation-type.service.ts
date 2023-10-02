@@ -142,27 +142,6 @@ export class DocumentationTypeService {
     return await newDocument.save();
   }
 
-  //--------funcion convertir a pdf ------------
-  // async convertDocxToPdf(docxFilePath: string): Promise<Buffer> {
-  //   return new Promise<Buffer>((resolve, reject) => {
-  //     const docxStream = fs.createReadStream(docxFilePath);
-  //     const pdfStream = new pdfkit();
-  //     const buffers: Buffer[] = [];
-
-  //     pdfStream.on('data', (data: Buffer) => {
-  //       buffers.push(data);
-  //     });
-
-  //     pdfStream.on('end', () => {
-  //       const pdfBuffer = Buffer.concat(buffers);
-  //       resolve(pdfBuffer);
-  //     });
-
-  //     docxStream.pipe(officegen('pdfstream')).pipe(pdfStream);
-  //   });
-  // }
-  //-------------------------------------------------
-
   async findAll() {
     const findAllDocumetationType = await this.documentationTypeModel
       .find()

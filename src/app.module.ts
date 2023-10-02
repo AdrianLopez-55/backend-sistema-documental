@@ -101,17 +101,17 @@ export class AppModule implements NestModule {
       { path: '/documents/*', method: RequestMethod.DELETE },
       { path: '/documents/*', method: RequestMethod.PUT },
 
-      { path: '/documentation-type', method: RequestMethod.POST },
-      { path: '/documentation-type/*', method: RequestMethod.PUT },
-      { path: '/documentation-type/*', method: RequestMethod.DELETE },
+      // { path: '/documentation-type', method: RequestMethod.POST },
+      // { path: '/documentation-type/*', method: RequestMethod.PUT },
+      // { path: '/documentation-type/*', method: RequestMethod.DELETE },
 
-      { path: '/workflow', method: RequestMethod.POST },
-      { path: '/workflow/*', method: RequestMethod.PUT },
-      { path: '/workflow/*', method: RequestMethod.DELETE },
+      // { path: '/workflow', method: RequestMethod.POST },
+      // { path: '/workflow/*', method: RequestMethod.PUT },
+      // { path: '/workflow/*', method: RequestMethod.DELETE },
 
-      { path: '/step', method: RequestMethod.POST },
-      { path: '/step/*', method: RequestMethod.PUT },
-      { path: '/step/*', method: RequestMethod.DELETE },
+      // { path: '/step', method: RequestMethod.POST },
+      // { path: '/step/*', method: RequestMethod.PUT },
+      // { path: '/step/*', method: RequestMethod.DELETE },
 
       // { path: '/rol/*', method: RequestMethod.PUT },
       // { path: '/rol/*', method: RequestMethod.DELETE },
@@ -120,8 +120,8 @@ export class AppModule implements NestModule {
       // { path: '/permissions/*', method: RequestMethod.DELETE },
 
       { path: '/roadmap', method: RequestMethod.POST },
-      { path: '/roadmap/*', method: RequestMethod.PUT },
-      { path: '/roadmap/*', method: RequestMethod.DELETE },
+      // { path: '/roadmap/*', method: RequestMethod.PUT },
+      // { path: '/roadmap/*', method: RequestMethod.DELETE },
 
       { path: '/digital-signature', method: RequestMethod.POST },
       { path: '/digital-signature/*', method: RequestMethod.PUT },

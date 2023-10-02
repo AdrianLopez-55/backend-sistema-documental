@@ -1,9 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import {
-  DigitalSignature,
-  DigitalSignatureSchema,
-} from './schemas/digital-signature.schema';
 import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
 import {
   Permission,
@@ -26,7 +22,6 @@ import { PinUser, PinUserSchema } from './schemas/pinUser.schema';
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: DigitalSignature.name, schema: DigitalSignatureSchema },
       { name: CredentialUser.name, schema: CredentialUserSchema },
       { name: PinUser.name, schema: PinUserSchema },
       { name: Rol.name, schema: RolSchema },

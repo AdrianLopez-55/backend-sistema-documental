@@ -1,23 +1,16 @@
 import {
   Injectable,
   HttpException,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { generateKeyPairSync } from 'crypto';
 import { Model } from 'mongoose';
 import {
-  DigitalSignature,
-  DigitalSignatureDocument,
-  DigitalSignatureSchema,
-} from './schemas/digital-signature.schema';
-import {
   DocumentDocument,
   Documents,
 } from 'src/documents/schema/documents.schema';
 import { HttpService } from '@nestjs/axios';
-import { signatureDocumentDto } from './dto/signatureDocument.dto';
 import { compare } from 'bcrypt';
 import { CredentialUserDto } from './dto/CredentialUser.dto';
 import { CredentialUser } from './schemas/credentialUser.schema';
@@ -27,15 +20,12 @@ const bcrypt = require('bcrypt');
 @Injectable()
 export class DigitalSignatureService {
   constructor(
-    @InjectModel(DigitalSignature.name)
-    private readonly digitalSignatureModel: Model<DigitalSignatureDocument>,
     @InjectModel(Documents.name)
     private readonly documentsModel: Model<DocumentDocument>,
     @InjectModel(CredentialUser.name)
     private readonly credentialUserModel: Model<CredentialUser>,
     @InjectModel(PinUser.name)
     private readonly pinUserModel: Model<PinUser>,
-    private readonly httpService: HttpService,
   ) {}
 
   async createKeys(
@@ -43,95 +33,62 @@ export class DigitalSignatureService {
     createCredentialDto: CredentialUserDto,
     passwordUser: string,
   ) {
-    const userData = await this.credentialUserModel
-      .findOne({ userId: userId })
-      .exec();
+    if (!userId) {
+      throw new HttpException(`usuario logeado sin datos`, 500);
+    }
+    const userData = await this.credentialUserModel.findOne({ userId: userId });
     if (userData) {
-      throw new HttpException('usted ya cuenta con credenciales validos', 400);
+      throw new HttpException('Usted ya cuenta con credenciales válidos', 400);
     }
 
-    const userPin = await this.pinUserModel.findOne({ userId: userId }).exec();
+    const userPin = await this.pinUserModel.findOne({ userId: userId });
     if (userPin) {
-      throw new HttpException('usted ya cuenta con pin valido', 400);
+      throw new HttpException('Usted ya cuenta con pin válido', 400);
     }
 
     const { password, pin } = createCredentialDto;
 
     const checkPassword = await compare(password, passwordUser);
     if (!checkPassword) {
-      throw new UnauthorizedException('Credenciales invalidas');
+      throw new UnauthorizedException('Contraseña inválida');
     }
 
     const pinInUse = await this.isPinUse(pin);
 
     if (pinInUse) {
-      throw new HttpException(`el pin ${pin} ya esta en uso`, 400);
+      throw new HttpException(`El pin ${pin} ya está en uso`, 400);
     }
 
     if (await this.validatePin(pin)) {
-      const hasPin = await this.createPINHash(pin);
-      const { publicKey, privateKey } = generateKeyPairSync('rsa', {
-        modulusLength: 4096,
-        publicKeyEncoding: {
-          type: 'spki',
-          format: 'pem',
-        },
-        privateKeyEncoding: {
-          type: 'pkcs8',
-          format: 'pem',
-        },
-      });
-
-      const savePublicKeyUser = await this.savePublicKey(
-        userId,
-        publicKey,
-        privateKey,
-        hasPin,
-      );
-      return savePublicKeyUser;
+      try {
+        const hasPin = await this.createPINHash(pin);
+        const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+          modulusLength: 4096,
+          publicKeyEncoding: {
+            type: 'spki',
+            format: 'pem',
+          },
+          privateKeyEncoding: {
+            type: 'pkcs8',
+            format: 'pem',
+          },
+        });
+        const savePublicKeyUser = await this.savePublicKey(
+          userId,
+          publicKey,
+          privateKey,
+          hasPin,
+        );
+        return savePublicKeyUser;
+      } catch (error) {
+        throw new HttpException(`Esto es el error ${error}`, 500);
+      }
     } else {
       throw new HttpException(
-        `El pin ${pin} no es valido, debe tener 5 caracteres con letras mayúsculas o numeros combinados`,
+        `El pin ${pin} no es válido, debe tener 5 caracteres con letras mayúsculas y/o números combinados`,
         400,
       );
     }
-  }
-
-  private async savePublicKey(
-    userId: string,
-    publicKey: string,
-    privateKey: string,
-    hasPin: string,
-  ): Promise<any> {
-    const credentialUser = new this.credentialUserModel({
-      userId,
-      publicKey,
-      privateKey,
-    });
-
-    const pinUser = new this.pinUserModel({
-      userId,
-      hasPin,
-    });
-    await credentialUser.save();
-    await pinUser.save();
-    return { credentialUser, pinUser };
-  }
-
-  private async validatePin(pin: string) {
-    const regex = /^[A-Z0-9]{5}$/;
-    return regex.test(pin);
-  }
-
-  async isPinUse(pin: string): Promise<Boolean> {
-    const pins = await this.pinUserModel.find().exec();
-    for (const hasPin of pins) {
-      const isMatch = await compare(pin, hasPin.hasPin);
-      if (isMatch) {
-        return true;
-      }
-    }
-    return false;
   }
 
   async signatureDocument(
@@ -141,14 +98,7 @@ export class DigitalSignatureService {
     signatureDocumentDto: CredentialUserDto,
   ) {
     const crypto = require('crypto');
-    const document = await this.documentsModel.findById(documentId);
-    if (document.active === false) {
-      throw new HttpException('documento archivado', 400);
-    }
-    if (!document) {
-      throw new HttpException('documento no encontrado', 404);
-    }
-
+    const document = await this.validateDocumentFind(documentId);
     const documentString = JSON.stringify(
       document,
       Object.keys(document).sort(),
@@ -201,16 +151,6 @@ export class DigitalSignatureService {
     return document;
   }
 
-  private async createPINHash(pin: string): Promise<string> {
-    // generar un salt aleatorio
-    const saltRounds = 15;
-    const salt = await bcrypt.genSalt(saltRounds);
-
-    // Hashear el PIN con el salt
-    const hashedPIN = await bcrypt.hash(pin, salt);
-    return hashedPIN;
-  }
-
   async getKeysUser(userId: string) {
     const credentialUser = await this.credentialUserModel
       .find({ userId })
@@ -258,14 +198,35 @@ export class DigitalSignatureService {
     }
   }
 
+  async recoverPin(
+    userId: string,
+    passwordUser: string,
+    createCredentialDto: CredentialUserDto,
+  ) {
+    const userPin = await this.pinUserModel.findOne({ userId: userId });
+    if (userPin) {
+      throw new HttpException('Usted ya cuenta con pin válido', 400);
+    }
+    const { password, pin } = createCredentialDto;
+    const checkPassword = await compare(password, passwordUser);
+    if (!checkPassword) {
+      throw new UnauthorizedException('Contraseña inválida');
+    } else {
+      if (await this.validatePin(pin)) {
+        try {
+          const hasPin = await this.createPINHash(pin);
+          userPin.hasPin = hasPin;
+          await userPin.save();
+          return userPin;
+        } catch (error) {
+          throw new HttpException(`Esto es el error: ${error}`, 500);
+        }
+      }
+    }
+  }
+
   async removeDigitalSignature(id: string, userId: string): Promise<Documents> {
-    const document = await this.documentsModel.findById(id).exec();
-    if (!document) {
-      throw new NotFoundException(`Documento con ID "${id}" no encontrado`);
-    }
-    if (document.active === false) {
-      throw new HttpException('documento eliminado', 400);
-    }
+    const document = await this.validateDocumentFind(id);
     const removeDigitalSignatureDocument =
       document.digitalSignatureDocument.filter(
         (signature) => signature.userDigitalSignature !== userId,
@@ -273,5 +234,82 @@ export class DigitalSignatureService {
     document.digitalSignatureDocument = removeDigitalSignatureDocument;
     await document.save();
     return document;
+  }
+
+  //----FUNCIONES USADAS PARA EL SERVICE
+  private async validateDocumentFind(idDocument: string) {
+    const document = await this.documentsModel.findById(idDocument).exec();
+    if (!document) {
+      throw new HttpException(
+        `Documento con ID "${idDocument}" no encontrado`,
+        404,
+      );
+    }
+    if (document.active === false) {
+      throw new HttpException(
+        `El documento con ID "${idDocument}" fue archivado o eliminado`,
+        400,
+      );
+    }
+    return document;
+  }
+
+  private async isPinUse(pin: string): Promise<Boolean> {
+    try {
+      const pins = await this.pinUserModel.find().exec();
+      for (const hasPin of pins) {
+        const isMatch = await compare(pin, hasPin.hasPin);
+        if (isMatch) {
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      throw new HttpException(`El error es: ${error}`, 500);
+    }
+  }
+
+  private async createPINHash(pin: string): Promise<string> {
+    try {
+      // generar un salt aleatorio
+      const saltRounds = 15;
+      const salt = await bcrypt.genSalt(saltRounds);
+
+      // Hashear el PIN con el salt
+      const hashedPIN = await bcrypt.hash(pin, salt);
+      return hashedPIN;
+    } catch (error) {
+      throw new HttpException(`Esto es el error: ${error}`, 500);
+    }
+  }
+
+  private async savePublicKey(
+    userId: string,
+    publicKey: string,
+    privateKey: string,
+    hasPin: string,
+  ): Promise<any> {
+    try {
+      const credentialUser = new this.credentialUserModel({
+        userId,
+        publicKey,
+        privateKey,
+      });
+
+      const pinUser = new this.pinUserModel({
+        userId,
+        hasPin,
+      });
+      await credentialUser.save();
+      await pinUser.save();
+      return { credentialUser, pinUser };
+    } catch (error) {
+      throw new HttpException(`Esto es el error: ${error}`, 500);
+    }
+  }
+
+  private async validatePin(pin: string) {
+    const regex = /^[A-Z0-9]{5}$/;
+    return regex.test(pin);
   }
 }

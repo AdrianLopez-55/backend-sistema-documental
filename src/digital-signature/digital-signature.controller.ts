@@ -15,7 +15,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
 import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
-import { signatureDocumentDto } from './dto/signatureDocument.dto';
 import { CredentialUserDto } from './dto/CredentialUser.dto';
 
 @Controller('digital-signature')
@@ -31,7 +30,7 @@ export class DigitalSignatureController {
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   // @UseInterceptors(LoggerInterceptor)
   @Post('generate-credential')
-  @ApiOperation({ summary: 'create credentials from a user' })
+  @ApiOperation({ summary: 'Create credentials from a user' })
   generateKeys(@Req() req, @Body() createCredentialDto: CredentialUserDto) {
     const userId = req.user;
     const passwordUser = req.password;
@@ -47,7 +46,7 @@ export class DigitalSignatureController {
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   // @UseInterceptors(LoggerInterceptor)
   @Post(':documentId/signature-document')
-  @ApiOperation({ summary: 'signature document by ID document' })
+  @ApiOperation({ summary: 'Signature document by ID document' })
   signatureDocument(
     @Body() signatureDocumentDto: CredentialUserDto,
     @Param('documentId') documentId: string,
@@ -66,7 +65,7 @@ export class DigitalSignatureController {
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get()
-  @ApiOperation({ summary: 'show users with digital signature' })
+  @ApiOperation({ summary: 'Show users with digital signature' })
   getUsersWithDigitalSignature() {
     return this.digitalSignatureService.getUsersDigitalSignatures();
   }
@@ -74,6 +73,7 @@ export class DigitalSignatureController {
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('get-keys-user')
+  @ApiOperation({ summary: 'Show all user credentials' })
   async getKeysUser(@Req() req) {
     const userId = req.user;
     return this.digitalSignatureService.getUserWithDigitalSignature(userId);
@@ -82,10 +82,27 @@ export class DigitalSignatureController {
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('get-documents-with-digital-signature-user')
+  @ApiOperation({ summary: 'Show your documents with digital signature' })
   async getDocumentsWithDigitalSignatureUser(@Req() req) {
     const userId = req.user;
     return this.digitalSignatureService.getDocumentsWithDigitalSignatureUser(
       userId,
+    );
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Post('recover-pin')
+  @ApiOperation({
+    summary: 'This endpoint use to recover pin from a user logged',
+  })
+  async recoverPin(@Req() req, @Body() credentialUserDto: CredentialUserDto) {
+    const userId = req.user;
+    const passwordUser = req.password;
+    return this.digitalSignatureService.recoverPin(
+      userId,
+      passwordUser,
+      credentialUserDto,
     );
   }
 

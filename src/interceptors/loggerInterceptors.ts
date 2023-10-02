@@ -81,12 +81,6 @@ export class LoggerInterceptor implements NestInterceptor {
               description = `se añadio un comentario al documento ${data._id}`;
             } else if (req.path.startsWith('/documents/milestone')) {
               description = `se añadio metadatos al documento ${data._id}`;
-            } else if (req.path === '/documentation-type') {
-              description = `se creo un nuevo tipo de documento con id ${data._id}`;
-            } else if (req.path === '/workflow') {
-              description = `se creo un flujo de trabajo con id: ${data._id}`;
-            } else if (req.path === '/step') {
-              description = `se creo un nuevo step con id: ${data._id}`;
             } else if (req.path === '/digital-signature/generate') {
               description = `se genero clave privada y publica para el usuario ${data.userId}`;
             } else if (req.path === '/digital-signature/signature-document') {
@@ -103,23 +97,24 @@ export class LoggerInterceptor implements NestInterceptor {
               description = `documento actualizado con id ${data._id}`;
             } else if (req.path.startsWith('/documnts/active')) {
               description = `documento reactivado con id ${data._id}`;
-            } else if (req.path.startsWith('/documentation-type')) {
-              description = `tipo de documento actualizado con id ${data._id}`;
-            } else if (req.path.startsWith('/documentation-type/activer')) {
-              description = `tipo de documento reactivado con id ${data._id}`;
-            } else if (req.path.startsWith('/wotkflow')) {
-              description = `flujo de trabajo actualizado con id ${data._id}`;
-            } else if (req.path.startsWith('/workflow/activer')) {
-              description = `flujo de trabajo reactivado con id ${data._id}`;
-            } else if (req.path.startsWith('/step')) {
-              description = `step actualizado con id ${data._id}`;
-            } else if (req.path.startsWith('/step/update-only-paso')) {
-              description = `paso actualizado de un step con id ${data._id}`;
-            } else if (req.path.startsWith('/step/activer')) {
-              description = `step reactivado con id ${data._id}`;
-            } else if (req.path.startsWith('/roadmap')) {
-              description = `hoja de ruta actualizada con id ${data._id}`;
             }
+            // else if (req.path.startsWith('/documentation-type')) {
+            //   description = `tipo de documento actualizado con id ${data._id}`;
+            // } else if (req.path.startsWith('/documentation-type/activer')) {
+            //   description = `tipo de documento reactivado con id ${data._id}`;
+            // } else if (req.path.startsWith('/wotkflow')) {
+            //   description = `flujo de trabajo actualizado con id ${data._id}`;
+            // } else if (req.path.startsWith('/workflow/activer')) {
+            //   description = `flujo de trabajo reactivado con id ${data._id}`;
+            // } else if (req.path.startsWith('/step')) {
+            //   description = `step actualizado con id ${data._id}`;
+            // } else if (req.path.startsWith('/step/update-only-paso')) {
+            //   description = `paso actualizado de un step con id ${data._id}`;
+            // } else if (req.path.startsWith('/step/activer')) {
+            //   description = `step reactivado con id ${data._id}`;
+            // } else if (req.path.startsWith('/roadmap')) {
+            //   description = `hoja de ruta actualizada con id ${data._id}`;
+            // }
 
             break;
           case 'DELETE':
@@ -129,20 +124,24 @@ export class LoggerInterceptor implements NestInterceptor {
               description = `tipo de documento eliminado con id ${data._id}`;
             } else if (req.path.startsWith('/workflow')) {
               description = `flujo de trabajo eliminado con id ${data._id}`;
-            } else if (req.path.startsWith('/step')) {
-              description = `step eliminado con id ${data._id}`;
-            } else if (req.path.startsWith('/rol')) {
+            }
+            // else if (req.path.startsWith('/step')) {
+            //   description = `step eliminado con id ${data._id}`;
+            // }
+            else if (req.path.startsWith('/rol')) {
               description = `rol fue eliminado con id ${data._id}`;
-            } else if (req.path.startsWith('/permissions')) {
-              description = `permiso eliminado con id ${data._id}`;
-            } else if (
+            }
+            // else if (req.path.startsWith('/permissions')) {
+            //   description = `permiso eliminado con id ${data._id}`;
+            // }
+            else if (
               req.path.startsWith('/digital-signature/delete-digital-signature')
             ) {
               description = `firma digital eliminada de documento con id ${data._id}`;
-            } else if (req.path.startsWith('/roadmap')) {
-              description = `hoja de ruta eliminado con id ${data._id}`;
             }
-
+            // else if (req.path.startsWith('/roadmap')) {
+            //   description = `hoja de ruta eliminado con id ${data._id}`;
+            // }
             break;
           default:
             description = 'Accion predeterminada';
