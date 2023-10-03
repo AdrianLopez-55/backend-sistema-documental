@@ -426,6 +426,7 @@ export class DocumentsService {
         nameOfficeUserRecieved: data.nameUnity,
         dateRecived: new Date(),
         observado: false,
+        stateDocumentUser: 'RECIBIDO',
       }));
       const receivedUsersArray = [];
       if (matchingUsers.length > 0) {
@@ -454,6 +455,13 @@ export class DocumentsService {
             completado: paso.completado,
           })),
         });
+
+        // Cambiar el estado del documento a 'DERIVADO' en receivedUsers
+        document.bitacoraWorkflow[
+          document.bitacoraWorkflow.length - 1
+        ].receivedUsers
+          .filter((user) => user.idOfUser === userId)
+          .forEach((user) => (user.stateDocumentUser = 'DERIVADO'));
 
         document.workflow = workflow;
         document.stateDocumetUser = 'DERIVADO';
@@ -554,6 +562,7 @@ export class DocumentsService {
           nameOfficeUserRecieved: user.unityUser,
           dateRecived: new Date(),
           observado: false,
+          stateDocumentUser: 'RECIBIDO',
         })),
         motivoBack: 'se envio documento a personal seleccionado',
         oficinasPorPasar: pasos.map((paso) => ({
@@ -563,6 +572,34 @@ export class DocumentsService {
           completado: paso.completado,
         })),
       });
+
+      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+        return entry.receivedUsers.some((user) => user.idOfUser === userId);
+      });
+
+      const updateBitacoraEntry = {
+        ...bitacoraEntry,
+        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+          if (user.idOfUser === userId) {
+            user.stateDocumentUser = 'DERIVADO';
+          }
+          return user;
+        }),
+      };
+      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+      });
+
+      document.bitacoraWorkflow = updateBitacoraWorkflow;
+
+      /*
+      // Cambiar el estado del documento a 'DERIVADO' en receivedUsers
+      document.bitacoraWorkflow[
+        document.bitacoraWorkflow.length - 1
+      ].receivedUsers
+        .filter((user) => user.idOfUser === userId)
+        .forEach((user) => (user.stateDocumentUser = 'DERIVADO'));
+        */
 
       document.workflow = workflow;
       document.stateDocumetUser = 'DERIVADO';
@@ -668,13 +705,7 @@ export class DocumentsService {
   //-----------------------------------
 
   async markDocumentReviewed(id: string, userId: string): Promise<Documents> {
-    const document = await this.documentModel.findById(id).exec();
-    if (!document) {
-      throw new HttpException(`documento con id: ${id} no fue encontrado`, 404);
-    }
-    if (document.active === false) {
-      throw new HttpException(`documento con id: ${id} fue eliminado`, 400);
-    }
+    const document = await this.checkDocument(id);
 
     const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
       return entry.receivedUsers.some((user) => user.idOfUser === userId);
@@ -687,13 +718,37 @@ export class DocumentsService {
       );
     }
 
+    // Verificar si el usuario ya revisó el documento
+    const userAlreadyReviewed = bitacoraEntry.receivedUsers.some((user) => {
+      return user.idOfUser === userId && user.stateDocumentUser === 'REVISADO';
+    });
+
+    if (userAlreadyReviewed) {
+      throw new HttpException('El documento ya fue revisado por usted', 400);
+    }
+
     const pasos = document.workflow.step.pasos;
     const currentStepIndex = document.workflow.pasoActual - 1;
     if (
       currentStepIndex < pasos.length - 1 &&
       !pasos[currentStepIndex + 1].completado
     ) {
+      const updateBitacoraEntry = {
+        ...bitacoraEntry,
+        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+          if (user.idOfUser === userId) {
+            user.stateDocumentUser = 'REVISADO';
+          }
+          return user;
+        }),
+      };
+      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+      });
+
+      document.bitacoraWorkflow = updateBitacoraWorkflow;
       document.stateDocumetUser = 'REVISADO';
+
       await document.save();
       return document;
     } else {
@@ -714,13 +769,12 @@ export class DocumentsService {
   //---------------------------------
 
   async markDocumentcompleted(id: string, userId: string): Promise<Documents> {
-    const document = await this.documentModel.findById(id).exec();
-    if (!document) {
-      throw new HttpException(`Documento con ID: ${id} no encontrado`, 404);
-    }
-
-    if (!document.active) {
-      throw new HttpException(`Documento con ID: ${id} fue archivado`, 400);
+    const document = await this.checkDocument(id);
+    if (document.workflow === null) {
+      throw new HttpException(
+        'no puedes devolver un documento que no inicio un flujo de trabajo',
+        400,
+      );
     }
 
     const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
@@ -741,7 +795,9 @@ export class DocumentsService {
       // El usuario actual es el último en recibir el documento
       const pasos = document.workflow.step.pasos;
       const currentStepIndex = document.workflow.pasoActual - 1;
+
       if (currentStepIndex === pasos.length - 1) {
+        lastReceivedUser.stateDocumentUser = 'CONCLUIDO';
         document.stateDocumetUser = 'CONCLUIDO';
         document.stateDocumentUserSend = 'CONCLUIDO';
         await document.save();
@@ -806,6 +862,11 @@ export class DocumentsService {
       .sort({ numberDocument: 1 })
       .setOptions({ sanitizeFilter: true })
       .exec();
+    const findDocument = await this.functionObtainAndDerivedDocument(
+      documents,
+      idUser,
+    );
+    /*
     const filteredDocumentsWithSteps = [];
     for (const document of documents) {
       if (document.userId) {
@@ -857,7 +918,10 @@ export class DocumentsService {
         }
       }
     }
-    return filteredDocumentsWithSteps.map((dat) => dat.document);
+
+    */
+    // return filteredDocumentsWithSteps.map((dat) => dat.document);
+    return findDocument;
   }
 
   async showAllDocumentSend(userId: string): Promise<Documents[]> {
@@ -993,19 +1057,7 @@ export class DocumentsService {
     motivo: string,
     userId: string,
   ): Promise<Documents> {
-    const document = await this.documentModel.findById(documentId);
-
-    if (!document) {
-      throw new NotFoundException(
-        `Documento con ID "${documentId}" no encontrado`,
-      );
-    }
-    if (document.active === false) {
-      throw new HttpException(
-        `Documento con id: ${documentId} fue archivado`,
-        400,
-      );
-    }
+    const document = await this.checkDocument(documentId);
     if (document.workflow === null) {
       throw new HttpException(
         'no puedes devolver un documento que no inicio un flujo de trabajo',
@@ -1017,11 +1069,17 @@ export class DocumentsService {
     const pasoActual = workflow.pasoActual;
     const pasos = workflow.step.pasos;
 
-    if (numberPaso < 0 || numberPaso > pasos.length) {
-      throw new BadRequestException('El paso no existe');
+    if (
+      numberPaso < 0 ||
+      numberPaso > pasos.length ||
+      numberPaso === pasoActual
+    ) {
+      throw new BadRequestException(
+        'El paso no existe o es el mismo lugar en el que se encuentra el documento',
+      );
     }
 
-    if (numberPaso == 0 && document.workflow.pasoActual == 1) {
+    if (numberPaso == 0 && pasoActual == 1) {
       const originalUserSend = document.userId;
       document.bitacoraWorkflow.push({
         oficinaActual: 'remitente original',
@@ -1037,18 +1095,36 @@ export class DocumentsService {
             nameOfficeUserRecieved: '',
             dateRecived: new Date(),
             observado: true,
+            stateDocumentUser: 'OBSERVADO',
           },
         ],
         oficinasPorPasar: [],
         motivoBack: motivo,
       });
+
+      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+        return entry.receivedUsers.some((user) => user.idOfUser === userId);
+      });
+      const updateBitacoraEntry = {
+        ...bitacoraEntry,
+        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+          if (user.idOfUser === userId) {
+            user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
+          }
+          return user;
+        }),
+      };
+      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+      });
+      document.bitacoraWorkflow = updateBitacoraWorkflow;
       document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
       document.stateDocumentUserSend = 'OBSERVADO';
       const paso1 = pasos.find((paso) => paso.paso === 1);
       if (paso1) {
         paso1.completado = false;
       }
-      await document.save();
+      // await document.save();
       return document;
     }
 
@@ -1076,6 +1152,7 @@ export class DocumentsService {
 
       receivedUsers.forEach((user) => {
         user.observado = true;
+        user.stateDocumentUser = 'OBSERVADO';
       });
 
       const nameOfTheOffice = await this.httpService
@@ -1089,8 +1166,8 @@ export class DocumentsService {
         receivedUsers,
         userSend: document.userId,
         dateSend: document.bitacoraWorkflow[0].dateSend,
-        userDerived: document.bitacoraWorkflow[pasoActual].userDerived,
-        datedDerived: document.bitacoraWorkflow[pasoActual].datedDerived,
+        userDerived: userId,
+        datedDerived: new Date(),
         motivoBack: motivo,
         oficinasPorPasar: pasos.map((paso) => ({
           paso: paso.paso,
@@ -1100,6 +1177,24 @@ export class DocumentsService {
         })),
       });
     }
+
+    const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+      return entry.receivedUsers.some((user) => user.idOfUser === userId);
+    });
+    const updateBitacoraEntry = {
+      ...bitacoraEntry,
+      receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+        if (user.idOfUser === userId) {
+          user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
+        }
+        return user;
+      }),
+    };
+    const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+      return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+    });
+    document.bitacoraWorkflow = updateBitacoraWorkflow;
+
     document.workflow = workflow;
     document.stateDocumentUserSend = `OBSERVADO PARA EL PASO: ${document.workflow.pasoActual}`;
     document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
@@ -1648,7 +1743,7 @@ export class DocumentsService {
           idOfUser: user.idOfUser,
           nameOfficeUserRecieved: user.unityUser,
           dateRecived: new Date(),
-          // stateDocumentUser: 'RECIBIDO',
+          stateDocumentUser: 'RECIBIDO',
         })),
         motivoBack: 'se envio documento a personal seleccionado',
         oficinasPorPasar: pasos,
@@ -1762,7 +1857,7 @@ export class DocumentsService {
     if (pasoActual < pasos.length) {
       // if (nextPasoUserState.completado === true) {
       //   throw new HttpException(
-      //     'usted ya no puede derivar el documento porque ya fue enviado',
+      //     'usted ya no puede derivar el documento porque ya fue derivado de su oficina',
       //     400,
       //   );
       // }
@@ -1786,7 +1881,7 @@ export class DocumentsService {
         idOfUser: data.idOfUser,
         nameOfficeUserRecieved: data.nameUnity,
         dateRecived: new Date(),
-        // stateDocumentUser: 'RECIBIDO',
+        stateDocumentUser: 'RECIBIDO',
       }));
 
       if (matchingUsers.length > 0) {
@@ -1876,6 +1971,42 @@ export class DocumentsService {
       throw new HttpException('El workflow puesto está inactivo', 400);
     }
     return workflowData;
+  }
+
+  //--FUNCION PARA OBTENER LOS DOCUMENTOS RECIBIDOS Y DERIVADOS
+  private async functionObtainAndDerivedDocument(
+    documents: Documents[],
+    userId: string,
+  ) {
+    return documents.filter((document) => {
+      const recievedUsers = document.bitacoraWorkflow.reduce((users, entry) => {
+        return users.concat(entry.receivedUsers);
+      }, []);
+      const userRecieved = recievedUsers.find(
+        (user) => user.idOfUser === userId,
+      );
+      return (
+        userRecieved &&
+        (userRecieved.stateDocumentUser === 'RECIBIDO' ||
+          userRecieved.stateDocumentUser === 'DERIVADO')
+      );
+    });
+  }
+
+  //--FUNCION PARA OBTENER LOS DOCUMENTOS MARCADOS COMO REVISADOS
+  private async funtionObtainReviewedDocument(
+    documents: Documents[],
+    userId: string,
+  ) {
+    return documents.filter((document) => {
+      const recievedUsers = document.bitacoraWorkflow.reduce((users, entry) => {
+        return users.concat(entry.receivedUsers);
+      }, []);
+      const userRecieved = recievedUsers.find(
+        (user) => user.idOfUser === userId,
+      );
+      return userRecieved && userRecieved.stateDocumentUser === 'REVISADO';
+    });
   }
 
   private async convertDocxToPdf(inputPath: Buffer, outputPath: Buffer) {

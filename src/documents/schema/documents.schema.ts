@@ -33,17 +33,9 @@ export class Documents {
   @Prop({ type: DocumentationTypeSchema, ref: 'DocumentationType' })
   documentationType: DocumentationType;
 
-  // para hacer seguimiento del documento pero sin datos, solo saber si
-  // el documento esta en espera, fue enviado, hubo alguna observacion, finalizo
-  // 'INICIADO', 'CONCLUIDO', 'OBSERVADO', 'EN ESPERA', 'ARCHIVADO'
-  // en caso de que el documento se envie sin workflow, este dato debe mostrar lo siguiente:
-  // 'ENVIADO DIRECTO'
   @Prop({ uppercase: true })
   stateDocumentUserSend: string;
 
-  // este dato es solo para saber en que estado del documento esta la persona que
-  //recibio el documento y lo derivara, no puede ver el dato stateDocumetWorkflowUserSend
-  // 'RECIBIDO', 'REVISADO', 'DERIVADO', 'OBSERVADO', 'COMPLETADO'
   @Prop({ uppercase: true })
   stateDocumetUser: string;
 
@@ -116,7 +108,7 @@ export class Documents {
             idOfUser: String,
             nameOfficeUserRecieved: String,
             dateRecived: Date,
-            // stateDocumentUser: String,
+            stateDocumentUser: String,
             observado: { type: Boolean, default: false },
           },
         ],
@@ -144,7 +136,7 @@ export class Documents {
       idOfUser: string;
       nameOfficeUserRecieved: string;
       dateRecived: Date;
-      // stateDocumentUser: string;
+      stateDocumentUser: string;
       observado: boolean;
     }[];
     motivoBack: string;
