@@ -40,16 +40,51 @@ export class Documents {
   stateDocumetUser: string;
 
   //dato de seguimiento mas detallado para la persona que envio un documento
-  // @Prop({
-  //   userRecieved: String,
-  //   nameOfficeUserRecieved: String,
-  //   stateDocumentUser: String,
-  // })
-  // infoStateDocument: {
-  //   userRecieved: string;
-  //   nameOfficeUserRecieved: string;
-  //   stateDocumentUser: string;
-  // };
+  @Prop({
+    type: [
+      {
+        ciUser: String,
+        idOfUser: String,
+        nameOfficeUserRecieved: String,
+        dateRecived: Date,
+        stateDocumentUser: String,
+        observado: Boolean,
+      },
+    ],
+  })
+  userReceivedDocument: {
+    ciUser: string;
+    idOfUser: string;
+    nameOfficeUserRecieved: string;
+    dateRecived: Date;
+    stateDocumentUser: string;
+    observado: boolean;
+  }[];
+
+  @Prop({
+    type: [
+      {
+        ciUser: String,
+        idOfUser: String,
+        nameOfficeUserRecieved: String,
+        dateRecived: Date,
+        stateDocumentUser: String,
+      },
+    ],
+  })
+  userReceivedDocumentWithoutWorkflow: {
+    ciUser: string;
+    idOfUser: string;
+    nameOfficeUserRecieved: string;
+    dateRecived: Date;
+    stateDocumentUser: string;
+  }[];
+
+  @Prop()
+  oficinaActual: string;
+
+  @Prop()
+  oficinaPorPasar: string;
 
   @Prop({ type: WorkflowSchema, ref: 'Workflow', default: null })
   workflow: Workflow;
@@ -57,11 +92,36 @@ export class Documents {
   @Prop({ uppercase: true })
   description: string;
 
-  @Prop({ default: null })
-  fileRegister: mongoose.Schema.Types.Mixed;
+  // @Prop({ default: null })
+  // fileRegister: mongoose.Schema.Types.Mixed;
 
-  @Prop()
-  fileBase64: string;
+  @Prop({
+    type: [
+      {
+        idFile: String,
+        status: String,
+        extension: String,
+      },
+    ],
+  })
+  filesRegister: {
+    idFile: string;
+    status: string;
+    extension: string;
+  }[];
+
+  @Prop({
+    type: [
+      {
+        idFile: String,
+        base64File: String,
+      },
+    ],
+  })
+  fileBase64: {
+    idFile: string;
+    base64File: string;
+  }[];
 
   @Prop()
   idTemplate: string;
@@ -174,6 +234,41 @@ export class Documents {
       idOfUser: string;
       idOffice: string;
       nameOficeUserRecieved: string;
+    }[];
+  }[];
+
+  @Prop({
+    type: [
+      {
+        idUserSend: String,
+        idOfficeUserSend: String,
+        nameOficeUserSend: String,
+        send: [
+          {
+            nameUnity: String,
+            idUnity: String,
+            receivedUsers: [
+              {
+                ciUser: String,
+                idOfUser: String,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+  sendMultiUnitysWithoutWorkflow: {
+    idUserSend: string;
+    idOfficeUserSend: string;
+    nameOficeUserSend: string;
+    send: {
+      nameUnity: string;
+      idUnity: string;
+      receivedUsers: {
+        ciUser: string;
+        idOfUser: string;
+      }[];
     }[];
   }[];
 

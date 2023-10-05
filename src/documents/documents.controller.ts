@@ -50,6 +50,7 @@ import {
 } from './dto/sendDocumentWithoutWorkflow.dto';
 import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
 import { EmailService } from 'src/email/email.service';
+import { UnitysDto } from './dto/sendUnitysWithoutWorkflow.dto';
 
 @ApiTags('Documents')
 @UseGuards(RolesGuard)
@@ -82,8 +83,8 @@ export class DocumentsController {
       const numberDocument =
         await this.sequenceService.getNextValueNumberDocument();
 
-      if (createDocumentDTO.file === '') {
-        createDocumentDTO.file = null;
+      if (createDocumentDTO.files.length === 0) {
+        createDocumentDTO.files = null;
       }
       const newRegisterDocument = {
         ...createDocumentDTO,
@@ -103,8 +104,13 @@ export class DocumentsController {
     }
   }
 
+  @Post('create-multi-documents')
+  async createMultiDocuments() {
+    return this.documentsService.createMultiDocuments();
+  }
+
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(Permission.USER)
   @Get()
   @ApiOperation({
     summary: 'see all documents or search by filters',
@@ -268,6 +274,14 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('obtain-multi-unity-document')
+  async obtainMultiUnityDocument(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.getRecievedDocumentsMultiUnitys(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('documents-send-without-workflow')
   @ApiOperation({
     summary: 'see all documentos send to other user without workflow',
@@ -305,6 +319,21 @@ export class DocumentsController {
       const userId = req.user;
       return this.documentsService.showAllDocumentsCompleted(userId);
     } catch (error) {}
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Get('get-documents-mark-completed')
+  @ApiOperation({
+    summary: 'get yours documents mark completed',
+  })
+  async getDocumentsMarkCompleted(@Req() req) {
+    try {
+      const userId = req.user;
+      return this.documentsService.showDocumentsMarkComplete(userId);
+    } catch (error) {
+      throw new HttpException(`hubo un eror: ${error}`, 500);
+    }
   }
 
   @ApiBearerAuth()
@@ -438,7 +467,7 @@ export class DocumentsController {
     @Param('id') id: string,
     @Body() updateDocumentDTO: UpdateDocumentDTO,
     @Req() req,
-  ): Promise<Documents> {
+  ) {
     const userId = req.user;
     return this.documentsService.update(id, updateDocumentDTO, userId);
   }
@@ -456,7 +485,7 @@ export class DocumentsController {
     @Param('id') id: string,
     @Body() updateDocumentDTO: UpdateDocumentDTO,
     @Req() req,
-  ): Promise<Documents> {
+  ) {
     const userId = req.user;
     return this.documentsService.update(id, updateDocumentDTO, userId);
   }
@@ -550,6 +579,25 @@ export class DocumentsController {
     } catch (error) {
       throw new HttpException('no se pudo enviar', 500);
     }
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Post('send-document-multiple-units/:id')
+  async sendDocumentMultipleUnits(
+    @Param('id') documentId: string,
+    @Body() unitysDto: UnitysDto,
+    @Req() req,
+  ) {
+    try {
+      const userId = req.user;
+      const unitys = unitysDto.unitys;
+      return this.documentsService.sendDocumentMultiUnitysWithoutWorkflow(
+        documentId,
+        unitys,
+        userId,
+      );
+    } catch (error) {}
   }
 
   @ApiBearerAuth()

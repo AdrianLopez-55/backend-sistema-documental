@@ -9,10 +9,12 @@ import {
   Permission,
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
+import { Workflow, WorkflowSchema } from 'src/workflow/schemas/workflow.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
+      { name: Workflow.name, schema: WorkflowSchema },
       { name: Step.name, schema: StepSchema },
       { name: Rol.name, schema: RolSchema },
       { name: Permission.name, schema: PermissionSchema },

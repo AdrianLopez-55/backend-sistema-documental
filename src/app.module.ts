@@ -96,10 +96,10 @@ import { EmailController } from './email/email.controller';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggerMiddleware).forRoutes(
-      { path: '/documents', method: RequestMethod.POST },
-      { path: '/documents/*', method: RequestMethod.POST },
-      { path: '/documents/*', method: RequestMethod.DELETE },
-      { path: '/documents/*', method: RequestMethod.PUT },
+      // { path: '/documents', method: RequestMethod.POST },
+      // { path: '/documents/*', method: RequestMethod.POST },
+      // { path: '/documents/*', method: RequestMethod.DELETE },
+      // { path: '/documents/*', method: RequestMethod.PUT },
 
       // { path: '/documentation-type', method: RequestMethod.POST },
       // { path: '/documentation-type/*', method: RequestMethod.PUT },

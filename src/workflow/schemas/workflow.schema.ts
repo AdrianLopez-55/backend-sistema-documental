@@ -12,8 +12,18 @@ export class Workflow {
   @Prop({ uppercase: true })
   descriptionWorkflow: string;
 
-  @Prop({ type: StepSchema, ref: 'Step' })
-  step: Step;
+  @Prop({ type: Object })
+  step: {
+    pasos: Array<{
+      paso: number;
+      idOffice: string;
+      oficina: string;
+      completado: boolean;
+    }>;
+  };
+
+  @Prop()
+  idStep: string;
 
   @Prop({ default: 0 })
   pasoActual: number;
@@ -21,10 +31,10 @@ export class Workflow {
   @Prop()
   oficinaActual: string;
 
-  @Prop({ default: Date.now() })
+  @Prop({ default: new Date().toLocaleString(), immutable: true })
   createdAt: Date;
 
-  @Prop({ default: Date.now() })
+  @Prop({ default: new Date().toLocaleString() })
   updateAt: Date;
 
   @Prop({ default: true })

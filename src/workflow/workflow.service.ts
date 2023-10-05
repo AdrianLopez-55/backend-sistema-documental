@@ -14,22 +14,27 @@ import { Request } from 'express';
 import { WorkflowFilter } from './dto/workfowFilter.dto';
 import { UpdatePasoWorkflowDto } from './dto/updatePasoWorkflow.dto';
 import { StepService } from 'src/step/step.service';
+import { StepDto } from 'src/step/dto/step.dto';
+import getConfig from '../config/configuration';
+import { HttpService } from '@nestjs/axios';
+import { PasoDto } from 'src/step/dto/paso.dto';
+import { UpdateWorkflowDto } from './dto/updateWorkflow.dto';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class WorkflowService {
+  private readonly apiOrganizationChartMain =
+    getConfig().api_organization_chart_main;
+  private defaultLimit: number;
   constructor(
     @InjectModel(Workflow.name) private workflowModel: Model<WorkflowDocuments>,
     @InjectModel(Step.name) private readonly stepModel: Model<StepDocuments>,
     private readonly stepService: StepService,
+    private readonly httpService: HttpService,
   ) {}
 
-  async createWorkflow(workflowDto: WorkflowDto): Promise<any> {
-    const { nombre, descriptionWorkflow, stepName } = workflowDto;
-    const step = await this.stepModel.findOne({ step: stepName });
-    if (!step) {
-      throw new NotFoundException(`Paso "${stepName}" no encontrado`);
-    }
-
+  async createWorkflow(workflowDto: WorkflowDto) {
+    const { nombre, descriptionWorkflow, step } = workflowDto;
     const existingWorkflow = await this.workflowModel
       .findOne({ nombre })
       .exec();
@@ -37,10 +42,74 @@ export class WorkflowService {
       throw new HttpException(`El nombre ${existingWorkflow} ya existe.`, 400);
     }
 
+    //creacion del step
+    let prevPaso = 0;
+    const pasos = step.pasos;
+    // const nombreStep = step.step;
+    //si el nombre del step que se coloca ya existe y se quiere reutilizar para la creacion workflow
+    // const existingStep = await this.stepModel
+    //   .findOne({ step: nombreStep })
+    //   .exec();
+
+    // if (existingStep) {
+    //   workflowDto.step = existingStep;
+    //   const nuevoWorkflow = new this.workflowModel({
+    //     nombre: nombre,
+    //     descriptionWorkflow: descriptionWorkflow,
+    //     step: {
+    //       step: existingStep.step,
+    //       descriptionStep: existingStep.descriptionStep,
+    //       pasos: existingStep.pasos,
+    //     },
+    //     idStep: existingStep._id,
+    //     oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
+    //   });
+    //   return nuevoWorkflow.save();
+    // }
+
+    for (const paso of pasos) {
+      const oficina = paso.oficina;
+      try {
+        const officeInfo = await this.checkOfficeValidity(oficina);
+        paso.idOffice = officeInfo.id;
+
+        await this.validateOffice(oficina);
+      } catch (error) {
+        throw new BadRequestException(
+          `Oficína no válida en el paso ${paso.paso}: ${error.message}`,
+        );
+      }
+      if (paso.paso <= prevPaso) {
+        throw new HttpException(
+          `El número de paso en el paso ${paso.paso} no sigue la secuencia adecuada`,
+          400,
+        );
+      }
+      prevPaso = paso.paso;
+    }
+    if (!this.areStepsConsecutive(pasos)) {
+      throw new HttpException(
+        'Los números de paso no están en secuencia adecuada',
+        400,
+      );
+    }
+
+    const newStep = new this.stepModel({
+      // step: step.step,
+      // descriptionStep: step.descriptionStep,
+      pasos: step.pasos,
+    });
+    await newStep.save();
+
     const nuevoWorkflow = new this.workflowModel({
       nombre: nombre,
       descriptionWorkflow: descriptionWorkflow,
-      step: step,
+      step: {
+        // step: newStep.step,
+        // descriptionStep: newStep.descriptionStep,
+        pasos: newStep.pasos,
+      },
+      idStep: newStep._id,
       oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
     });
 
@@ -49,6 +118,21 @@ export class WorkflowService {
 
   async findAll(): Promise<Workflow[]> {
     return this.workflowModel.find().sort({ nombre: 1 }).exec();
+  }
+
+  async findAllPaginate(paginationDto: PaginationDto) {
+    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+
+    const offset = (page - 1) * limit;
+
+    const workflows = await this.workflowModel.find().limit(limit).skip(offset);
+
+    const total = await this.workflowModel.countDocuments().exec();
+    return {
+      data: workflows,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getWorkflowByName(nombre: string): Promise<Workflow> {
@@ -81,33 +165,19 @@ export class WorkflowService {
     );
   }
 
-  async update(id: string, workflowDto: WorkflowDto): Promise<any> {
-    const existingWorkflow = await this.workflowModel.findById(id).exec();
-    if (!existingWorkflow) {
+  async update(id: string, updateWorkflowDto: UpdateWorkflowDto) {
+    const workflow = await this.workflowModel.findById(id).exec();
+    if (!workflow) {
       throw new NotFoundException(`Workflow con ID "${id}" no encontrado`);
     }
-    if (existingWorkflow.activeWorkflow === false) {
+    if (workflow.activeWorkflow === false) {
       throw new HttpException('el workflow fue borrado', 404);
     }
+    const step = await this.stepModel.findById(workflow.idStep);
 
-    const { nombre, descriptionWorkflow, stepName } = workflowDto;
-    if (nombre !== undefined && nombre !== '') {
-      existingWorkflow.nombre = nombre;
-    }
-    if (descriptionWorkflow !== undefined && descriptionWorkflow !== '') {
-      existingWorkflow.descriptionWorkflow = descriptionWorkflow;
-    }
-
-    const step = await this.stepModel.findOne({ step: stepName });
-    if (!step) {
-      throw new NotFoundException(`Paso "${stepName}" no encontrado`);
-    }
-    if (stepName !== undefined && stepName !== '') {
-      existingWorkflow.step = step;
-    }
-
-    const updatedWorkflow = await existingWorkflow.save();
-    return updatedWorkflow;
+    return await this.workflowModel.findByIdAndUpdate(id, updateWorkflowDto, {
+      new: true,
+    });
   }
 
   async inactiverWorkflow(id: string, activeWorkflow: boolean) {
@@ -133,8 +203,28 @@ export class WorkflowService {
     if (filter.nombre) {
       query['nombre'] = filter.nombre;
     }
+    if (filter.descriptionWorkflow) {
+      query['descriptionWorkflow'] = filter.descriptionWorkflow;
+    }
     if (filter.step) {
-      query['steps[0][0].step'] = filter.step;
+      query['step'] = {
+        $elemMatch: { step: filter.step },
+      };
+    }
+    if (filter.descriptionStep) {
+      query['step'] = {
+        $elemMatch: { descriptionStep: filter.step },
+      };
+    }
+    if (filter.paso) {
+      query['step.pasos'] = {
+        $elemMatch: { paso: filter.paso },
+      };
+    }
+    if (filter.oficina) {
+      query['step.pasos'] = {
+        $elemMatch: { oficina: filter.oficina },
+      };
     }
     const filteredWorkflow = await this.workflowModel.find(query).exec();
     return filteredWorkflow;
@@ -151,5 +241,68 @@ export class WorkflowService {
       throw new NotFoundException('Versión del documento no encontrada');
     }
     return document;
+  }
+
+  //----FUNCIONES AUXILIARES
+  async checkOfficeValidity(
+    oficina: string,
+  ): Promise<{ id: string; name: string }> {
+    const response = await this.httpService
+      .get(
+        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(oficina)}`,
+      )
+      .toPromise();
+
+    const exacMatch = response.data.find((result) => result.name === oficina);
+    const organigramaList = response.data;
+
+    try {
+      const officeInfo = this.searchInTree(organigramaList, oficina);
+      return officeInfo;
+    } catch (error) {
+      throw new HttpException(
+        `la oficina ${oficina} no existe en el organigrama`,
+        404,
+      );
+    }
+  }
+
+  searchInTree(data, name) {
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      if (item.name === name) {
+        return {
+          id: item._id,
+          name: item.name,
+        };
+      }
+      if (item.children && item.children.length > 0) {
+        const result = this.searchInTree(item.children, name);
+        if (result) {
+          return result;
+        }
+      }
+    }
+    throw new HttpException(
+      'No se encontró el elemento o tiene hijos no válidos',
+      400,
+    );
+  }
+
+  areStepsConsecutive(pasos: PasoDto[]): boolean {
+    const sortedPasos = pasos.slice().sort((a, b) => a.paso - b.paso);
+    for (let i = 0; i < sortedPasos.length - 1; i++) {
+      if (sortedPasos[i].paso + 1 !== sortedPasos[i + 1].paso) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async validateOffice(oficina: string): Promise<void> {
+    const isValid = await this.checkOfficeValidity(oficina);
+    if (!isValid) {
+      throw new HttpException('Oficina no válida', 400);
+    }
   }
 }

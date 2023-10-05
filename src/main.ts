@@ -13,6 +13,8 @@ import { RolService } from './rol/rol.service';
 // import * as io from 'socket.io';
 
 async function bootstrap() {
+  process.env.TZ = 'America/La_Paz';
+
   const app = await NestFactory.create(AppModule, { cors: true });
   app.use(express.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true }));
@@ -60,11 +62,7 @@ async function bootstrap() {
       'endpoints related to the CRUD of documentation types',
     )
     .addTag('workflows', 'endpoints related to creating a workflow')
-    .addTag(
-      'external-organization-chart-data',
-      'endpoint related to obtaining the organizational chart',
-    )
-    .addTag('personal-get', 'obtain data personal')
+
     .addTag(
       'step',
       'enpoints related to the creation of steps that a document must follow according to the organization chart',
@@ -74,6 +72,11 @@ async function bootstrap() {
       'enpoints related to the creation and designation of roles and permissions',
     )
     .addTag('Permissions', 'endpoints related to creating permissions')
+    .addTag(
+      'external-organization-chart-data',
+      'endpoint related to obtaining the organizational chart',
+    )
+    .addTag('personal-get', 'obtain data personal')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

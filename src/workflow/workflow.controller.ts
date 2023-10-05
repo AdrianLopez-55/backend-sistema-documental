@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -30,6 +31,8 @@ import { RolesGuard } from 'src/guard/roles.guard';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
 import { UpdatePasoWorkflowDto } from './dto/updatePasoWorkflow.dto';
+import { StepDto } from 'src/step/dto/step.dto';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Controller('workflow')
 // @UseGuards(RolesGuard)
@@ -42,6 +45,26 @@ export class WorkflowController {
   @Permissions(Permission.SUPERADMIN)
   @ApiResponse({ status: 201, description: 'Workflow creado exitosamente' })
   @Post()
+  @ApiBody({
+    type: StepDto,
+    examples: {
+      example: {
+        value: {
+          nombre: 'workflow a',
+          descriptionWorkflow: 'string',
+          step: {
+            pasos: [
+              { paso: 1, oficina: 'oficina_A' },
+              { paso: 2, oficina: 'oficina_B' },
+              { paso: 3, oficina: 'oficina_C' },
+              { paso: 4, oficina: 'oficina_D' },
+              { paso: 5, oficina: 'oficina_E' },
+            ],
+          },
+        },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Create a new workflow' })
   async create(@Body() workflowDto: WorkflowDto) {
     return this.workflowService.createWorkflow(workflowDto);
@@ -66,6 +89,13 @@ export class WorkflowController {
   })
   async filterParam(@Query() filter: WorkflowFilter) {
     return await this.workflowService.filterParams(filter);
+  }
+
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
+  @Get('paginacion')
+  findAllPaginate(@Query() paginationDto: PaginationDto) {
+    return this.workflowService.findAllPaginate(paginationDto);
   }
 
   // @ApiBearerAuth()
@@ -129,6 +159,28 @@ export class WorkflowController {
   @Permissions(Permission.ADMIN)
   @Permissions(Permission.SUPERADMIN)
   @Put(':id')
+  @ApiBody({
+    type: StepDto,
+    examples: {
+      example: {
+        value: {
+          nombre: 'workflow a',
+          descriptionWorkflow: 'string',
+          step: {
+            step: 'step Y',
+            descriptionStep: 'string',
+            pasos: [
+              { paso: 1, oficina: 'oficina_A' },
+              { paso: 2, oficina: 'oficina_B' },
+              { paso: 3, oficina: 'oficina_C' },
+              { paso: 4, oficina: 'oficina_D' },
+              { paso: 5, oficina: 'oficina_E' },
+            ],
+          },
+        },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Update workflow by ID' })
   async updateWorkflow(
     @Param('id') id: string,

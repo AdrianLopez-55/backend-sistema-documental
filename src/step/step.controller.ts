@@ -45,8 +45,6 @@ export class StepController {
     examples: {
       example: {
         value: {
-          step: 'step A',
-          descriptionStep: 'a description',
           pasos: [
             { paso: 1, oficina: 'oficina_A' },
             { paso: 2, oficina: 'oficina_B' },
@@ -62,7 +60,7 @@ export class StepController {
   @ApiOperation({ summary: 'create a new step' })
   async crearStep(@Body() stepDto: StepDto, @Req() req) {
     const tokenDat = req.token;
-    return this.stepsService.crearStep(stepDto, tokenDat);
+    return this.stepsService.crearStep(stepDto);
   }
 
   // @ApiBearerAuth()

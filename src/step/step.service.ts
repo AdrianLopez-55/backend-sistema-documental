@@ -16,6 +16,10 @@ import { Request } from 'express';
 import { UpdateStepDto } from './dto/updateStep.dto';
 import { updateOnlyPasoDto } from './dto/updateOnlyPaso.dto';
 import getConfig from '../config/configuration';
+import {
+  Workflow,
+  WorkflowDocuments,
+} from 'src/workflow/schemas/workflow.schema';
 
 @Injectable()
 export class StepService {
@@ -24,19 +28,21 @@ export class StepService {
 
   constructor(
     @InjectModel(Step.name) private stepModel: Model<StepDocuments>,
+    @InjectModel(Workflow.name)
+    private workfflowModel: Model<WorkflowDocuments>,
     private readonly httpService: HttpService,
   ) {}
 
-  async crearStep(stepDto: StepDto, tokenDat: string): Promise<Step> {
-    const { step, descriptionStep, pasos } = stepDto;
+  async crearStep(stepDto: StepDto): Promise<Step> {
+    const { pasos } = stepDto;
     let prevPaso = 0;
     for (const paso of pasos) {
       const oficina = paso.oficina;
       try {
-        const officeInfo = await this.checkOfficeValidity(oficina, tokenDat);
+        const officeInfo = await this.checkOfficeValidity(oficina);
         paso.idOffice = officeInfo.id;
 
-        await this.validateOffice(oficina, tokenDat);
+        await this.validateOffice(oficina);
       } catch (error) {
         throw new BadRequestException(
           `Oficína no válida en el paso ${paso.paso}: ${error.message}`,
@@ -56,16 +62,16 @@ export class StepService {
         400,
       );
     }
-    const existingStep = await this.stepModel.findOne({ step }).exec();
-    if (existingStep) {
-      throw new HttpException('El nombre del step ya existe', 400);
-    }
-    if (!step) {
-      throw new HttpException('se debe poner nombre al step', 400);
-    }
+    // const existingStep = await this.stepModel.findOne({ step }).exec();
+    // if (existingStep) {
+    //   throw new HttpException('El nombre del step ya existe', 400);
+    // }
+    // if (!step) {
+    //   throw new HttpException('se debe poner nombre al step', 400);
+    // }
     const newStep = new this.stepModel({
-      step: step,
-      descriptionStep: descriptionStep,
+      // step: step,
+      // descriptionStep: descriptionStep,
       pasos: pasos,
     });
     const saveStep = await newStep.save();
@@ -82,8 +88,8 @@ export class StepService {
     return true;
   }
 
-  async validateOffice(oficina: string, tokenDat: string): Promise<void> {
-    const isValid = await this.checkOfficeValidity(oficina, tokenDat);
+  async validateOffice(oficina: string): Promise<void> {
+    const isValid = await this.checkOfficeValidity(oficina);
     if (!isValid) {
       throw new HttpException('Oficina no válida', 400);
     }
@@ -91,16 +97,10 @@ export class StepService {
 
   async checkOfficeValidity(
     oficina: string,
-    tokenDat: string,
   ): Promise<{ id: string; name: string }> {
     const response = await this.httpService
       .get(
         `${this.apiOrganizationChartMain}?name=${encodeURIComponent(oficina)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenDat}`,
-          },
-        },
       )
       .toPromise();
 
@@ -151,14 +151,14 @@ export class StepService {
 
   async findAllstepsActive(): Promise<Step[]> {
     const stepActives = await this.stepModel.find({ activeStep: true }).exec();
-    return stepActives.sort((a, b) => a.step.localeCompare(b.step));
+    return stepActives;
   }
 
   async findAllStepInactive(): Promise<Step[]> {
     const stepInactives = await this.stepModel
       .find({ activeStep: false })
       .exec();
-    return stepInactives.sort((a, b) => a.step.localeCompare(b.step));
+    return stepInactives;
   }
 
   async findOne(id: string): Promise<Step> {
@@ -192,11 +192,8 @@ export class StepService {
     const { nameOfice, numberPaso } = updateOnlyPasoDto;
     const oficeSearch = nameOfice;
     const pasoSearch = numberPaso;
-    const validateNewOfice = await this.checkOfficeValidity(
-      oficeSearch,
-      tokenDat,
-    );
-    await this.validateOffice(oficeSearch, tokenDat);
+    const validateNewOfice = await this.checkOfficeValidity(oficeSearch);
+    await this.validateOffice(oficeSearch);
 
     const stepFind = findOneStepId.pasos.find(
       (paso) => paso.paso == pasoSearch,
@@ -228,19 +225,20 @@ export class StepService {
       throw new HttpException('el step fue borrado', 400);
     }
 
-    const { step, pasos } = updateStepDto;
-    if (step !== undefined && step !== '') {
-      existingStep.step = step;
-    }
+    const { pasos } = updateStepDto;
+
+    // if (step !== undefined && step !== '') {
+    //   existingStep.step = step;
+    // }
 
     if (pasos !== undefined && Array.isArray(pasos) && pasos.length > 0) {
       let prevPaso = 0;
       for (const paso of pasos) {
         const oficina = paso.oficina;
         try {
-          const officeInfo = await this.checkOfficeValidity(oficina, tokenDat);
+          const officeInfo = await this.checkOfficeValidity(oficina);
           paso.idOffice = officeInfo.id;
-          await this.validateOffice(oficina, tokenDat);
+          await this.validateOffice(oficina);
         } catch (error) {
           throw new BadRequestException(
             `Oficina no válida en el paso ${paso.paso}: ${error.message}`,
@@ -266,6 +264,19 @@ export class StepService {
       existingStep.pasos = pasos;
     }
     const updatedStep = await existingStep.save();
+
+    const workflows = await this.workfflowModel.find();
+    for (const workflow of workflows) {
+      if (workflow.idStep === id) {
+        workflow.step = {
+          // step: updatedStep.step,
+          // descriptionStep: updatedStep.descriptionStep,
+          pasos: updatedStep.pasos,
+        };
+        await workflow.save();
+      }
+    }
+
     return updatedStep;
   }
 

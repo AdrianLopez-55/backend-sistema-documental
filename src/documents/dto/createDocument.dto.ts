@@ -4,7 +4,7 @@ import { IsString } from 'class-validator';
 export class CreateDocumentDTO {
   @ApiProperty({ example: 'Memorandum-2023' })
   @IsString()
-  readonly title: string;
+  title: string;
 
   @ApiProperty({ example: 'Licencia' })
   @IsString()
@@ -14,8 +14,10 @@ export class CreateDocumentDTO {
     example: 'contract document registration for new staff. It is on revision',
   })
   @IsString()
-  readonly description: string;
+  description: string;
 
-  @ApiProperty({ example: 'data:@file/jpeg;base64,/9jq' })
-  file: string;
+  @ApiProperty({
+    example: ['data:@file/jpeg;base64,/9jq', 'data:@file/jpeg;base64,/9jq'],
+  })
+  files: string[];
 }

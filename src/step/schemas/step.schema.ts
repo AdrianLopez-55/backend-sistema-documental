@@ -8,11 +8,11 @@ export class Step {
   push(nuevoPaso: WorkflowStep) {
     throw new Error('Method not implemented.');
   }
-  @Prop({ required: true, uppercase: true })
-  step: string;
+  // @Prop({ required: true, uppercase: true })
+  // step: string;
 
-  @Prop({ uppercase: true })
-  descriptionStep: string;
+  // @Prop({ uppercase: true })
+  // descriptionStep: string;
 
   @Prop([
     {
