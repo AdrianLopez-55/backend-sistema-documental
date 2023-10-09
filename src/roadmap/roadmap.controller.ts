@@ -9,15 +9,17 @@ import {
   UseGuards,
   Req,
   Put,
+  Query,
 } from '@nestjs/common';
 import { RoadmapService } from './roadmap.service';
 import { CreateRoadmapDto } from './dto/create-roadmap.dto';
 import { UpdateRoadmapDto } from './dto/update-roadmap.dto';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from 'src/guard/roles.guard';
 import { Permission } from 'src/guard/constants/Permission';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { CreateAssignedDocumentDto } from './dto/createAssignedDocument.dto';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Controller('roadmap')
 @UseGuards(RolesGuard)
@@ -58,6 +60,13 @@ export class RoadmapController {
   @Get()
   findAll() {
     return this.roadmapService.findAll();
+  }
+
+  @Get('pagination')
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'offset', type: Number, example: 0, required: false })
+  async findAllPaginate(@Query() paginationDto: PaginationDto, @Req() req) {
+    return this.roadmapService.findAllPaginate(paginationDto);
   }
 
   @Get(':id')

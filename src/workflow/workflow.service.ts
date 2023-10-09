@@ -34,7 +34,7 @@ export class WorkflowService {
   ) {}
 
   async createWorkflow(workflowDto: WorkflowDto) {
-    const { nombre, descriptionWorkflow, step } = workflowDto;
+    const { nombre, descriptionWorkflow, pasos } = workflowDto;
     const existingWorkflow = await this.workflowModel
       .findOne({ nombre })
       .exec();
@@ -44,29 +44,6 @@ export class WorkflowService {
 
     //creacion del step
     let prevPaso = 0;
-    const pasos = step.pasos;
-    // const nombreStep = step.step;
-    //si el nombre del step que se coloca ya existe y se quiere reutilizar para la creacion workflow
-    // const existingStep = await this.stepModel
-    //   .findOne({ step: nombreStep })
-    //   .exec();
-
-    // if (existingStep) {
-    //   workflowDto.step = existingStep;
-    //   const nuevoWorkflow = new this.workflowModel({
-    //     nombre: nombre,
-    //     descriptionWorkflow: descriptionWorkflow,
-    //     step: {
-    //       step: existingStep.step,
-    //       descriptionStep: existingStep.descriptionStep,
-    //       pasos: existingStep.pasos,
-    //     },
-    //     idStep: existingStep._id,
-    //     oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
-    //   });
-    //   return nuevoWorkflow.save();
-    // }
-
     for (const paso of pasos) {
       const oficina = paso.oficina;
       try {
@@ -97,18 +74,19 @@ export class WorkflowService {
     const newStep = new this.stepModel({
       // step: step.step,
       // descriptionStep: step.descriptionStep,
-      pasos: step.pasos,
+      pasos: pasos,
     });
     await newStep.save();
+    console.log('esto es newStep');
+    console.log(newStep);
 
     const nuevoWorkflow = new this.workflowModel({
       nombre: nombre,
       descriptionWorkflow: descriptionWorkflow,
-      step: {
-        // step: newStep.step,
-        // descriptionStep: newStep.descriptionStep,
-        pasos: newStep.pasos,
-      },
+      // step: newStep.step,
+      // descriptionStep: newStep.descriptionStep,
+      pasos: newStep.pasos,
+
       idStep: newStep._id,
       oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
     });

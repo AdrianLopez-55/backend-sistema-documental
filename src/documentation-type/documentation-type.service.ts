@@ -30,9 +30,12 @@ import * as path from 'path';
 import { HttpService } from '@nestjs/axios';
 import * as officegen from 'officegen';
 import * as pdfkit from 'pdfkit';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class DocumentationTypeService {
+  private defaultLimit: number;
+
   constructor(
     @InjectModel(DocumentationType.name)
     private readonly documentationTypeModel: Model<DocumentationTypeDocument>,
@@ -164,6 +167,24 @@ export class DocumentationTypeService {
     return findAllDocumetationType.sort((a, b) =>
       a.typeName.localeCompare(b.typeName),
     );
+  }
+
+  async findAllPaginate(paginationDto: PaginationDto) {
+    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+
+    const documentationTypes = await this.documentationTypeModel
+      .find({ activeDocumentType: true })
+      .limit(limit)
+      .skip(offset);
+    for (const documentType of documentationTypes) {
+    }
+    const total = await this.documentationTypeModel.countDocuments().exec();
+    return {
+      data: documentationTypes,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findDocumentsTypeActive(): Promise<DocumentationType[]> {

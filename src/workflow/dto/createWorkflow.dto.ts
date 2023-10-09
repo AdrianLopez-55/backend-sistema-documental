@@ -14,6 +14,6 @@ export class WorkflowDto {
 
   @ApiProperty({ description: 'Pasos en formato JSON' })
   @ValidateNested({ each: true })
-  @Type(() => StepDto)
-  step: StepDto;
+  @Type(() => PasoDto)
+  pasos: PasoDto[];
 }

@@ -13,14 +13,12 @@ export class Workflow {
   descriptionWorkflow: string;
 
   @Prop({ type: Object })
-  step: {
-    pasos: Array<{
-      paso: number;
-      idOffice: string;
-      oficina: string;
-      completado: boolean;
-    }>;
-  };
+  pasos: Array<{
+    paso: number;
+    idOffice: string;
+    oficina: string;
+    completado: boolean;
+  }>;
 
   @Prop()
   idStep: string;

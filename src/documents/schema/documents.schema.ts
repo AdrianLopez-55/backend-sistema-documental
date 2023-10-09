@@ -92,36 +92,11 @@ export class Documents {
   @Prop({ uppercase: true })
   description: string;
 
-  // @Prop({ default: null })
-  // fileRegister: mongoose.Schema.Types.Mixed;
+  @Prop({ default: null })
+  fileRegister: mongoose.Schema.Types.Mixed;
 
-  @Prop({
-    type: [
-      {
-        idFile: String,
-        status: String,
-        extension: String,
-      },
-    ],
-  })
-  filesRegister: {
-    idFile: string;
-    status: string;
-    extension: string;
-  }[];
-
-  @Prop({
-    type: [
-      {
-        idFile: String,
-        base64File: String,
-      },
-    ],
-  })
-  fileBase64: {
-    idFile: string;
-    base64File: string;
-  }[];
+  @Prop()
+  fileBase64: string;
 
   @Prop()
   idTemplate: string;

@@ -19,6 +19,8 @@ async function bootstrap() {
   app.use(express.json({ limit: '10mb' }));
   app.use(bodyParser.urlencoded({ extended: true }));
 
+  app.use(bodyParser.text({ type: 'text/html' }));
+
   const permission = app.get(PermissionsService);
   permission.setPermissionDefault();
 

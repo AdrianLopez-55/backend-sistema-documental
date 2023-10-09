@@ -35,6 +35,7 @@ import mongoose from 'mongoose';
 import { string } from 'joi';
 import { Milestone } from './schema/milestone.schema';
 import { StateDocumentSchema } from 'src/state-document/schemas/state-document.schema';
+import puppeteer from 'puppeteer';
 
 @Injectable()
 export class DocumentsService {
@@ -53,8 +54,8 @@ export class DocumentsService {
     private readonly documentModel: Model<DocumentDocument>,
     private readonly httpService: HttpService,
     @InjectModel(DocumentationType.name)
-    private readonly documentationTypeService: DocumentationTypeService,
-    @InjectModel(Workflow.name) private workflowModel: Model<WorkflowDocuments>,
+    @InjectModel(Workflow.name)
+    private workflowModel: Model<WorkflowDocuments>,
     // private readonly customErrorService: CustomErrorService, // private personalGetService: PersonalGetService,
     private readonly findDocumentationTypeService: FindDocumentationTypeService,
   ) {}
@@ -72,7 +73,7 @@ export class DocumentsService {
     }
 
     await connectToDataBase();
-    const numberOfDocumentsToGenerate = 500;
+    const numberOfDocumentsToGenerate = 2000;
     const DocumentsSchema = new mongoose.Schema({
       numberDocument: String,
       userId: String,
@@ -133,88 +134,85 @@ export class DocumentsService {
     }
   }
 
-  // async deleteGenerateDocument(){
-  //   try {
-  //     const result = await documentModel.deleteMany({ title:/^Document\d+$/ });
+  //-------------------------------
 
-  //   } catch (error) {
+  async htmlConvertPdf(htmlContent: string) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
 
-  //   }
-  // }
+    await page.setContent(htmlContent);
+
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+    });
+
+    await browser.close();
+
+    const pdfBase64 = pdfBuffer.toString('base64');
+    return pdfBase64;
+  }
+
+  //-------------------------------
 
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
-    const { files, documentTypeName } = createDocumentDTO;
-    const documentationTypeData =
-      await this.findDocumentationTypeService.findDocumentationType(
-        documentTypeName,
-      );
-    let fileRegister = [];
-    if (!files || !Array.isArray(files) || files.length === 0) {
-      return this.functionCreateDocument(
-        createDocumentDTO,
-        documentationTypeData,
-        userId,
-      );
-    }
-    if (files.length > 0) {
-      for (const file of files) {
+    try {
+      const { file, documentTypeName } = createDocumentDTO;
+      const documentationTypeData =
+        await this.findDocumentationTypeService.findDocumentationType(
+          documentTypeName,
+        );
+
+      if (file) {
         const { mime, base64 } = this.extractFileData(file);
         const fileObj = {
           mime: mime,
           base64: base64,
         };
         const response = await this.uploadFile(fileObj);
-        // console.log('ESTO ES RESPONSE.DATA DE CREATE DOCUMENT FILE');
-        // console.log(response.data);
-        const fileRegisterItemData = this.createFileRegister(
-          response.data.file,
+        const fileRegister = this.createFileRegister(response.data.file);
+        const newDocument = new this.documentModel({
+          ...createDocumentDTO,
+          fileRegister,
+          documentationType: documentationTypeData,
+          stateDocumentUserSend: 'EN ESPERA',
+          userId: userId,
+        });
+        return newDocument.save();
+      } else {
+        return this.functionCreateDocument(
+          createDocumentDTO,
+          documentationTypeData,
+          userId,
         );
-        const fileRegisterItem = {
-          idFile: fileRegisterItemData.idFile,
-          status: fileRegisterItemData.status,
-          extension: fileRegisterItemData.extension,
-        };
-        fileRegister.push(fileRegisterItem);
       }
-      const newDocument = new this.documentModel({
-        ...createDocumentDTO,
-        filesRegister: fileRegister, // Colocamos el objeto fileRegister en un array
-        documentationType: documentationTypeData,
-        stateDocumentUserSend: 'EN ESPERA',
-        userId: userId,
-      });
-      return newDocument.save();
-    } else {
-      return this.functionCreateDocument(
-        createDocumentDTO,
-        documentationTypeData,
-        userId,
-      );
+    } catch (error) {
+      throw new Error(`error encontrado: ${error}`);
     }
   }
 
   async getBase64Documents(id: string) {
     const document = await this.checkDocument(id);
-    const base64Documents = [];
-    if (document.filesRegister.length > 0) {
-      for (const file of document.filesRegister) {
-        const idFile = file.idFile;
-        try {
-          const res = await this.httpService
-            .get(`${this.apiFilesUploader}/file/${idFile}`)
-            .toPromise();
-          base64Documents.push({
-            idFile: idFile,
-            base64File: res.data.file.base64,
-          });
-        } catch (error) {
-          document.fileBase64 = null;
-        }
-      }
-      return {
-        idDocument: id,
-        base64Document: base64Documents,
+    if (document.fileRegister && typeof document.fileRegister === 'object') {
+      const fileRegisterObject = document.fileRegister as unknown as {
+        idFile: string;
       };
+      try {
+        const res = await this.httpService
+          .get(`${this.apiFilesUploader}/file/${fileRegisterObject.idFile}`)
+          .toPromise();
+        document.fileBase64 = res.data.file.base64;
+      } catch (error) {
+        document.fileBase64 = null;
+      }
+      const idDocument = id;
+      const fileBase64 = document.fileBase64;
+      const showDocument = { idDocument, fileBase64 };
+      return showDocument;
+    } else {
+      throw new HttpException(
+        'El documento no cuenta con un archivo adjunto',
+        400,
+      );
     }
   }
 
@@ -342,48 +340,28 @@ export class DocumentsService {
     updateDocumentDTO: UpdateDocumentDTO,
     userId: string,
   ) {
-    const { documentTypeName, files } = updateDocumentDTO;
+    const { documentTypeName, file } = updateDocumentDTO;
     const documentationType =
       await this.findDocumentationTypeService.findDocumentationType(
         documentTypeName,
       );
-
-    if (!files || !Array.isArray(files) || files.length === 0) {
+    if (file && file.startsWith('data')) {
+      const { mime, base64 } = this.extractFileData(file);
+      const fileObj = {
+        mime,
+        base64,
+      };
+      const response = await this.uploadFile(fileObj);
+      const fileRegister = this.createFileRegister(response.data.file);
       const updateDocument = {
         ...updateDocumentDTO,
+        fileRegister,
         documentationType,
       };
       const updateNewDocument = await this.documentModel
         .findOneAndUpdate({ _id: id }, updateDocument, { new: true })
         .exec();
       return updateNewDocument;
-    }
-    if (files.length > 0) {
-      // const showUpdateDocument: Documents[] = [];
-      const fileRegister = [];
-      for (const file of files) {
-        if (file.startsWith('data')) {
-          const { mime, base64 } = this.extractFileData(file);
-          const fileObj = {
-            mime,
-            base64,
-          };
-          const response = await this.uploadFile(fileObj);
-          const fileRegisterItem = this.createFileRegister(response.data.file);
-          fileRegister.push(fileRegisterItem);
-        }
-      }
-      const updateDocument = {
-        ...updateDocumentDTO,
-        filesRegister: fileRegister,
-        documentationType,
-      };
-      const updateNewDocument = await this.documentModel
-        .findOneAndUpdate({ _id: id }, updateDocument, { new: true })
-        .exec();
-
-      const savedDocument = await updateNewDocument.save();
-      return savedDocument;
     } else {
       const updateDocument = {
         ...updateDocumentDTO,
@@ -483,7 +461,7 @@ export class DocumentsService {
     // verificar el estado del siguiente paso
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
-    const pasos = document.workflow.step.pasos;
+    const pasos = document.workflow.pasos;
 
     const findMarkDocuments = document.userReceivedDocument.some((entry) => {
       return entry.idOfUser === userId;
@@ -501,7 +479,7 @@ export class DocumentsService {
 
     // verificar la oficina actual de usuario lodgeado
     const oficinaActualUsuario = userOficce;
-    const oficinaUserDentroBitacora = document.workflow.step.pasos.filter(
+    const oficinaUserDentroBitacora = document.workflow.pasos.filter(
       (dat) => dat.oficina === userOficce,
     );
     const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
@@ -565,7 +543,7 @@ export class DocumentsService {
       if (matchingUsers.length > 0) {
         pasos[pasoActual].completado = true;
         workflow.pasoActual = pasoActual + 1;
-        workflow.oficinaActual = workflow.step.pasos[pasoActual].oficina;
+        workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
 
         const nameOfTheOffice = await this.httpService
           .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
@@ -644,8 +622,8 @@ export class DocumentsService {
 
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
-    const pasos = workflow.step.pasos;
-    const oficinaUserDentroBitacora = document.workflow.step.pasos.filter(
+    const pasos = workflow.pasos;
+    const oficinaUserDentroBitacora = document.workflow.pasos.filter(
       (dat) => dat.oficina === userOficce,
     );
     const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
@@ -695,7 +673,7 @@ export class DocumentsService {
       const unityUsers = await Promise.all(unityUserPromises);
       pasos[pasoActual].completado = true;
       workflow.pasoActual = pasoActual + 1;
-      workflow.oficinaActual = workflow.step.pasos[pasoActual].oficina;
+      workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
 
       const nameOfTheOffice = await this.httpService
         .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
@@ -1202,7 +1180,7 @@ export class DocumentsService {
       throw new HttpException('El documento ya fue revisado por usted', 400);
     }
 
-    const pasos = document.workflow.step.pasos;
+    const pasos = document.workflow.pasos;
     const currentStepIndex = document.workflow.pasoActual - 1;
     if (
       currentStepIndex < pasos.length - 1 &&
@@ -1293,7 +1271,7 @@ export class DocumentsService {
 
     if (lastReceivedUser.idOfUser === userId) {
       // El usuario actual es el último en recibir el documento
-      const pasos = document.workflow.step.pasos;
+      const pasos = document.workflow.pasos;
       const currentStepIndex = document.workflow.pasoActual - 1;
 
       if (currentStepIndex === pasos.length - 1) {
@@ -1560,7 +1538,7 @@ export class DocumentsService {
 
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
-    const pasos = workflow.step.pasos;
+    const pasos = workflow.pasos;
 
     if (
       numberPaso < 0 ||
@@ -1906,24 +1884,24 @@ export class DocumentsService {
       .sort({ numberDocument: 1 })
       .setOptions({ sanitizeFilter: true })
       .exec();
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-    }
+    // for (const document of documents) {
+    //   if (document.userId) {
+    //     try {
+    //       const res = await this.httpService
+    //         .get(`${this.apiPersonalGet}/${document.userId}`)
+    //         .toPromise();
+    //       document.userInfo = {
+    //         name: res.data.name,
+    //         lastName: res.data.lastName,
+    //         ci: res.data.ci,
+    //         email: res.data.email,
+    //         unity: res.data.unity,
+    //       };
+    //     } catch (error) {
+    //       document.userId = 'no se encontraron datos del usuario';
+    //     }
+    //   }
+    // }
     return documents;
   }
 
@@ -2209,7 +2187,7 @@ export class DocumentsService {
 
   async addDocumentationType(typeName: string): Promise<any> {
     const documentationType =
-      await this.documentationTypeService.getDocumentatioTypeByName(typeName);
+      await this.findDocumentationTypeService.findDocumentationType(typeName);
     return documentationType;
   }
 
@@ -2244,7 +2222,7 @@ export class DocumentsService {
     const workDt = {
       nombre: workflowData.nombre,
       descriptionWorkflow: workflowData.descriptionWorkflow,
-      step: workflowData.step,
+      pasos: workflowData.pasos,
       idStep: workflowData.idStep,
       pasoActual: workflowData.pasoActual,
       createdAt: workflowData.createdAt,
@@ -2256,7 +2234,7 @@ export class DocumentsService {
     document.workflow = workDt;
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
-    const pasos = workflow.step.pasos;
+    const pasos = workflow.pasos;
     if (pasoActual < pasos.length) {
       const unityUserPromises = ci.map(async (ci) => {
         const user = await this.httpService
@@ -2296,7 +2274,7 @@ export class DocumentsService {
       const unityUsers = await Promise.all(unityUserPromises);
       pasos[pasoActual].completado = true;
       workflow.pasoActual = pasoActual + 1;
-      workflow.oficinaActual = workflow.step.pasos[pasoActual].oficina;
+      workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
       let newBitacora = [];
       const nameOfTheOffice = await this.httpService
         .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
@@ -2366,7 +2344,7 @@ export class DocumentsService {
     }
     const {
       descriptionWorkflow,
-      step,
+      pasos,
       idStep,
       createdAt,
       activeWorkflow,
@@ -2378,7 +2356,7 @@ export class DocumentsService {
     const workDt: Workflow = {
       nombre: workflowData.nombre,
       descriptionWorkflow,
-      step,
+      pasos,
       idStep,
       pasoActual: workflowData.pasoActual,
       createdAt,
@@ -2392,7 +2370,7 @@ export class DocumentsService {
     //---------paso actual del documento ---
     const workflow = document.workflow;
     const pasoActual = workflow.pasoActual;
-    const pasos = workflow.step.pasos;
+    // const pasos = workflow.pasos;
 
     //------- obtener lista con todos los usuarios ---
     //---- obtener info de la persona logeada y evitar su registro si trabja en
@@ -2401,7 +2379,7 @@ export class DocumentsService {
       .get(`${this.apiPersonalGet}/${userId}`)
       .toPromise();
     const userOficce = loggedUser.data.unity;
-    const oficinaUserDentroBitacora = document.workflow.step.pasos.filter(
+    const oficinaUserDentroBitacora = document.workflow.pasos.filter(
       (dat) => dat.oficina === userOficce,
     );
 
@@ -2489,7 +2467,7 @@ export class DocumentsService {
       if (matchingUsers.length > 0) {
         pasos[pasoActual].completado = true;
         workflow.pasoActual = pasoActual + 1;
-        workflow.oficinaActual = workflow.step.pasos[pasoActual].oficina;
+        workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
         const nameOfTheOffice = await this.httpService
           .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
           .toPromise();

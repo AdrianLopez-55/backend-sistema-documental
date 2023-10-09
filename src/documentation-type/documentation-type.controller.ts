@@ -30,6 +30,7 @@ import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
 import { RolesGuard } from 'src/guard/roles.guard';
 import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Controller('documentation-type')
 // @UseGuards(RolesGuard)
@@ -74,6 +75,16 @@ export class DocumentationTypeController {
   @ApiOperation({ summary: 'see only document type actives' })
   async findDocumentTypeActive(): Promise<DocumentationType[]> {
     return this.documentationTypeService.findDocumentsTypeActive();
+  }
+
+  @Get('pagination')
+  @ApiOperation({
+    summary: 'get dcumentation types by pagination',
+  })
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'offset', type: Number, example: 10, required: false })
+  async findAllPaginate(@Query() paginationDto: PaginationDto, @Req() req) {
+    return this.documentationTypeService.findAllPaginate(paginationDto);
   }
 
   @Get(':id')

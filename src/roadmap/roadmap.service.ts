@@ -8,11 +8,12 @@ import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
 import { CreateAssignedDocumentDto } from './dto/createAssignedDocument.dto';
 import { AssignedDocument } from './schemas/assignedDocuments.schema';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class RoadmapService {
   private readonly apiDocument = getConfig().api_document;
-
+  private defaulLimit: number;
   constructor(
     @InjectModel(Roadmap.name) private roadmapModel: Model<RoadmapDocuments>,
     @InjectModel(AssignedDocument.name)
@@ -109,5 +110,20 @@ export class RoadmapService {
       roadmap.save();
       return roadmap;
     } catch (error) {}
+  }
+
+  async findAllPaginate(paginationDto: PaginationDto) {
+    const { limit = this.defaulLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+    const roadmaps = await this.roadmapModel
+      .find({ active: true })
+      .limit(limit)
+      .skip(offset);
+    const total = await this.roadmapModel.countDocuments().exec();
+    return {
+      data: roadmaps,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

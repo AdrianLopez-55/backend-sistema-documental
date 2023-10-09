@@ -17,7 +17,7 @@ export class CreateDocumentDTO {
   description: string;
 
   @ApiProperty({
-    example: ['data:@file/jpeg;base64,/9jq', 'data:@file/jpeg;base64,/9jq'],
+    example: 'data:@file/jpeg;base64,/9jq',
   })
-  files: string[];
+  file: string;
 }

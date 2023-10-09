@@ -83,8 +83,8 @@ export class DocumentsController {
       const numberDocument =
         await this.sequenceService.getNextValueNumberDocument();
 
-      if (createDocumentDTO.files.length === 0) {
-        createDocumentDTO.files = null;
+      if (createDocumentDTO.file === '') {
+        createDocumentDTO.file = null;
       }
       const newRegisterDocument = {
         ...createDocumentDTO,
@@ -508,6 +508,12 @@ export class DocumentsController {
   @ApiOperation({ summary: 'reactivate a document record' })
   async reactiverDocument(@Param('id') id: string, active: boolean) {
     return this.documentsService.activerDocument(id, active);
+  }
+
+  @Post('generate-pdf')
+  async generatePdf(@Body() htmlContent: string) {
+    const pdfBase64 = await this.documentsService.htmlConvertPdf(htmlContent);
+    return pdfBase64;
   }
 
   @ApiBearerAuth()

@@ -27,6 +27,7 @@ import { Rol } from './schema/rol.schema';
 import { RolesGuard } from 'src/guard/roles.guard';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Controller('rol')
 @UseGuards(RolesGuard)
@@ -71,6 +72,16 @@ export class RolController {
   @ApiOperation({ summary: 'see only rol actives' })
   async findRolActives(): Promise<Rol[]> {
     return this.rolService.findRolActive();
+  }
+
+  @Get('pagination')
+  @ApiOperation({
+    summary: 'get rols by pagination',
+  })
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'offset', type: Number, example: 0, required: false })
+  async findAllPaginate(@Query() paginationDto: PaginationDto, @Req() req) {
+    return this.rolService.findAllPagination(paginationDto);
   }
 
   @Get(':id')

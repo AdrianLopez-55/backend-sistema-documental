@@ -52,15 +52,13 @@ export class WorkflowController {
         value: {
           nombre: 'workflow a',
           descriptionWorkflow: 'string',
-          step: {
-            pasos: [
-              { paso: 1, oficina: 'oficina_A' },
-              { paso: 2, oficina: 'oficina_B' },
-              { paso: 3, oficina: 'oficina_C' },
-              { paso: 4, oficina: 'oficina_D' },
-              { paso: 5, oficina: 'oficina_E' },
-            ],
-          },
+          pasos: [
+            { paso: 1, oficina: 'oficina_A' },
+            { paso: 2, oficina: 'oficina_B' },
+            { paso: 3, oficina: 'oficina_C' },
+            { paso: 4, oficina: 'oficina_D' },
+            { paso: 5, oficina: 'oficina_E' },
+          ],
         },
       },
     },

@@ -11,9 +11,12 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { SetPermissionToRolDto } from './dto/permission.rol';
 import { Request } from 'express';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class RolService {
+  private defaultLimit: number;
+
   constructor(
     @InjectModel(Rol.name)
     private readonly rolModel: Model<RolDocument>,
@@ -117,5 +120,22 @@ export class RolService {
       .sort({ rolName: 1 })
       .setOptions({ sanitizeFilter: true })
       .exec();
+  }
+
+  async findAllPagination(paginationDto: PaginationDto) {
+    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+
+    const rols = await this.rolModel
+      .find({ activeRol: true })
+      .limit(limit)
+      .skip(offset);
+
+    const total = await this.rolModel.countDocuments().exec();
+    return {
+      data: rols,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

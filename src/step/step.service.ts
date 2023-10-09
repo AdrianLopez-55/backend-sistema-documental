@@ -268,11 +268,7 @@ export class StepService {
     const workflows = await this.workfflowModel.find();
     for (const workflow of workflows) {
       if (workflow.idStep === id) {
-        workflow.step = {
-          // step: updatedStep.step,
-          // descriptionStep: updatedStep.descriptionStep,
-          pasos: updatedStep.pasos,
-        };
+        workflow.pasos = updatedStep.pasos;
         await workflow.save();
       }
     }

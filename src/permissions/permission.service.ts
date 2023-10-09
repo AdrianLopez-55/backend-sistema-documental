@@ -5,9 +5,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Permission, PermissionDocument } from './schemas/permission.schema';
 import { Model } from 'mongoose';
 import { Request } from 'express';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class PermissionsService {
+  private defaulLimit: number;
   constructor(
     @InjectModel(Permission.name)
     private readonly permissionModel: Model<PermissionDocument>,
@@ -117,12 +119,18 @@ export class PermissionsService {
       .exec();
   }
 
-  // async findPermissionActive(): Promise<PermissionDocument[]>{
-  //   // const activePermission: PermissionDocument[] = await this.permissionModel.find({ active: true }).exec();
-  // 	return this.permissionModel.find({ active: true }).exec();
-  // }
-
-  // async findDocumentsActive(query: any): Promise<Permission[]>{
-  // 	return this.permissionModel.find(query).sort({numberDocument: 1}).setOptions({sanitizeFilter: true}).exec();
-  // }
+  async findAllPaginate(paginationDto: PaginationDto) {
+    const { limit = this.defaulLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+    const permissions = await this.permissionModel
+      .find({ active: true })
+      .limit(limit)
+      .skip(offset);
+    const total = await this.permissionModel.countDocuments().exec();
+    return {
+      data: permissions,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }
