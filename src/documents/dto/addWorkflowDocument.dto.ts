@@ -7,3 +7,8 @@ export class AddWorkflowDocumentDto {
   @ApiProperty({ example: ['54758', '4454'] })
   ci: string[];
 }
+
+export class AddWorkflowSinCiDocumentDto {
+  @ApiProperty({ example: 'workflow_A' })
+  workflowName: string;
+}

@@ -29,6 +29,7 @@ import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
 import { FindDocumentationTypeService } from './findDocumentationType.service';
 import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
 import { EmailService } from 'src/email/email.service';
+import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { EmailService } from 'src/email/email.service';
     CustomErrorService,
     FindDocumentationTypeService,
     EmailService,
+    SendDerivedDocumentsService,
   ],
 })
 export class DocumentsModule {}

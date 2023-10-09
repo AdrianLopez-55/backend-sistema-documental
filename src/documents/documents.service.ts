@@ -36,6 +36,7 @@ import { string } from 'joi';
 import { Milestone } from './schema/milestone.schema';
 import { StateDocumentSchema } from 'src/state-document/schemas/state-document.schema';
 import puppeteer from 'puppeteer';
+import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
 
 @Injectable()
 export class DocumentsService {
@@ -58,6 +59,7 @@ export class DocumentsService {
     private workflowModel: Model<WorkflowDocuments>,
     // private readonly customErrorService: CustomErrorService, // private personalGetService: PersonalGetService,
     private readonly findDocumentationTypeService: FindDocumentationTypeService,
+    private sendDerivedDocumentsService: SendDerivedDocumentsService,
   ) {}
 
   async createMultiDocuments() {
@@ -81,23 +83,10 @@ export class DocumentsService {
       title: String,
       documentationType: String,
       stateDocumentUserSend: String,
-      // stateDocumetUser: String,
-      // userReceivedDocument: [String],
-      // userReceivedDocumentWithoutWorkflow: [String],
-      // oficinaActual: String,
-      // oficinaPorPasar: String,
-      // workflow: null,
       description: String,
-      // filesRegister: null,
-      // fileBase64: [String],
-      // idTemplate: String,
-      // base64Template: String,
-      // comments: Comment,
-      // milestone: Milestone,
       active: Boolean,
       year: String,
       state: String,
-      // counter: Number,
     });
 
     const documentModel = mongoose.model<DocumentDocument>(
@@ -154,6 +143,7 @@ export class DocumentsService {
 
   //-------------------------------
 
+  //documents service
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
       const { file, documentTypeName } = createDocumentDTO;
@@ -190,6 +180,7 @@ export class DocumentsService {
     }
   }
 
+  //documents service
   async getBase64Documents(id: string) {
     const document = await this.checkDocument(id);
     if (document.fileRegister && typeof document.fileRegister === 'object') {
@@ -216,6 +207,7 @@ export class DocumentsService {
     }
   }
 
+  //documents service
   async showBase64TemplateDoc(id: string) {
     const document = await this.checkDocument(id);
     const idTemplateFromDoc = document.documentationType.idTemplateDocType;
@@ -335,6 +327,7 @@ export class DocumentsService {
     return showDocument;
   }
 
+  //documents service
   async update(
     id: string,
     updateDocumentDTO: UpdateDocumentDTO,
@@ -374,12 +367,19 @@ export class DocumentsService {
     }
   }
 
-  //echo
+  //echo //sendDerivedService.sendDocumentWithCi
   async enviarDocument(
     documentId: string,
     addWorkflowDocumentDto: AddWorkflowDocumentDto,
     userId: string,
   ): Promise<Documents> {
+    return await this.sendDerivedDocumentsService.sendDocumentWithCi(
+      documentId,
+      addWorkflowDocumentDto,
+      userId,
+    );
+
+    /*
     const document = await this.checkDocument(documentId);
     const { worflowName, ci } = addWorkflowDocumentDto;
     if (!ci) {
@@ -413,14 +413,22 @@ export class DocumentsService {
       );
       return documentSend;
     }
+    */
   }
 
-  //echo
+  //echo //sendDerivedDocumentsService.sendDocumentToUnity
   async sendDocumentToUnity(
     documentId: string,
     addWorkflowSinCiDocumentDto: AddWorkflowSinCiDocumentDto,
     userId: string,
   ): Promise<Documents> {
+    return await this.sendDerivedDocumentsService.sendDocumentToUnity(
+      documentId,
+      addWorkflowSinCiDocumentDto,
+      userId,
+    );
+
+    /*
     const document = await this.checkDocument(documentId);
     const { workflowName } = addWorkflowSinCiDocumentDto;
     if (document.stateDocumentUserSend === 'OBSERVADO') {
@@ -448,6 +456,7 @@ export class DocumentsService {
       );
       return documentSend;
     }
+    */
   }
 
   //echo
@@ -455,6 +464,11 @@ export class DocumentsService {
     documentId: string,
     userId: string,
   ): Promise<Documents> {
+    return await this.sendDerivedDocumentsService.derivarDocumentAll(
+      documentId,
+      userId,
+    );
+    /*
     const document = await this.checkDocument(documentId);
     await this.validarDerivacion(document, userId);
 
@@ -595,6 +609,7 @@ export class DocumentsService {
     } else {
       throw new HttpException('no hay a quien mas derivar', 400);
     }
+    */
   }
 
   //echo
@@ -603,6 +618,12 @@ export class DocumentsService {
     ci: string[],
     userId: string,
   ) {
+    return await this.sendDerivedDocumentsService.derivarDocumentWithCi(
+      documentId,
+      ci,
+      userId,
+    );
+    /*
     const document = await this.checkDocument(documentId);
     await this.validarDerivacion(document, userId);
 
@@ -751,6 +772,7 @@ export class DocumentsService {
     } else {
       throw new HttpException('no hay a quien mas derivar', 400);
     }
+    */
   }
 
   //----------------------------------------
@@ -761,6 +783,12 @@ export class DocumentsService {
     ci: string[],
     userId: string,
   ) {
+    return await this.sendDerivedDocumentsService.sendDocumentSinWorkflow(
+      documentId,
+      ci,
+      userId,
+    );
+    /*
     const document = await this.checkDocument(documentId);
 
     if (document.workflow) {
@@ -853,6 +881,7 @@ export class DocumentsService {
     document.stateDocumentUserSend = 'ENVIADO DIRECTO';
     await document.save();
     return document;
+    */
   }
 
   //----------------------
@@ -1032,6 +1061,12 @@ export class DocumentsService {
     unitys: string[],
     userId: string,
   ) {
+    return await this.sendDerivedDocumentsService.sendDocumentMultiUnitysWithoutWorkflow(
+      documentId,
+      unitys,
+      userId,
+    );
+    /*
     const document = await this.checkDocument(documentId);
 
     if (document.workflow) {
@@ -1125,6 +1160,7 @@ export class DocumentsService {
 
     await document.save();
     return document;
+    */
   }
 
   async getRecievedDocumentsMultiUnitys(userId: string) {
@@ -2338,6 +2374,7 @@ export class DocumentsService {
     userId: string,
   ) {
     const document = await this.checkDocument(id);
+    // const workflowData = await this.findDocumentationTypeService.findDocumentationType(workflowName);
     const workflowData = await this.findWorkflowByName(workflowName);
     if (!workflowData) {
       throw new HttpException('no se encontro el workflow', 400);
@@ -2364,6 +2401,14 @@ export class DocumentsService {
       oficinaActual,
       updateAt,
     };
+
+    // const {
+    //   activeDocumentType,
+    //   createdAt,
+    //   dataUriTemplate,
+    //   idTemplateDocType,
+    //   typeName,
+    // } = workflowData
 
     document.workflow = workDt;
 
