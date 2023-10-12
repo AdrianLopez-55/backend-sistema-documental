@@ -8,7 +8,6 @@ import {
   Put,
   Req,
   Query,
-  ForbiddenException,
   HttpException,
   UseGuards,
 } from '@nestjs/common';

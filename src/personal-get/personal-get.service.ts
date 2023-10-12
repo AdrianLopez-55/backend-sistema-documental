@@ -3,10 +3,13 @@ import { HttpException, Injectable } from '@nestjs/common';
 import getConfig from '../config/configuration';
 import axios from 'axios';
 import { ObtainDataPersonalGetDto } from './dto/personal-get-result.dto';
+import { PaginationDto } from 'src/common/pagination.dto';
+import { number } from 'joi';
 
 @Injectable()
 export class PersonalGetService {
   private readonly apiPersonalGet = getConfig().api_personal_get;
+  private defaultLimit: number;
 
   constructor(private readonly httpService: HttpService) {}
 
@@ -71,4 +74,8 @@ export class PersonalGetService {
       throw new HttpException('error al obtener los datos del personal', 404);
     }
   }
+  // async findAllPaginate(paginationDto: PaginationDto){
+  //   const { limit = this.defaultLimit, page =  1} = paginationDto;
+  //   const offset
+  // }
 }

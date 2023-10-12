@@ -16,6 +16,7 @@ import { CredentialUserDto } from './dto/CredentialUser.dto';
 import { CredentialUser } from './schemas/credentialUser.schema';
 import { PinUser } from './schemas/pinUser.schema';
 const bcrypt = require('bcrypt');
+import * as crypto from 'crypto';
 
 @Injectable()
 export class DigitalSignatureService {
@@ -149,6 +150,27 @@ export class DigitalSignatureService {
     document.digitalSignatureDocument.push(newSignature);
     await document.save();
     return document;
+  }
+
+  async verifySignature(
+    document: any,
+    signature: string,
+    publicKey: string,
+  ): Promise<boolean> {
+    try {
+      const documentString = JSON.stringify(
+        document,
+        Object.keys(document).sort(),
+      );
+      const verify = crypto.createVerify('SHA256');
+      verify.update(documentString, 'utf8');
+      const isSignatureValid = verify.verify(publicKey, signature, 'base64');
+
+      return isSignatureValid;
+    } catch (error) {
+      console.error('Error al verificar la firma:', error);
+      return false;
+    }
   }
 
   async getKeysUser(userId: string) {

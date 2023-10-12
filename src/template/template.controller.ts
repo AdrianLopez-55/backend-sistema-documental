@@ -9,6 +9,8 @@ import {
   Res,
   UseInterceptors,
   UploadedFile,
+  Put,
+  Query,
 } from '@nestjs/common';
 import { TemplateService } from './template.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
@@ -19,6 +21,7 @@ import * as path from 'path';
 import { HttpService } from '@nestjs/axios';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
+import { TemplateFilter } from './dto/template-filter';
 
 @Controller('template')
 @ApiTags('template')
@@ -28,10 +31,33 @@ export class TemplateController {
     private readonly httpService: HttpService,
   ) {}
 
-  // @Post()
-  // createTemplateCero(@Body() createTemplateDto: CreateTemplateDto) {
-  //   return this.templateService.create(createTemplateDto);
-  // }
+  @Post()
+  createTemplateCero(@Body() createTemplateDto: CreateTemplateDto) {
+    return this.templateService.create(createTemplateDto);
+  }
+
+  @Get()
+  async findAllTemplate() {
+    return this.templateService.findAll();
+  }
+
+  @Get('filtered')
+  async filteredParam(@Query() filter: TemplateFilter) {
+    return await this.templateService.filterParams(filter);
+  }
+
+  @Get('find-base64/:id')
+  async findBase64Template(@Param('id') id: string) {
+    return this.templateService.getBase64Template(id);
+  }
+
+  @Put(':id')
+  async updateTemplate(
+    @Param('id') id: string,
+    @Body() updateTemplateDto: UpdateTemplateDto,
+  ) {
+    return this.templateService.updateTemplate(id, updateTemplateDto);
+  }
 
   // @Post('upload-template')
   // @UseInterceptors(FileInterceptor('file'))

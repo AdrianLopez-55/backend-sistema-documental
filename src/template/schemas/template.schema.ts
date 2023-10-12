@@ -5,11 +5,14 @@ export type TemplateDocuments = Template & Document;
 
 @Schema()
 export class Template {
-  @Prop({ default: null })
+  @Prop({ uppercase: true })
   nameTemplate: string;
 
-  @Prop({ default: null })
-  dataTemplate: string;
+  @Prop({ uppercase: true })
+  descriptionTemplate: string;
+
+  @Prop()
+  idTemplate: string;
 }
 
 export const TemplateSchema = SchemaFactory.createForClass(Template);

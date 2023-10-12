@@ -11,15 +11,186 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Template, TemplateDocuments } from './schemas/template.schema';
 import { Model } from 'mongoose';
 import { HttpService } from '@nestjs/axios';
+import puppeteer from 'puppeteer';
+import * as mimeTypes from 'mime-types';
+import getConfig from '../config/configuration';
+import { TemplateFilter } from './dto/template-filter';
+// import HTMLtoDOCX from 'html-to-docx';
 
 @Injectable()
 export class TemplateService {
+  private readonly apiFilesTemplate = getConfig().api_files_template;
   constructor(
     @InjectModel(Template.name)
     private templateModel: Model<TemplateDocuments>,
     private readonly httpService: HttpService,
   ) {}
 
+  async create(createTemplateDto: CreateTemplateDto) {
+    const findName = await this.templateModel
+      .findOne({ nameTemplate: createTemplateDto.nameTemplate })
+      .exec();
+    if (findName) {
+      throw new HttpException('nombre de template ya en uso', 400);
+    }
+    // const { HTMLtoDOCX } = require('html-to-docx');
+    // const { fromHtml } = require('html-to-docx');
+    const HTMLtoDOCX = require('html-to-docx');
+    const { nameTemplate, descriptionTemplate, htmlContent } =
+      createTemplateDto;
+
+    //--convertir html a pdf usando puppeteer
+    // const browser = await puppeteer.launch({
+    //   headless: 'new',
+    // });
+    // const page = await browser.newPage();
+    // await page.setContent(htmlContent);
+    // const pdfBuffer = await page.pdf({
+    //   format: 'Letter',
+    // });
+    // await browser.close();
+    // const pdfBase64 = pdfBuffer.toString('base64');
+    // const mimeType = mimeTypes.lookup('pdf');
+    //subir el archi{vo al servicio pdf
+    // const fileObj = {
+    //   mime: mimeType,
+    //   base64: pdfBase64,
+    // };
+    // const filePdf = await this.httpService
+    //   .post(`${this.apiFilesTemplate}/files/upload-template`, {
+    //     templateName: nameTemplate,
+    //     file: fileObj,
+    //   })
+    //   .toPromise();
+    // const newTemplate = new this.templateModel({
+    //   nameTemplate: nameTemplate,
+    //   descriptionTemplate: descriptionTemplate,
+    //   idTemplate: filePdf.data.file._id,
+    // });
+
+    //convertir html a docx:
+    const fileBuffer = await HTMLtoDOCX(
+      htmlContent,
+      null,
+      {
+        table: { row: { cantSplit: true } },
+        footer: true,
+        pageNumber: true,
+      },
+      true,
+    );
+
+    //guardar el archivo docx en template
+    const templateDir = path.join(process.cwd(), 'template');
+    const filePath = path.join(
+      templateDir,
+      `${nameTemplate.toUpperCase()}.docx`,
+    );
+    fs.writeFileSync(filePath, fileBuffer);
+
+    //obtener mime del docx
+    // const mimeTypeDocx = mimeTypes.lookup('.docx');
+    const fileExtension = path.extname(filePath).substring(1);
+    const mimeTypeDocx = `application/${fileExtension}`;
+
+    //obtener la base64 de docx
+    const docxBase64 = fileBuffer.toString('base64');
+
+    const fileObj = {
+      mime: mimeTypeDocx,
+      base64: docxBase64,
+    };
+
+    const fileDocx = await this.httpService
+      .post(`${this.apiFilesTemplate}/files/upload-template`, {
+        templateName: nameTemplate,
+        file: fileObj,
+      })
+      .toPromise();
+
+    const newTemplate = new this.templateModel({
+      nameTemplate: nameTemplate,
+      descriptionTemplate: descriptionTemplate,
+      idTemplate: fileDocx.data.file._id,
+    });
+
+    await newTemplate.save();
+    return newTemplate;
+  }
+
+  async findAll() {
+    const templates = await this.templateModel.find().exec();
+    return templates;
+  }
+
+  async getBase64Template(id: string) {
+    const template = await this.templateModel.findById(id).exec();
+    const fileInfo = await this.httpService
+      .get(`${this.apiFilesTemplate}/file/template/${template.idTemplate}`)
+      .toPromise();
+    return {
+      idTemplate: template._id,
+      nameTemplate: template.nameTemplate,
+      base64Template: fileInfo.data.file.base64,
+    };
+  }
+
+  async updateTemplate(id: string, updateTemplateDto: UpdateTemplateDto) {
+    const HTMLtoDOCX = require('html-to-docx');
+    const template = await this.templateModel
+      .findByIdAndUpdate(id, updateTemplateDto, { new: true })
+      .exec();
+
+    if (updateTemplateDto.htmlContent) {
+      //convertir html a docx:
+      const fileBuffer = await HTMLtoDOCX(updateTemplateDto.htmlContent, true, {
+        table: { row: { cantSplit: true } },
+        footer: true,
+        pageNumber: true,
+      });
+
+      //guardar el archivo docx en template
+      const templateDir = path.join(process.cwd(), 'template');
+      const filePath = path.join(
+        templateDir,
+        `${updateTemplateDto.nameTemplate.toUpperCase()}.docx`,
+      );
+      fs.writeFileSync(filePath, fileBuffer);
+
+      //obtener mime del docx
+      // const mimeTypeDocx = mimeTypes.lookup('.docx');
+      const fileExtension = path.extname(filePath).substring(1);
+      const mimeTypeDocx = `application/${fileExtension}`;
+
+      //obtener la base64 de docx
+      const docxBase64 = fileBuffer.toString('base64');
+
+      const fileObj = {
+        mime: mimeTypeDocx,
+        base64: docxBase64,
+      };
+
+      const fileDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: updateTemplateDto.nameTemplate,
+          file: fileObj,
+        })
+        .toPromise();
+      template.idTemplate = fileDocx.data.file._id;
+    }
+    return template;
+  }
+
+  async filterParams(filter: TemplateFilter): Promise<Template[]> {
+    const query: any = {};
+    if (filter.nameTemplate) {
+      query.nameTemplate = filter.nameTemplate;
+    }
+    const filteredTemplate = await this.templateModel.find(query).exec();
+    return filteredTemplate;
+  }
+
+  /*
   async create(createTemplateDto: CreateTemplateDto): Promise<any> {
     const { nameTemplate } = createTemplateDto;
     // const timestam = new Date().toISOString().replace(/[:.]/g, '-');
@@ -156,4 +327,6 @@ export class TemplateService {
     };
     return fileRegister;
   }
+
+  */
 }

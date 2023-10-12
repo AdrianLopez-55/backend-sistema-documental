@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { DocumentDocument, Documents } from './schema/documents.schema';
 import { Model } from 'mongoose';
@@ -527,6 +527,7 @@ export class SendDerivedDocumentsService {
           `${this.apiOrganizationChartMain}?name=${encodeURIComponent(unity)}`,
         )
         .toPromise();
+      // console.log(response.data);
       return {
         idOfficeUserSend: userOffice,
         nameOficeUserSend: userOffice,
@@ -560,11 +561,14 @@ export class SendDerivedDocumentsService {
         const exacMatch = unityResponse.data.find(
           (result) => result.name === user.unity,
         );
-        const idOfficeUser = exacMatch._id;
+        const idOfficeUser = exacMatch ? exacMatch._id : '';
+        console.log(idOfficeUser);
         return idOfficeUser;
       });
 
       const unityIds = await Promise.all(unityIdsPromises);
+      // console.log('esto es unityIds');
+      // console.log(unityIds);
 
       return { users, unityIds };
     });
@@ -934,6 +938,231 @@ export class SendDerivedDocumentsService {
       return document;
       // throw new HttpException('se llego la paso final', 400);
     }
+  }
+
+  async selectPreviousStep(
+    documentId: string,
+    numberPaso: number,
+    motive: string,
+    userId: string,
+  ): Promise<Documents> {
+    const document = await this.checkDocument(documentId);
+    if (document.workflow === null) {
+      throw new HttpException(
+        'no puedes devolver un documento que no inicio un flujo de trabajo',
+        400,
+      );
+    }
+
+    const workflow = document.workflow;
+    const pasoActual = workflow.pasoActual;
+    const pasos = workflow.pasos;
+
+    if (
+      numberPaso < 0 ||
+      numberPaso > pasos.length ||
+      numberPaso == pasoActual
+    ) {
+      throw new BadRequestException(
+        'El paso no existe o es el mismo lugar en el que se encuentra el documento',
+      );
+    }
+
+    if (numberPaso == 0 && pasoActual == 1) {
+      const originalUserSend = document.userId;
+      document.bitacoraWorkflow.push({
+        oficinaActual: 'remitente original',
+        nameOficinaActual: 'remitente original',
+        userSend: document.userId,
+        dateSend: document.bitacoraWorkflow[0].dateSend,
+        userDerived: userId,
+        datedDerived: new Date(),
+        receivedUsers: [
+          {
+            ciUser: '',
+            idOfUser: originalUserSend,
+            nameOfficeUserRecieved: '',
+            dateRecived: new Date(),
+            observado: true,
+            stateDocumentUser: 'OBSERVADO',
+          },
+        ],
+        oficinasPorPasar: [],
+        motivoBack: motive,
+      });
+
+      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+        return entry.receivedUsers.some((user) => user.idOfUser === userId);
+      });
+      const updateBitacoraEntry = {
+        ...bitacoraEntry,
+        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+          if (user.idOfUser === userId) {
+            user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
+          }
+          return user;
+        }),
+      };
+      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+      });
+
+      document.userReceivedDocument = [
+        {
+          ciUser: '',
+          idOfUser: originalUserSend,
+          nameOfficeUserRecieved: '',
+          dateRecived: new Date(),
+          stateDocumentUser: 'OBSERVADO',
+          observado: true,
+        },
+      ];
+
+      document.bitacoraWorkflow = updateBitacoraWorkflow;
+      document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
+      document.stateDocumentUserSend = 'OBSERVADO';
+      const paso1 = pasos.find((paso) => paso.paso === 1);
+      if (paso1) {
+        paso1.completado = false;
+      }
+      await document.save();
+      return document;
+    }
+
+    if (numberPaso == 0) {
+      const originalUserSend = document.userId;
+      document.bitacoraWorkflow.push({
+        oficinaActual: 'remitente original',
+        nameOficinaActual: 'remitente original',
+        userSend: document.userId,
+        dateSend: document.bitacoraWorkflow[0].dateSend,
+        userDerived: userId,
+        datedDerived: new Date(),
+        receivedUsers: [
+          {
+            ciUser: '',
+            idOfUser: originalUserSend,
+            nameOfficeUserRecieved: '',
+            dateRecived: new Date(),
+            observado: true,
+            stateDocumentUser: 'OBSERVADO',
+          },
+        ],
+        oficinasPorPasar: [],
+        motivoBack: motive,
+      });
+
+      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+        return entry.receivedUsers.some((user) => user.idOfUser === userId);
+      });
+      const updateBitacoraEntry = {
+        ...bitacoraEntry,
+        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+          if (user.idOfUser === userId) {
+            user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
+          }
+          return user;
+        }),
+      };
+      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+      });
+
+      document.userReceivedDocument = [
+        {
+          ciUser: '',
+          idOfUser: originalUserSend,
+          nameOfficeUserRecieved: '',
+          dateRecived: new Date(),
+          stateDocumentUser: 'OBSERVADO',
+          observado: true,
+        },
+      ];
+
+      document.bitacoraWorkflow = updateBitacoraWorkflow;
+      document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
+      document.stateDocumentUserSend = 'OBSERVADO';
+      const paso1 = pasos.find((paso) => paso.paso === 1);
+      if (paso1) {
+        paso1.completado = false;
+      }
+      await document.save();
+      return document;
+    }
+
+    const selectedPaso = pasos[numberPaso - 1];
+    if (numberPaso === document.workflow.pasoActual) {
+      throw new HttpException(
+        'usted se encuentra en el paso actual al cual desea reenviar',
+        400,
+      );
+    }
+
+    for (let i = numberPaso; i < pasos.length; i++) {
+      pasos[i].completado = false;
+    }
+
+    workflow.pasoActual = numberPaso;
+    workflow.oficinaActual = selectedPaso.idOffice;
+
+    const matchingEntry = document.bitacoraWorkflow.find(
+      (entry) => entry.oficinaActual === selectedPaso.idOffice,
+    );
+
+    if (matchingEntry) {
+      const receivedUsers = matchingEntry.receivedUsers;
+
+      receivedUsers.forEach((user) => {
+        user.observado = true;
+        user.stateDocumentUser = 'OBSERVADO';
+      });
+
+      const nameOfTheOffice = await this.httpService
+        .get(`${this.apiOrganizationChartId}/${selectedPaso.idOffice}`)
+        .toPromise();
+      const nameOffce = nameOfTheOffice.data.name;
+
+      document.bitacoraWorkflow.push({
+        oficinaActual: selectedPaso.idOffice,
+        nameOficinaActual: nameOffce,
+        receivedUsers,
+        userSend: document.userId,
+        dateSend: document.bitacoraWorkflow[0].dateSend,
+        userDerived: userId,
+        datedDerived: new Date(),
+        motivoBack: motive,
+        oficinasPorPasar: pasos.map((paso) => ({
+          paso: paso.paso,
+          idOffice: paso.idOffice,
+          oficina: paso.oficina,
+          completado: paso.completado,
+        })),
+      });
+      document.userReceivedDocument = receivedUsers;
+    }
+
+    const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
+      return entry.receivedUsers.some((user) => user.idOfUser === userId);
+    });
+    const updateBitacoraEntry = {
+      ...bitacoraEntry,
+      receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
+        if (user.idOfUser === userId) {
+          user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
+        }
+        return user;
+      }),
+    };
+    const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
+      return entry === bitacoraEntry ? updateBitacoraEntry : entry;
+    });
+    document.bitacoraWorkflow = updateBitacoraWorkflow;
+
+    document.workflow = workflow;
+    document.stateDocumentUserSend = `OBSERVADO PARA EL PASO: ${document.workflow.pasoActual}`;
+    document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
+    await document.save();
+    return document;
   }
 
   private async validarDerivacion(document: Documents, userId: string) {

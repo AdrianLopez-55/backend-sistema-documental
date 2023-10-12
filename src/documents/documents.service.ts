@@ -19,7 +19,7 @@ import {
   Workflow,
   WorkflowDocuments,
 } from 'src/workflow/schemas/workflow.schema';
-import * as PDFDocument from 'pdfkit';
+// import * as PDFDocument from 'pdfkit';
 import { DocumentsFilter } from './dto/documents-filter.dto';
 import { Observable } from 'rxjs';
 import { AxiosResponse } from 'axios';
@@ -32,23 +32,21 @@ import { AddWorkflowSinCiDocumentDto } from './dto/addWorkflowSinCiDocument.dto'
 import * as docxConverter from 'docx-pdf';
 import { FindDocumentationTypeService } from './findDocumentationType.service';
 import mongoose from 'mongoose';
-import { string } from 'joi';
-import { Milestone } from './schema/milestone.schema';
-import { StateDocumentSchema } from 'src/state-document/schemas/state-document.schema';
+// import { Milestone } from './schema/milestone.schema';
+// import { StateDocumentSchema } from 'src/state-document/schemas/state-document.schema';
 import puppeteer from 'puppeteer';
 import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
+import { GetDocumentsService } from './getsDocuments.service';
+import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
+import { Template } from 'src/template/schemas/template.schema';
 
 @Injectable()
 export class DocumentsService {
   private defaultLimit: number;
   private readonly apiFilesUploader = getConfig().api_files_uploader;
   private readonly apiFilesTemplate = getConfig().api_files_template;
-  private readonly apiPersonalGetCi = getConfig().api_personal_get_ci;
-  private readonly apiOrganizationChartMain =
-    getConfig().api_organization_chart_main;
-  private readonly apiOrganizationChartId =
-    getConfig().api_organization_chart_id;
   private readonly apiPersonalGet = getConfig().api_personal_get;
+  private readonly apiTemplate = getConfig().api_template;
 
   constructor(
     @InjectModel(Documents.name)
@@ -60,9 +58,10 @@ export class DocumentsService {
     // private readonly customErrorService: CustomErrorService, // private personalGetService: PersonalGetService,
     private readonly findDocumentationTypeService: FindDocumentationTypeService,
     private sendDerivedDocumentsService: SendDerivedDocumentsService,
+    private getDocumentsService: GetDocumentsService,
   ) {}
 
-  async createMultiDocuments() {
+  async createMultiDocuments(userId: string) {
     async function connectToDataBase() {
       const dbUrl = 'mongodb://localhost/documental';
       try {
@@ -75,15 +74,16 @@ export class DocumentsService {
     }
 
     await connectToDataBase();
-    const numberOfDocumentsToGenerate = 2000;
+    const numberOfDocumentsToGenerate = 10000;
     const DocumentsSchema = new mongoose.Schema({
       numberDocument: String,
       userId: String,
-      // userInfo: { String },
       title: String,
-      documentationType: String,
+      documentationType: Object,
       stateDocumentUserSend: String,
+      workflow: Object,
       description: String,
+      fileRegister: mongoose.Schema.Types.Mixed,
       active: Boolean,
       year: String,
       state: String,
@@ -96,17 +96,65 @@ export class DocumentsService {
     const documentsToCreate: Partial<DocumentDocument>[] = [];
     for (let i = 0; i < numberOfDocumentsToGenerate; i++) {
       const newDocument: Partial<DocumentDocument> = {
-        numberDocument: `DOC-${i + 1}-year`,
-        userId: `asd${i + 1}`,
-        title: `titulo${i + 1}`,
-        documentationType: null,
-        stateDocumentUserSend: `asdff${i + 1}`,
-        // workflow: null,
-        description: `descri${i + 1}`,
-        // filesRegister: null,
+        numberDocument: `DOC-0000${i + 1}-2023`,
+        userId: userId,
+        title: `titulo-${i + 1}`,
+        // documentationType: {
+        //   typeName: 'LICENCIA',
+        //   idTemplateDocType: `64f74c3d215abf8c9be98306`,
+        //   activeDocumentType: true,
+        //   createdAt: new Date(),
+        //   updateAt: new Date(),
+        //   dataUriTemplate: '',
+        // },
+        documentationType: {
+          typeName: 'LICENCIA',
+          idTemplateDocType: `description-${i + 1}`,
+          activeDocumentType: true,
+          dataUriTemplate: '',
+          createdAt: undefined,
+          updateAt: undefined,
+        },
+        stateDocumentUserSend: `EN ESPERA`,
+        workflow: {
+          nombre: 'WORKFLOW A',
+          descriptionWorkflow: 'STRING',
+          pasos: [
+            {
+              paso: 1,
+              idOffice: '65084336717fc4c1b23d1452',
+              oficina: 'RECTORADO',
+              completado: true,
+            },
+            {
+              paso: 2,
+              idOffice: '65084467717fc4c1b23d1468',
+              oficina: 'VICERECTORADO',
+              completado: false,
+            },
+          ],
+          idStep: '65240c3d7ba0128f73a8749f',
+          oficinaActual: 'RECTORADO',
+          updateAt: new Date(),
+          activeWorkflow: true,
+          pasoActual: 1,
+          createdAt: undefined,
+        },
         active: true,
-        year: `234${i + 1}`,
-        state: `adfasdf${i + 1}`,
+        year: `2023`,
+        state: `create`,
+        userReceivedDocument: [
+          {
+            ciUser: '8845784',
+            idOfUser: '64e7c787eec126d6cb54296e',
+            nameOfficeUserRecieved: 'RECTORADO',
+            dateRecived: new Date(),
+            stateDocumentUser: 'RECIBIDO',
+            observado: false,
+          },
+        ],
+        description: `description-${i + 1}`,
+        fileRegister: null,
       };
 
       documentsToCreate.push(newDocument);
@@ -125,25 +173,33 @@ export class DocumentsService {
 
   //-------------------------------
 
-  async htmlConvertPdf(htmlContent: string) {
-    const browser = await puppeteer.launch();
+  async htmlConvertPdf(sendHtmlFileDto: SendHtmlFileDto) {
+    const { htmlContent, nameFile, descriptionFile } = sendHtmlFileDto;
+    const browser = await puppeteer.launch({
+      headless: 'new',
+    });
     const page = await browser.newPage();
 
     await page.setContent(htmlContent);
 
     const pdfBuffer = await page.pdf({
       format: 'Letter',
+      // format: pageSize,
+      // printBackground: true,
     });
 
     await browser.close();
 
     const pdfBase64 = pdfBuffer.toString('base64');
-    return pdfBase64;
-  }
 
+    return {
+      nameFile: nameFile,
+      descriptionFile: descriptionFile,
+      pdfBase64: pdfBase64,
+    };
+  }
   //-------------------------------
 
-  //documents service
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
       const { file, documentTypeName } = createDocumentDTO;
@@ -151,6 +207,12 @@ export class DocumentsService {
         await this.findDocumentationTypeService.findDocumentationType(
           documentTypeName,
         );
+
+      // const documentationTypeData = await this.httpService
+      //   .get(`${this.apiTemplate}/filtered?nameTemplate=${documentTypeName}`)
+      //   .toPromise();
+      // console.log('esto es el template encontrado simple');
+      // console.log(documentationTypeData.data[0]);
 
       if (file) {
         const { mime, base64 } = this.extractFileData(file);
@@ -180,7 +242,6 @@ export class DocumentsService {
     }
   }
 
-  //documents service
   async getBase64Documents(id: string) {
     const document = await this.checkDocument(id);
     if (document.fileRegister && typeof document.fileRegister === 'object') {
@@ -207,7 +268,6 @@ export class DocumentsService {
     }
   }
 
-  //documents service
   async showBase64TemplateDoc(id: string) {
     const document = await this.checkDocument(id);
     const idTemplateFromDoc = document.documentationType.idTemplateDocType;
@@ -215,14 +275,17 @@ export class DocumentsService {
       .get(`${this.apiFilesUploader}/file/template/${idTemplateFromDoc}`)
       .toPromise();
     const base64TemplateDoc = getBase64Template.data.file.base64;
+
     //--decodificar base64 a dats binarios
     const binaryData = Buffer.from(base64TemplateDoc, 'base64');
+
     //--especificar ruta y nombre del archivo temporal
     const path = require('path');
     const tempFolder = path.join(process.cwd(), 'template');
     const fileName = `${document.documentationType.typeName}_template.docx`;
     const filePathTemplateDoc = path.join(tempFolder, fileName);
     fs.writeFileSync(filePathTemplateDoc, binaryData);
+
     //---borrar el template descargado
     const timeToLiveInMIllisecondsTemplate = 1 * 60 * 1000;
     setTimeout(() => {
@@ -234,6 +297,7 @@ export class DocumentsService {
         }
       });
     }, timeToLiveInMIllisecondsTemplate);
+
     const rutaTemplate = path.join(
       process.cwd(),
       'template',
@@ -241,6 +305,7 @@ export class DocumentsService {
     );
     const templatefile = fs.readFileSync(rutaTemplate);
     const data = {
+      nameTemplate: document.documentationType.typeName,
       numberDocumentTag: document.numberDocument,
       title: document.title,
       descriptionTag: document.description,
@@ -284,13 +349,13 @@ export class DocumentsService {
       base64: base64String,
     };
     const sentDataDocx = await this.httpService
-      .post(`${this.apiFilesTemplate}/files/upload-template-docx`, {
+      .post(`${this.apiFilesTemplate}/files/upload-template`, {
         templateName: fileNamePdf,
         file: dataPdf,
       })
       .toPromise();
 
-    const timeToLiveInMIlliseconds = 1 * 60 * 1000;
+    const timeToLiveInMIlliseconds = 30 * 1000;
 
     setTimeout(() => {
       fs.unlink(filePathDoc, (err) => {
@@ -327,7 +392,6 @@ export class DocumentsService {
     return showDocument;
   }
 
-  //documents service
   async update(
     id: string,
     updateDocumentDTO: UpdateDocumentDTO,
@@ -367,7 +431,6 @@ export class DocumentsService {
     }
   }
 
-  //echo //sendDerivedService.sendDocumentWithCi
   async enviarDocument(
     documentId: string,
     addWorkflowDocumentDto: AddWorkflowDocumentDto,
@@ -378,45 +441,8 @@ export class DocumentsService {
       addWorkflowDocumentDto,
       userId,
     );
-
-    /*
-    const document = await this.checkDocument(documentId);
-    const { worflowName, ci } = addWorkflowDocumentDto;
-    if (!ci) {
-      throw new HttpException('no se encontro ci', 400);
-    }
-    await this.validateCi(ci);
-    if (document.stateDocumentUserSend === 'OBSERVADO') {
-      if (worflowName === document.workflow.nombre) {
-        const documentSend = await this.sendDocument(
-          documentId,
-          worflowName,
-          ci,
-          userId,
-        );
-        return documentSend;
-      } else {
-        throw new HttpException(
-          'el documento debe enviarse al mismo flujo de trabajo',
-          400,
-        );
-      }
-    } else {
-      if (document.stateDocumentUserSend === 'INICIADO') {
-        throw new HttpException(`El documento ya fue enviado por usted`, 400);
-      }
-      const documentSend = await this.sendDocument(
-        documentId,
-        worflowName,
-        ci,
-        userId,
-      );
-      return documentSend;
-    }
-    */
   }
 
-  //echo //sendDerivedDocumentsService.sendDocumentToUnity
   async sendDocumentToUnity(
     documentId: string,
     addWorkflowSinCiDocumentDto: AddWorkflowSinCiDocumentDto,
@@ -427,39 +453,8 @@ export class DocumentsService {
       addWorkflowSinCiDocumentDto,
       userId,
     );
-
-    /*
-    const document = await this.checkDocument(documentId);
-    const { workflowName } = addWorkflowSinCiDocumentDto;
-    if (document.stateDocumentUserSend === 'OBSERVADO') {
-      if (workflowName === document.workflow.nombre) {
-        const documentSend = await this.sendDocumentWithoutCi(
-          documentId,
-          workflowName,
-          userId,
-        );
-        return documentSend;
-      } else {
-        throw new HttpException(
-          'el documento debe enviarse al mismo flujo de trabajo',
-          400,
-        );
-      }
-    } else {
-      if (document.stateDocumentUserSend === 'INICIADO') {
-        throw new HttpException(`El documento ya fue enviado por usted`, 400);
-      }
-      const documentSend = await this.sendDocumentWithoutCi(
-        documentId,
-        workflowName,
-        userId,
-      );
-      return documentSend;
-    }
-    */
   }
 
-  //echo
   async derivarDocumentAll(
     documentId: string,
     userId: string,
@@ -468,151 +463,8 @@ export class DocumentsService {
       documentId,
       userId,
     );
-    /*
-    const document = await this.checkDocument(documentId);
-    await this.validarDerivacion(document, userId);
-
-    // verificar el estado del siguiente paso
-    const workflow = document.workflow;
-    const pasoActual = workflow.pasoActual;
-    const pasos = document.workflow.pasos;
-
-    const findMarkDocuments = document.userReceivedDocument.some((entry) => {
-      return entry.idOfUser === userId;
-    });
-    if (!findMarkDocuments) {
-      throw new HttpException(`Usted no puede derivar el documento`, 400);
-    }
-
-    //------- obtener lista con todos los usuarios ---
-    //---------
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOficce = loggedUser.data.unity;
-
-    // verificar la oficina actual de usuario lodgeado
-    const oficinaActualUsuario = userOficce;
-    const oficinaUserDentroBitacora = document.workflow.pasos.filter(
-      (dat) => dat.oficina === userOficce,
-    );
-    const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
-    const loggedUserOffice = await this.httpService
-      .get(
-        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-          userOficce,
-        )}`,
-      )
-      .toPromise();
-    const personalList = await this.httpService
-      .get(`${this.apiPersonalGet}`)
-      .toPromise();
-    const personalListData = personalList.data;
-    const unitysPersonalAll = personalListData.map((user) => ({
-      unity: user.unity,
-      ci: user.ci,
-      idOfUser: user._id,
-    }));
-    const filteredUnitysPersonal = unitysPersonalAll.filter(
-      (user) => user.ci !== loggedUser.data.ci,
-    );
-    const obtainDatos = await Promise.all(
-      filteredUnitysPersonal.map(async (idOfice) => ({
-        info: await this.httpService
-          .get(
-            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-              idOfice.unity,
-            )}`,
-          )
-          .toPromise(),
-        idOfUser: idOfice.idOfUser,
-        ci: idOfice.ci,
-      })),
-    );
-    if (pasoActual < pasos.length) {
-      if (nextPasoUserState.completado === true) {
-        throw new HttpException(
-          'usted ya no puede derivar el documento porque ya fue enviado',
-          400,
-        );
-      }
-      const reeeee = obtainDatos.map((response) => ({
-        nameUnity: response.info.data[0].name,
-        idOficce: response.info.data[0]._id,
-        idOfUser: response.idOfUser,
-        ci: response.ci,
-      }));
-      const matchingUsers = reeeee.filter(
-        (datata) => datata.idOficce === pasos[pasoActual].idOffice,
-      );
-      const receivedUsers = matchingUsers.map((data) => ({
-        ciUser: data.ci,
-        idOfUser: data.idOfUser,
-        nameOfficeUserRecieved: data.nameUnity,
-        dateRecived: new Date(),
-        observado: false,
-        stateDocumentUser: 'RECIBIDO',
-      }));
-      const receivedUsersArray = [];
-      if (matchingUsers.length > 0) {
-        pasos[pasoActual].completado = true;
-        workflow.pasoActual = pasoActual + 1;
-        workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
-
-        const nameOfTheOffice = await this.httpService
-          .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
-          .toPromise();
-        const nameOffce = nameOfTheOffice.data.name;
-
-        document.bitacoraWorkflow.push({
-          oficinaActual: pasos[pasoActual].idOffice,
-          nameOficinaActual: nameOffce,
-          userSend: document.userId,
-          dateSend: document.bitacoraWorkflow[0].dateSend,
-          userDerived: userId,
-          datedDerived: new Date(),
-          receivedUsers: receivedUsers,
-          motivoBack: 'Se envio documento a todo el personal de la unidad',
-          oficinasPorPasar: pasos.map((paso) => ({
-            paso: paso.paso,
-            idOffice: paso.idOffice,
-            oficina: paso.oficina,
-            completado: paso.completado,
-          })),
-        });
-
-        // Cambiar el estado del documento a 'DERIVADO' en receivedUsers
-        document.bitacoraWorkflow[
-          document.bitacoraWorkflow.length - 1
-        ].receivedUsers
-          .filter((user) => user.idOfUser === userId)
-          .forEach((user) => (user.stateDocumentUser = 'DERIVADO'));
-
-        //--poner valor del siguiente oficina
-        for (let i = 0; i < pasos.length; i++) {
-          const paso = pasos[i];
-          if (!paso.completado) {
-            document.oficinaPorPasar = paso.oficina;
-          } else {
-            document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
-          }
-        }
-        document.oficinaActual = workflow.oficinaActual;
-
-        document.userReceivedDocument = receivedUsers;
-        document.workflow = workflow;
-        document.stateDocumetUser = 'DERIVADO';
-        document.stateDocumentUserSend = 'INICIADO';
-      }
-      await document.save();
-      return document;
-    } else {
-      throw new HttpException('no hay a quien mas derivar', 400);
-    }
-    */
   }
 
-  //echo
   async derivarDocumentWithCi(
     documentId: string,
     ci: string[],
@@ -623,161 +475,8 @@ export class DocumentsService {
       ci,
       userId,
     );
-    /*
-    const document = await this.checkDocument(documentId);
-    await this.validarDerivacion(document, userId);
-
-    await this.validateCi(ci);
-
-    const findMarkDocuments = document.userReceivedDocument.some((entry) => {
-      return entry.idOfUser === userId;
-    });
-    if (!findMarkDocuments) {
-      throw new HttpException(`Usted no puede derivar el documento`, 400);
-    }
-
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOficce = loggedUser.data.unity;
-
-    const workflow = document.workflow;
-    const pasoActual = workflow.pasoActual;
-    const pasos = workflow.pasos;
-    const oficinaUserDentroBitacora = document.workflow.pasos.filter(
-      (dat) => dat.oficina === userOficce,
-    );
-    const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
-    if (pasoActual < pasos.length) {
-      if (nextPasoUserState.completado === true) {
-        throw new HttpException(
-          'usted ya no puede derivar el documento porque ya fue enviado',
-          400,
-        );
-      }
-      const unityUserPromises = ci.map(async (ci) => {
-        const user = await this.httpService
-          .get(`${this.apiPersonalGetCi}/${ci}`)
-          .toPromise();
-        if (user.data._id === userId) {
-          throw new HttpException('No se puede enviar archivo a si mismo', 400);
-        }
-        if (!user.data) {
-          throw new HttpException(`Usuario con CI: ${ci} no encontrado`, 404);
-        }
-        const unityUser = user.data.unity;
-        const dataOficeUser = await this.httpService
-          .get(
-            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-              unityUser,
-            )}`,
-          )
-          .toPromise();
-        const exacMatch = dataOficeUser.data.find(
-          (result) => result.name === unityUser,
-        );
-
-        const idOfficeUser = exacMatch._id;
-        if (pasos[pasoActual].idOffice !== idOfficeUser) {
-          throw new HttpException(
-            `Usuario con CI: ${ci} no trabaja en la oficina a enviar`,
-            400,
-          );
-        }
-        return {
-          ci,
-          idOfUser: user.data._id,
-          idOfficeUser,
-          unityUser,
-        };
-      });
-      const unityUsers = await Promise.all(unityUserPromises);
-      pasos[pasoActual].completado = true;
-      workflow.pasoActual = pasoActual + 1;
-      workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
-
-      const nameOfTheOffice = await this.httpService
-        .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
-        .toPromise();
-      const nameOffce = nameOfTheOffice.data.name;
-
-      document.bitacoraWorkflow.push({
-        oficinaActual: pasos[pasoActual].idOffice,
-        nameOficinaActual: nameOffce,
-        userSend: document.userId,
-        dateSend: document.bitacoraWorkflow[0].dateSend,
-        userDerived: userId,
-        datedDerived: new Date(),
-        receivedUsers: unityUsers.map((user) => ({
-          ciUser: user.ci,
-          idOfUser: user.idOfUser,
-          nameOfficeUserRecieved: user.unityUser,
-          dateRecived: new Date(),
-          observado: false,
-          stateDocumentUser: 'RECIBIDO',
-        })),
-        motivoBack: 'se envio documento a personal seleccionado',
-        oficinasPorPasar: pasos.map((paso) => ({
-          paso: paso.paso,
-          idOffice: paso.idOffice,
-          oficina: paso.oficina,
-          completado: paso.completado,
-        })),
-      });
-
-      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
-        return entry.receivedUsers.some((user) => user.idOfUser === userId);
-      });
-
-      const updateBitacoraEntry = {
-        ...bitacoraEntry,
-        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
-          if (user.idOfUser === userId) {
-            user.stateDocumentUser = 'DERIVADO';
-          }
-          return user;
-        }),
-      };
-      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
-        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
-      });
-
-      const newUserRecievedDocument = unityUsers.map((user) => ({
-        ciUser: user.ci,
-        idOfUser: user.idOfUser,
-        nameOfficeUserRecieved: user.unityUser,
-        dateRecived: new Date(),
-        observado: false,
-        stateDocumentUser: 'RECIBIDO',
-      }));
-
-      //--poner valor del siguiente oficina
-      for (let i = 0; i < pasos.length; i++) {
-        const paso = pasos[i];
-        if (!paso.completado) {
-          document.oficinaPorPasar = paso.oficina;
-        } else {
-          document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
-        }
-      }
-      document.oficinaActual = workflow.oficinaActual;
-
-      document.userReceivedDocument = newUserRecievedDocument;
-      document.bitacoraWorkflow = updateBitacoraWorkflow;
-      document.workflow = workflow;
-      document.stateDocumetUser = 'DERIVADO';
-      document.stateDocumentUserSend = 'INICIADO';
-      await document.save();
-      return document;
-    } else {
-      throw new HttpException('no hay a quien mas derivar', 400);
-    }
-    */
   }
 
-  //----------------------------------------
-
-  //echo
   async sendDocumentSinWorkflow(
     documentId: string,
     ci: string[],
@@ -788,273 +487,7 @@ export class DocumentsService {
       ci,
       userId,
     );
-    /*
-    const document = await this.checkDocument(documentId);
-
-    if (document.workflow) {
-      throw new HttpException(
-        'este documento cuenta con un flujo de trabajo',
-        400,
-      );
-    }
-
-    await this.validateCi(ci);
-
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOficce = loggedUser.data.unity;
-    const loggedUserOffice = await this.httpService
-      .get(
-        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-          userOficce,
-        )}`,
-      )
-      .toPromise();
-    const exacMatch = loggedUserOffice.data.find(
-      (result) => result.name === userOficce,
-    );
-
-    const unityUserPromises = ci.map(async (ci) => {
-      const user = await this.httpService
-        .get(`${this.apiPersonalGetCi}/${ci}`)
-        .toPromise();
-      if (user.data._id === userId) {
-        throw new HttpException(
-          'No se puede enviar un documento a si mismo',
-          400,
-        );
-      }
-      if (!user) {
-        throw new HttpException(`Usuario con CI: ${ci} no encontrado`, 404);
-      }
-
-      const unityUser = user.data.unity;
-      const dataOficeUser = await this.httpService
-        .get(
-          `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-            unityUser,
-          )}`,
-        )
-        .toPromise();
-      const exacMatchToUsers = loggedUserOffice.data.find(
-        (result) => result.name === userOficce,
-      );
-      const idOfficeUser = exacMatchToUsers._id;
-      return {
-        ci,
-        idOfUser: user.data._id,
-        idOfficeUser,
-        unityUser,
-      };
-    });
-
-    const unityUsers = await Promise.all(unityUserPromises);
-
-    let infoIdUsers = document.bitacoraWithoutWorkflow.map((data) =>
-      data.recievedUsers.map((data) => data.idOfUser),
-    );
-
-    const idUsersToSend = unityUsers.map((data) => data.idOfUser);
-
-    document.bitacoraWithoutWorkflow.push({
-      idUserSendOrigin: userId,
-      idOfficeUserSend: exacMatch._id,
-      nameOficeUser: userOficce,
-      recievedUsers: unityUsers.map((user) => ({
-        ciUser: user.ci,
-        idOfUser: user.idOfUser,
-        idOffice: user.idOfficeUser,
-        nameOficeUserRecieved: user.unityUser,
-      })),
-    });
-    const userReceivedDocumentWithoutWorkflow = unityUsers.map((user) => ({
-      ciUser: user.ci,
-      idOfUser: user.idOfUser,
-      nameOfficeUserRecieved: user.unityUser,
-      dateRecived: new Date(),
-      stateDocumentUser: 'RECIBIDO DIRECTO',
-    }));
-
-    document.userReceivedDocumentWithoutWorkflow =
-      userReceivedDocumentWithoutWorkflow;
-    document.stateDocumentUserSend = 'ENVIADO DIRECTO';
-    await document.save();
-    return document;
-    */
   }
-
-  //----------------------
-
-  /*
-  async sendDocumentMultiUnitysWithoutWorkflow(
-    documentId: string,
-    unitys: string[],
-    userId: string,
-  ) {
-    const document = await this.checkDocument(documentId);
-
-    if (document.workflow) {
-      throw new HttpException(
-        'este documento cuenta con un flujo de trabajo',
-        400,
-      );
-    }
-
-       //------- obtener lista con todos los usuarios ---
-    //---- obtener info de la persona logeada y evitar su registro si trabja en
-    //---- misma oficina
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOficce = loggedUser.data.unity;
-    const oficinaUserDentroBitacora = document.workflow.step.pasos.filter(
-      (dat) => dat.oficina === userOficce,
-    );
-
-    // const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
-    const loggedUserOffice = await this.httpService
-      .get(
-        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-          userOficce,
-        )}`,
-      )
-      .toPromise();
-    const exacMatch = loggedUserOffice.data.find(
-      (result) => result.name === userOficce,
-    );
-
-    const personalList = await this.httpService
-      .get(`${this.apiPersonalGet}`)
-      .toPromise();
-
-    const personalListData = personalList.data;
-    const unitysPersonalAll = personalListData.map((user) => ({
-      unity: user.unity,
-      ci: user.ci,
-      idOfUser: user._id,
-    }));
-
-    // Filtrar la lista de usuarios de la oficina actual para excluir al usuario logueado
-    const filteredUnitysPersonal = unitysPersonalAll.filter(
-      (user) => user.ci !== loggedUser.data.ci,
-    );
-
-    const obtainDatos = await Promise.all(
-      filteredUnitysPersonal.map(async (idOfice) => ({
-        info: await this.httpService
-          .get(
-            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-              idOfice.unity,
-            )}`,
-          )
-          .toPromise(),
-        idOfUser: idOfice.idOfUser,
-        ci: idOfice.ci,
-      })),
-    );
-
-    const reeeee = obtainDatos.map((response) => ({
-      nameUnity: response.info.data[0].name,
-      idOficce: response.info.data[0]._id,
-      idOfUser: response.idOfUser,
-      ci: response.ci,
-    }));
-
-    const matchingUsers = reeeee.filter(
-      (datata) => datata.nameUnity === unitys,
-    );
-
-    const receivedUsers = matchingUsers.map((data) => ({
-      ciUser: data.ci,
-      idOfUser: data.idOfUser,
-      nameOfficeUserRecieved: data.nameUnity,
-      dateRecived: new Date(),
-      stateDocumentUser: 'RECIBIDO',
-    }));
-    console.log(receivedUsers)
-
-
-
-
-
-
-    /*
-    // verificar la oficina actual del usuario logeado
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOffice = loggedUser.data.unity;
-
-    //obtener informacion de las oficinas a las que se enviara el documento
-    const officeInfoPromises = unitys.map(async (unity) => {
-      const response = await this.httpService
-        .get(
-          `${this.apiOrganizationChartMain}?name=${encodeURIComponent(unity)}`,
-        )
-        .toPromise();
-      const organigramaList = response.data;
-      try {
-        const officeInfo = await this.checkOfficeValidity(unity);
-        await this.validateOffice(unity);
-        return {
-          idOfficeUserSend: officeInfo.id,
-          nameOficeUserSend: officeInfo.name,
-          idUserSend: userId,
-          send: [
-            {
-              nameUnity: unity,
-              receivedUsers: [],
-            },
-          ],
-        };
-      } catch (error) {
-        throw new Error(error);
-      }
-    });
-    const officeInfoList = await Promise.all(officeInfoPromises);
-
-    //obtener informacoin de los usuarios de las oficinas seleccionadas
-    const usersToNotifyPromises = officeInfoList.map(async (officeInfo) => {
-      // const response = await this.httpService
-      //   .get(`${this.apiPersonalGet}?unity=${officeInfo.send[0].nameUnity}`)
-      //   .toPromise();
-      const 
-
-      return response.data.filter(
-        (user: any) => user.ci !== loggedUser.data.ci,
-      );
-    });
-    const usersToNotifyList = await Promise.all(usersToNotifyPromises);
-
-    // Crear una entrada en la estructura sendMultiUnitysWithoutWorkflow para cada usuario
-    const currentDate = new Date();
-    usersToNotifyList.forEach((users, index) => {
-      const officeInfo = officeInfoList[index];
-      users.forEach((user: any) => {
-        officeInfo.send[0].receivedUsers.push({
-          ciUser: user.ci,
-          idOfUser: user._id,
-        });
-      });
-    });
-
-    // Agregar la estructura sendMultiUnitysWithoutWorkflow al documento
-    if (!document.sendMultiUnitysWithoutWorkflow) {
-      document.sendMultiUnitysWithoutWorkflow = [];
-    }
-    document.sendMultiUnitysWithoutWorkflow.push(...officeInfoList);
-
-    // Actualizar el estado del documento
-    document.stateDocumetUser = 'ENVIADO DIRECTO';
-    document.stateDocumentUserSend = 'ENVIADO DIRECTO';
-
-    await document.save();
-    return document;
-
-    
-  }
-  */
 
   async sendDocumentMultiUnitysWithoutWorkflow(
     documentId: string,
@@ -1066,131 +499,20 @@ export class DocumentsService {
       unitys,
       userId,
     );
-    /*
-    const document = await this.checkDocument(documentId);
-
-    if (document.workflow) {
-      throw new HttpException(
-        'este documento cuenta con un flujo de trabajo',
-        400,
-      );
-    }
-
-    // Verificar la oficina actual del usuario logeado
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOffice = loggedUser.data.unity;
-
-    // Obtener información de las oficinas a las que se enviará el documento
-    const officeInfoPromises = unitys.map(async (unity) => {
-      const response = await this.httpService
-        .get(
-          `${this.apiOrganizationChartMain}?name=${encodeURIComponent(unity)}`,
-        )
-        .toPromise();
-      return {
-        idOfficeUserSend: userOffice,
-        nameOficeUserSend: userOffice,
-        idUserSend: userId,
-        send: [
-          {
-            nameUnity: unity,
-            idUnity: response.data[0]?._id || '',
-            receivedUsers: [],
-          },
-        ],
-      };
-    });
-
-    const officeInfoList = await Promise.all(officeInfoPromises);
-
-    // Obtener información de los usuarios de las unidades a las que se enviará el documento
-    const usersToNotifyPromises = unitys.map(async (unity) => {
-      // Realizar una llamada al servicio externo para obtener la `idUnity` de cada usuario
-      const usersResponse = await this.httpService
-        .get(`${this.apiPersonalGet}?unity=${unity}`)
-        .toPromise();
-
-      // Obtener la `idUnity` de cada usuario
-      const users = usersResponse.data;
-      const unityIdsPromises = users.map(async (user: any) => {
-        // Realizar una llamada al servicio externo para obtener la `idUnity` de cada usuario
-        const unityResponse = await this.httpService
-          .get(`${this.apiOrganizationChartMain}?unity=${user.unity}`)
-          .toPromise();
-        const exacMatch = unityResponse.data.find(
-          (result) => result.name === user.unity,
-        );
-        const idOfficeUser = exacMatch._id;
-        return idOfficeUser;
-      });
-
-      const unityIds = await Promise.all(unityIdsPromises);
-
-      return { users, unityIds };
-    });
-
-    const usersToNotifyLists = await Promise.all(usersToNotifyPromises);
-
-    // Crear una entrada en la estructura sendMultiUnitysWithoutWorkflow para cada usuario
-    usersToNotifyLists.forEach((usersInfo, index) => {
-      const officeInfo = officeInfoList[index];
-      usersInfo.users.forEach((user: any, userIndex: number) => {
-        const unityId = usersInfo.unityIds[userIndex];
-        if (unityId === officeInfo.send[0].idUnity) {
-          // Comparar la `idUnity` obtenida
-          officeInfo.send[0].receivedUsers.push({
-            ciUser: user.ci,
-            idOfUser: user._id,
-          });
-        }
-      });
-    });
-
-    // Agregar la estructura sendMultiUnitysWithoutWorkflow al documento
-    if (!document.sendMultiUnitysWithoutWorkflow) {
-      document.sendMultiUnitysWithoutWorkflow = [];
-    }
-    document.sendMultiUnitysWithoutWorkflow.push(...officeInfoList);
-
-    // Actualizar el estado del documento
-    document.stateDocumetUser = 'ENVIADO DIRECTO';
-    document.stateDocumentUserSend = 'ENVIADO DIRECTO';
-
-    await document.save();
-    return document;
-    */
   }
 
   async getRecievedDocumentsMultiUnitys(userId: string) {
-    try {
-      // Busca el primer documento que contiene el usuario en la lista receivedUsers
-      const document = await this.documentModel
-        .findOne({
-          'sendMultiUnitysWithoutWorkflow.send.receivedUsers.idOfUser': userId,
-        })
-        .exec();
-
-      // Si se encontró un documento, lo devuelve; de lo contrario, devuelve null
-      return document || null;
-    } catch (error) {
-      // Manejo de errores, por ejemplo, lanzar una excepción si hay un error
-      throw new Error('Error al buscar el documento del usuario');
-    }
+    return await this.getDocumentsService.getRecievedDocumentsMultiUnitys(
+      userId,
+    );
   }
-  //-----------------------------------
 
-  //echo
   async markDocumentReviewed(id: string, userId: string): Promise<Documents> {
     const document = await this.checkDocument(id);
 
     const userMarkReviewed = document.userReceivedDocument.find((entry) => {
       return entry.idOfUser === userId;
     });
-
-    console.log('esto es userMarkReviewed');
-    console.log(userMarkReviewed);
 
     const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
       return entry.receivedUsers.some((user) => user.idOfUser === userId);
@@ -1250,38 +572,9 @@ export class DocumentsService {
   }
 
   async getDocumentsReviewed(userId: string) {
-    const documents = await this.documentModel.find().exec();
-
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-
-      document.userReceivedDocument.find((entry) => {
-        return (
-          entry.idOfUser === userId && entry.stateDocumentUser === 'REVISADO'
-        );
-      });
-    }
-    return document;
+    return await this.getDocumentsService.getDocumentReviewed(userId);
   }
 
-  //---------------------------------
-
-  //echo
   async markDocumentcompleted(id: string, userId: string): Promise<Documents> {
     const document = await this.checkDocument(id);
     if (document.workflow === null) {
@@ -1335,563 +628,136 @@ export class DocumentsService {
     }
   }
 
-  //echo
   async showRecievedDocumentWithouWorkflow(
     userId: string,
   ): Promise<Documents[]> {
-    const documents = await this.documentModel.find({ active: true }).exec();
-    let showDocuments = [];
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-      const filteredDocumentsUserSome =
-        document.userReceivedDocumentWithoutWorkflow.some((entry) => {
-          return entry.idOfUser === userId;
-        });
-      if (filteredDocumentsUserSome) {
-        document.stateDocumetUser = 'RECIBIDO DIRECTO';
-        showDocuments.push(document);
-      }
-    }
-    showDocuments.sort((a, b) => {
-      const dateA = new Date(
-        a.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
-      ).getTime();
-      const dateB = new Date(
-        b.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
-      ).getTime();
-      return dateB - dateA;
-    });
-    return showDocuments;
-  }
-
-  //echo
-  async showRecievedDocument(idUser: string): Promise<Documents[]> {
-    const documents = await this.documentModel
-      .find({ active: true })
-      .sort({ numberDocument: 1 })
-      .setOptions({ sanitizeFilter: true })
-      .exec();
-    const findDocument = await this.functionObtainAndDerivedDocument(
-      documents,
-      idUser,
+    return await this.getDocumentsService.getRecievedDocumentsWithWorkflow(
+      userId,
     );
-    return findDocument;
   }
 
-  //echo
+  async showRecievedDocument(idUser: string): Promise<Documents[]> {
+    return await this.getDocumentsService.getRecievedDocument(idUser);
+  }
+
   async showAllDocumentSend(userId: string): Promise<Documents[]> {
-    const documents = await this.documentModel
-      .find({ userId: userId, stateDocumentUserSend: 'INICIADO' })
-      .sort({ numberDocument: 1 })
-      .setOptions({ sanitizeFilter: true })
-      .exec();
-
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-    }
-
-    return documents;
+    return await this.getDocumentsService.getAllDocumentSent(userId);
   }
-  //----------------
 
   async showAllDocumentsCompleted(userId: string): Promise<Documents[]> {
-    const documents = await this.documentModel
-      .find({ userId: userId, stateDocumentUserSend: 'CONCLUIDO' })
-      .sort({ numberDocument: 1 })
-      .setOptions({ sanitizeFilter: true })
-      .exec();
-
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-    }
-
-    return documents;
+    return await this.getDocumentsService.getAllDocumentsCompleted(userId);
   }
 
-  //echo
   async showDocumentsMarkComplete(userId: string) {
-    const documents = await this.documentModel.find().exec();
-    let showDocuments = [];
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-      const findMarkDocuments = document.userReceivedDocument.some((entry) => {
-        return (
-          entry.idOfUser === userId && entry.stateDocumentUser === 'CONCLUIDO'
-        );
-      });
-      if (findMarkDocuments) {
-        showDocuments.push(document);
-      }
-    }
-    return showDocuments;
+    return await this.getDocumentsService.getDocumentsMarkComplete(userId);
   }
 
-  //echo
   async showAllDocumentsSendWithoutWorkflow(
     userId: string,
   ): Promise<Documents[]> {
-    const documents = await this.documentModel
-      .find({
-        workflow: null,
-        stateDocumentUserSend: 'ENVIADO DIRECTO',
-        userId: userId,
-        active: true,
-      })
-      .sort({ numberDocument: 1 })
-      .setOptions({ sanitizeFilter: true })
-      .exec();
-
-    const filteredDocuments = [];
-
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-      filteredDocuments.push(document);
-    }
-    return filteredDocuments;
+    return await this.getDocumentsService.getAllDocumentsSentWithoutWorkflow(
+      userId,
+    );
   }
 
-  //echo
   async getDocumentsOnHold(userId: string): Promise<Documents[]> {
-    const documents = await this.documentModel
-      .find({
-        active: true,
-        bitacoraWorkflow: [],
-        bitacoraWithoutWorkflow: [],
-        stateDocumentUserSend: 'EN ESPERA',
-        userId: userId,
-      })
-      .exec();
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-    }
-    return documents;
+    return await this.getDocumentsService.getDocumentsOnHold(userId);
   }
 
-  //echo
   async selectPasoAnterior(
     documentId: string,
     numberPaso: number,
     motivo: string,
     userId: string,
   ): Promise<Documents> {
-    const document = await this.checkDocument(documentId);
-    if (document.workflow === null) {
-      throw new HttpException(
-        'no puedes devolver un documento que no inicio un flujo de trabajo',
-        400,
-      );
-    }
-
-    const workflow = document.workflow;
-    const pasoActual = workflow.pasoActual;
-    const pasos = workflow.pasos;
-
-    if (
-      numberPaso < 0 ||
-      numberPaso > pasos.length ||
-      numberPaso == pasoActual
-    ) {
-      throw new BadRequestException(
-        'El paso no existe o es el mismo lugar en el que se encuentra el documento',
-      );
-    }
-
-    if (numberPaso == 0 && pasoActual == 1) {
-      const originalUserSend = document.userId;
-      document.bitacoraWorkflow.push({
-        oficinaActual: 'remitente original',
-        nameOficinaActual: 'remitente original',
-        userSend: document.userId,
-        dateSend: document.bitacoraWorkflow[0].dateSend,
-        userDerived: userId,
-        datedDerived: new Date(),
-        receivedUsers: [
-          {
-            ciUser: '',
-            idOfUser: originalUserSend,
-            nameOfficeUserRecieved: '',
-            dateRecived: new Date(),
-            observado: true,
-            stateDocumentUser: 'OBSERVADO',
-          },
-        ],
-        oficinasPorPasar: [],
-        motivoBack: motivo,
-      });
-
-      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
-        return entry.receivedUsers.some((user) => user.idOfUser === userId);
-      });
-      const updateBitacoraEntry = {
-        ...bitacoraEntry,
-        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
-          if (user.idOfUser === userId) {
-            user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
-          }
-          return user;
-        }),
-      };
-      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
-        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
-      });
-
-      document.userReceivedDocument = [
-        {
-          ciUser: '',
-          idOfUser: originalUserSend,
-          nameOfficeUserRecieved: '',
-          dateRecived: new Date(),
-          stateDocumentUser: 'OBSERVADO',
-          observado: true,
-        },
-      ];
-
-      document.bitacoraWorkflow = updateBitacoraWorkflow;
-      document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
-      document.stateDocumentUserSend = 'OBSERVADO';
-      const paso1 = pasos.find((paso) => paso.paso === 1);
-      if (paso1) {
-        paso1.completado = false;
-      }
-      await document.save();
-      return document;
-    }
-
-    if (numberPaso == 0) {
-      const originalUserSend = document.userId;
-      document.bitacoraWorkflow.push({
-        oficinaActual: 'remitente original',
-        nameOficinaActual: 'remitente original',
-        userSend: document.userId,
-        dateSend: document.bitacoraWorkflow[0].dateSend,
-        userDerived: userId,
-        datedDerived: new Date(),
-        receivedUsers: [
-          {
-            ciUser: '',
-            idOfUser: originalUserSend,
-            nameOfficeUserRecieved: '',
-            dateRecived: new Date(),
-            observado: true,
-            stateDocumentUser: 'OBSERVADO',
-          },
-        ],
-        oficinasPorPasar: [],
-        motivoBack: motivo,
-      });
-
-      const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
-        return entry.receivedUsers.some((user) => user.idOfUser === userId);
-      });
-      const updateBitacoraEntry = {
-        ...bitacoraEntry,
-        receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
-          if (user.idOfUser === userId) {
-            user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
-          }
-          return user;
-        }),
-      };
-      const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
-        return entry === bitacoraEntry ? updateBitacoraEntry : entry;
-      });
-
-      document.userReceivedDocument = [
-        {
-          ciUser: '',
-          idOfUser: originalUserSend,
-          nameOfficeUserRecieved: '',
-          dateRecived: new Date(),
-          stateDocumentUser: 'OBSERVADO',
-          observado: true,
-        },
-      ];
-
-      document.bitacoraWorkflow = updateBitacoraWorkflow;
-      document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
-      document.stateDocumentUserSend = 'OBSERVADO';
-      const paso1 = pasos.find((paso) => paso.paso === 1);
-      if (paso1) {
-        paso1.completado = false;
-      }
-      await document.save();
-      return document;
-    }
-
-    const selectedPaso = pasos[numberPaso - 1];
-    if (numberPaso === document.workflow.pasoActual) {
-      throw new HttpException(
-        'usted se encuentra en el paso actual al cual desea reenviar',
-        400,
-      );
-    }
-
-    for (let i = numberPaso; i < pasos.length; i++) {
-      pasos[i].completado = false;
-    }
-
-    workflow.pasoActual = numberPaso;
-    workflow.oficinaActual = selectedPaso.idOffice;
-
-    const matchingEntry = document.bitacoraWorkflow.find(
-      (entry) => entry.oficinaActual === selectedPaso.idOffice,
+    return await this.sendDerivedDocumentsService.selectPreviousStep(
+      documentId,
+      numberPaso,
+      motivo,
+      userId,
     );
-
-    if (matchingEntry) {
-      const receivedUsers = matchingEntry.receivedUsers;
-
-      receivedUsers.forEach((user) => {
-        user.observado = true;
-        user.stateDocumentUser = 'OBSERVADO';
-      });
-
-      const nameOfTheOffice = await this.httpService
-        .get(`${this.apiOrganizationChartId}/${selectedPaso.idOffice}`)
-        .toPromise();
-      const nameOffce = nameOfTheOffice.data.name;
-
-      document.bitacoraWorkflow.push({
-        oficinaActual: selectedPaso.idOffice,
-        nameOficinaActual: nameOffce,
-        receivedUsers,
-        userSend: document.userId,
-        dateSend: document.bitacoraWorkflow[0].dateSend,
-        userDerived: userId,
-        datedDerived: new Date(),
-        motivoBack: motivo,
-        oficinasPorPasar: pasos.map((paso) => ({
-          paso: paso.paso,
-          idOffice: paso.idOffice,
-          oficina: paso.oficina,
-          completado: paso.completado,
-        })),
-      });
-      document.userReceivedDocument = receivedUsers;
-    }
-
-    const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
-      return entry.receivedUsers.some((user) => user.idOfUser === userId);
-    });
-    const updateBitacoraEntry = {
-      ...bitacoraEntry,
-      receivedUsers: bitacoraEntry.receivedUsers.map((user) => {
-        if (user.idOfUser === userId) {
-          user.stateDocumentUser = 'OBSERVADO Y DEVUELTO';
-        }
-        return user;
-      }),
-    };
-    const updateBitacoraWorkflow = document.bitacoraWorkflow.map((entry) => {
-      return entry === bitacoraEntry ? updateBitacoraEntry : entry;
-    });
-    document.bitacoraWorkflow = updateBitacoraWorkflow;
-
-    document.workflow = workflow;
-    document.stateDocumentUserSend = `OBSERVADO PARA EL PASO: ${document.workflow.pasoActual}`;
-    document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
-    await document.save();
-    return document;
   }
 
-  //echo
   async findDocumentsByUserIdAndObservation(
     userId: string,
   ): Promise<Documents[]> {
-    const documents = await this.documentModel.find().exec();
-    let showDocuments = [];
-    for (const document of documents) {
-      const findMarkDocuments = document.userReceivedDocument.some((entry) => {
-        return (
-          entry.idOfUser === userId && entry.stateDocumentUser === 'OBSERVADO'
-        );
-      });
-      if (findMarkDocuments) {
-        showDocuments.push(document);
-      }
-    }
-    return showDocuments;
+    return await this.getDocumentsService.getDocumentsByUserIdAndObservation(
+      userId,
+    );
   }
 
   async filterParams(filter: DocumentsFilter): Promise<Documents[]> {
     const query = {};
-
     if (filter.numberDocument) {
       query['numberDocument'] = filter.numberDocument;
     }
-
     if (filter.userId) {
       query['userId'] = filter.userId;
     }
-
     if (filter.title) {
       query['title'] = filter.title;
     }
-
     if (filter.typeName) {
       query['documentationType'] = {
         $elemMatch: { documentationType: filter.typeName },
       };
     }
-
     if (filter.stateDocumentUserSend) {
       query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
     }
-
     if (filter.nombre) {
       query['workflow'] = {
         $elemMatch: { nombre: filter.nombre },
       };
     }
-
     if (filter.descriptionWorkflow) {
       query['workflow'] = {
         $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
       };
     }
-
     if (filter.step) {
       query['workflow.step'] = {
         $elemMatch: { step: filter.step },
       };
     }
-
     if (filter.paso) {
       query['workflow.step.pasos'] = {
         $elemMatch: { paso: filter.paso },
       };
     }
-
     if (filter.oficina) {
       query['workflow.step.pasos'] = {
         $elemMatch: { oficina: filter.oficina },
       };
     }
-
     if (filter.completado) {
       query['workflow.step.pasos'] = {
         $elemMatch: { completado: filter.completado },
       };
     }
-
     if (filter.pasoActual) {
       query['workflow'] = {
         $elemMatch: { pasoActual: filter.pasoActual },
       };
     }
-
     if (filter.oficinaActual) {
       query['workflow'] = {
         $elemMatch: { oficinaActual: filter.completado },
       };
     }
-
     if (filter.description) {
       query['description'] = filter.description;
     }
-
     if (filter.active) {
       query['active'] = filter.active;
     }
-
     if (filter.year) {
       query['year'] = filter.year;
     }
-
     const filteredDocuments = await this.documentModel
       .find(query)
       .sort({ numberDocument: 1 })
       .exec();
-
     for (const document of filteredDocuments) {
       if (document.userId) {
         try {
@@ -1913,7 +779,6 @@ export class DocumentsService {
     return filteredDocuments;
   }
 
-  //echo
   async findAll(): Promise<Documents[]> {
     const documents = await this.documentModel
       .find()
@@ -2010,24 +875,24 @@ export class DocumentsService {
       .find({ active: true })
       .limit(limit)
       .skip(offset);
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-    }
+    // for (const document of documents) {
+    //   if (document.userId) {
+    //     try {
+    //       const res = await this.httpService
+    //         .get(`${this.apiPersonalGet}/${document.userId}`)
+    //         .toPromise();
+    //       document.userInfo = {
+    //         name: res.data.name,
+    //         lastName: res.data.lastName,
+    //         ci: res.data.ci,
+    //         email: res.data.email,
+    //         unity: res.data.unity,
+    //       };
+    //     } catch (error) {
+    //       document.userId = 'no se encontraron datos del usuario';
+    //     }
+    //   }
+    // }
     const total = await this.documentModel.countDocuments().exec();
 
     return {
@@ -2108,20 +973,6 @@ export class DocumentsService {
       .select('__v')
       .lean()
       .exec();
-    // if (documents.fileRegister && typeof documents.fileRegister === 'object') {
-    //   const fileRegisterObject = documents.fileRegister as unknown as {
-    //     _idFile: string;
-    //   };
-
-    // try {
-    //   const res = await this.httpService
-    //     .get(`${this.apiFilesUploader}/file/${fileRegisterObject._idFile}`)
-    //     .toPromise();
-    //   documents.fileBase64 = res.data.file.base64;
-    // } catch (error) {
-    //   throw new HttpException('no se encontro base64 del archivo', 404);
-    // }
-    // }
     if (documents.idTemplate) {
       try {
         const res = await this.httpService
@@ -2244,331 +1095,6 @@ export class DocumentsService {
 
   //----- FUNCIONES QUE SE USAN ------
 
-  //--FUNCION PARA ENVIAR DOCUEMNTO
-  private async sendDocument(
-    id: string,
-    workflowName: string,
-    ci: string[],
-    userId: string,
-  ) {
-    const document = await this.checkDocument(id);
-
-    const workflowData = await this.findWorkflowByName(workflowName);
-
-    const workDt = {
-      nombre: workflowData.nombre,
-      descriptionWorkflow: workflowData.descriptionWorkflow,
-      pasos: workflowData.pasos,
-      idStep: workflowData.idStep,
-      pasoActual: workflowData.pasoActual,
-      createdAt: workflowData.createdAt,
-      activeWorkflow: workflowData.activeWorkflow,
-      oficinaActual: workflowData.oficinaActual,
-      updateAt: workflowData.updateAt,
-    };
-
-    document.workflow = workDt;
-    const workflow = document.workflow;
-    const pasoActual = workflow.pasoActual;
-    const pasos = workflow.pasos;
-    if (pasoActual < pasos.length) {
-      const unityUserPromises = ci.map(async (ci) => {
-        const user = await this.httpService
-          .get(`${this.apiPersonalGetCi}/${ci}`)
-          .toPromise();
-        if (user.data._id === userId) {
-          throw new HttpException('No se puede enviar archivo a si mismo', 400);
-        }
-        if (!user.data) {
-          throw new HttpException(`Usuario con CI: ${ci} no encontrado`, 404);
-        }
-        const unityUser = user.data.unity;
-        const dataOficeUser = await this.httpService
-          .get(
-            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-              unityUser,
-            )}`,
-          )
-          .toPromise();
-        const exacMatch = dataOficeUser.data.find(
-          (result) => result.name === unityUser,
-        );
-        const idOfficeUser = exacMatch._id;
-        if (pasos[pasoActual].idOffice !== idOfficeUser) {
-          throw new HttpException(
-            `Usuario con CI: ${ci} no trabaja en la oficina a enviar`,
-            400,
-          );
-        }
-        return {
-          ci,
-          idOfUser: user.data._id,
-          idOfficeUser,
-          unityUser,
-        };
-      });
-      const unityUsers = await Promise.all(unityUserPromises);
-      pasos[pasoActual].completado = true;
-      workflow.pasoActual = pasoActual + 1;
-      workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
-      let newBitacora = [];
-      const nameOfTheOffice = await this.httpService
-        .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
-        .toPromise();
-      const nameOffce = nameOfTheOffice.data.name;
-      newBitacora.push({
-        oficinaActual: pasos[pasoActual].idOffice,
-        nameOficinaActual: nameOffce,
-        userSend: userId,
-        dateSend: new Date(),
-        userDerived: '',
-        datedDerived: '',
-        receivedUsers: unityUsers.map((user) => ({
-          ciUser: user.ci,
-          idOfUser: user.idOfUser,
-          nameOfficeUserRecieved: user.unityUser,
-          dateRecived: new Date(),
-          stateDocumentUser: 'RECIBIDO',
-        })),
-        motivoBack: 'se envio documento a personal seleccionado',
-        oficinasPorPasar: pasos,
-      });
-
-      const receivedDocumentUsers = unityUsers.map((user) => ({
-        ciUser: user.ci,
-        idOfUser: user.idOfUser,
-        nameOfficeUserRecieved: user.unityUser,
-        dateRecived: new Date(),
-        stateDocumentUser: 'RECIBIDO',
-        observado: false,
-      }));
-
-      //--poner valor del siguiente oficina
-      for (let i = 0; i < pasos.length; i++) {
-        const paso = pasos[i];
-        if (!paso.completado) {
-          document.oficinaPorPasar = paso.oficina;
-        } else {
-          document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
-        }
-      }
-      document.oficinaActual = workflow.oficinaActual;
-      document.userReceivedDocument = receivedDocumentUsers;
-      document.workflow = workflow;
-      document.stateDocumentUserSend = 'INICIADO';
-      document.stateDocumetUser = '';
-      document.bitacoraWorkflow = newBitacora;
-      await document.save();
-      return document;
-    } else {
-      document.stateDocumentUserSend = 'CONCLUIDO';
-      await document.save();
-      return document;
-    }
-  }
-
-  //--FUNCION PARA ENVIAR DOCUMENTO SIN CI
-  private async sendDocumentWithoutCi(
-    id: string,
-    workflowName: string,
-    userId: string,
-  ) {
-    const document = await this.checkDocument(id);
-    // const workflowData = await this.findDocumentationTypeService.findDocumentationType(workflowName);
-    const workflowData = await this.findWorkflowByName(workflowName);
-    if (!workflowData) {
-      throw new HttpException('no se encontro el workflow', 400);
-    }
-    const {
-      descriptionWorkflow,
-      pasos,
-      idStep,
-      createdAt,
-      activeWorkflow,
-      oficinaActual,
-      updateAt,
-      nombre,
-    } = workflowData;
-
-    const workDt: Workflow = {
-      nombre: workflowData.nombre,
-      descriptionWorkflow,
-      pasos,
-      idStep,
-      pasoActual: workflowData.pasoActual,
-      createdAt,
-      activeWorkflow,
-      oficinaActual,
-      updateAt,
-    };
-
-    // const {
-    //   activeDocumentType,
-    //   createdAt,
-    //   dataUriTemplate,
-    //   idTemplateDocType,
-    //   typeName,
-    // } = workflowData
-
-    document.workflow = workDt;
-
-    //---------paso actual del documento ---
-    const workflow = document.workflow;
-    const pasoActual = workflow.pasoActual;
-    // const pasos = workflow.pasos;
-
-    //------- obtener lista con todos los usuarios ---
-    //---- obtener info de la persona logeada y evitar su registro si trabja en
-    //---- misma oficina
-    const loggedUser = await this.httpService
-      .get(`${this.apiPersonalGet}/${userId}`)
-      .toPromise();
-    const userOficce = loggedUser.data.unity;
-    const oficinaUserDentroBitacora = document.workflow.pasos.filter(
-      (dat) => dat.oficina === userOficce,
-    );
-
-    // const nextPasoUserState = pasos[oficinaUserDentroBitacora[0].paso];
-    const loggedUserOffice = await this.httpService
-      .get(
-        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-          userOficce,
-        )}`,
-      )
-      .toPromise();
-    const exacMatch = loggedUserOffice.data.find(
-      (result) => result.name === userOficce,
-    );
-
-    const personalList = await this.httpService
-      .get(`${this.apiPersonalGet}`)
-      .toPromise();
-
-    const personalListData = personalList.data;
-    const unitysPersonalAll = personalListData.map((user) => ({
-      unity: user.unity,
-      ci: user.ci,
-      idOfUser: user._id,
-    }));
-
-    // Filtrar la lista de usuarios de la oficina actual para excluir al usuario logueado
-    const filteredUnitysPersonal = unitysPersonalAll.filter(
-      (user) => user.ci !== loggedUser.data.ci,
-    );
-
-    const obtainDatos = await Promise.all(
-      filteredUnitysPersonal.map(async (idOfice) => ({
-        info: await this.httpService
-          .get(
-            `${this.apiOrganizationChartMain}?name=${encodeURIComponent(
-              idOfice.unity,
-            )}`,
-          )
-          .toPromise(),
-        idOfUser: idOfice.idOfUser,
-        ci: idOfice.ci,
-      })),
-    );
-
-    if (pasoActual < pasos.length) {
-      // if (nextPasoUserState.completado === true) {
-      //   throw new HttpException(
-      //     'usted ya no puede derivar el documento porque ya fue derivado de su oficina',
-      //     400,
-      //   );
-      // }
-
-      const reeeee = obtainDatos.map((response) => ({
-        nameUnity: response.info.data[0].name,
-        idOficce: response.info.data[0]._id,
-        idOfUser: response.idOfUser,
-        ci: response.ci,
-      }));
-
-      const matchingUsers = reeeee.filter(
-        (datata) => datata.idOficce === pasos[pasoActual].idOffice,
-      );
-      // const matchingUsers = filteredUnitysPersonal.filter(
-      //   (datata) => datata.idOficce === pasos[pasoActual].idOffice,
-      // );
-
-      const receivedUsers = matchingUsers.map((data) => ({
-        ciUser: data.ci,
-        idOfUser: data.idOfUser,
-        nameOfficeUserRecieved: data.nameUnity,
-        dateRecived: new Date(),
-        stateDocumentUser: 'RECIBIDO',
-      }));
-
-      const userReceivedDocument = matchingUsers.map((data) => ({
-        ciUser: data.ci,
-        idOfUser: data.idOfUser,
-        nameOfficeUserRecieved: data.nameUnity,
-        dateRecived: new Date(),
-        stateDocumentUser: 'RECIBIDO',
-        observado: false,
-      }));
-
-      if (matchingUsers.length > 0) {
-        pasos[pasoActual].completado = true;
-        workflow.pasoActual = pasoActual + 1;
-        workflow.oficinaActual = workflow.pasos[pasoActual].oficina;
-        const nameOfTheOffice = await this.httpService
-          .get(`${this.apiOrganizationChartId}/${pasos[pasoActual].idOffice}`)
-          .toPromise();
-        const nameOffce = nameOfTheOffice.data.name;
-
-        let newBitacora = [];
-        newBitacora.push({
-          oficinaActual: pasos[pasoActual].idOffice,
-          nameOficinaActual: nameOffce,
-          userSend: userId,
-          dateSend: new Date(),
-          userDerived: '',
-          datedDerived: '',
-          receivedUsers: receivedUsers,
-          motivoBack: 'Se envio documento a todo el personal de la unidad',
-          oficinasPorPasar: pasos,
-        });
-
-        //--poner valor del siguiente oficina
-        for (let i = 0; i < pasos.length; i++) {
-          const paso = pasos[i];
-          if (!paso.completado) {
-            document.oficinaPorPasar = paso.oficina;
-          } else {
-            document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
-          }
-        }
-        document.oficinaActual = workflow.oficinaActual;
-        document.userReceivedDocument = userReceivedDocument;
-        document.workflow = workflow;
-        document.stateDocumentUserSend = 'INICIADO';
-        document.bitacoraWorkflow = newBitacora;
-      }
-      await document.save();
-      return document;
-    } else {
-      document.stateDocumentUserSend = 'CONCLUIDO';
-      await document.save();
-      return document;
-      // throw new HttpException('se llego la paso final', 400);
-    }
-  }
-
-  //-------------------------------------------
-
-  //--FUNCION PARA VALIDAR CI
-  private async validateCi(ci: string[]) {
-    const uniqueCi = new Set(ci);
-    if (uniqueCi.size !== ci.length) {
-      throw new HttpException(
-        'Hay números de identificación CI duplicados',
-        400,
-      );
-    }
-  }
-
   //--FUNCION PARA OBTENER UN DOCUMENTO Y VALIDARLO
   private async checkDocument(id: string) {
     const document = await this.documentModel.findById(id).exec();
@@ -2624,31 +1150,6 @@ export class DocumentsService {
     return { mime: mimeType, base64 };
   }
 
-  //--FUNCION PARA VALIDAR LA DERIVACION DE UN DOCUMENTO MEDIANTE EL USUARIO
-  private async validarDerivacion(document: Documents, userId: string) {
-    if (document.stateDocumetUser !== 'REVISADO') {
-      throw new HttpException(
-        'Primero se debe marcar el documento como revisado para derivarlo',
-        400,
-      );
-    }
-    if (document.workflow === null) {
-      throw new HttpException(
-        'No puedes derivar un documento que no ha comenzado un flujo de trabajo',
-        400,
-      );
-    }
-    const usuarioEnBitacora = document.bitacoraWorkflow.find((entry) =>
-      entry.receivedUsers.some((user) => user.idOfUser === userId),
-    );
-    if (!usuarioEnBitacora) {
-      throw new HttpException(
-        'No tienes permisos para derivar el documento porque no lo recibiste',
-        403,
-      );
-    }
-  }
-
   //FUNCION PARA ENCONTRAR WORKFLOW POR NOMBRE
   async findWorkflowByName(workflowName: string) {
     const workflowData = await this.workflowModel
@@ -2663,63 +1164,6 @@ export class DocumentsService {
     return workflowData;
   }
 
-  //--FUNCION PARA OBTENER LOS DOCUMENTOS RECIBIDOS Y DERIVADOS
-  private async functionObtainAndDerivedDocument(
-    documents: Documents[],
-    userId: string,
-  ) {
-    let showDocuments = [];
-    for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
-      const filteredDocumentsUserSome = document.userReceivedDocument.some(
-        (entry) => {
-          return entry.idOfUser === userId;
-        },
-      );
-      if (filteredDocumentsUserSome) {
-        document.stateDocumetUser = 'RECIBIDO';
-        showDocuments.push(document);
-      }
-    }
-    showDocuments.sort((a, b) => {
-      const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
-      const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
-      return dateB - dateA;
-    });
-    return showDocuments;
-  }
-
-  //--FUNCION PARA OBTENER LOS DOCUMENTOS MARCADOS COMO REVISADOS
-  private async funtionObtainReviewedDocument(
-    documents: Documents[],
-    userId: string,
-  ) {
-    return documents.filter((document) => {
-      const recievedUsers = document.bitacoraWorkflow.reduce((users, entry) => {
-        return users.concat(entry.receivedUsers);
-      }, []);
-      const userRecieved = recievedUsers.find(
-        (user) => user.idOfUser === userId,
-      );
-      return userRecieved && userRecieved.stateDocumentUser === 'REVISADO';
-    });
-  }
-
   private async convertDocxToPdf(inputPath: Buffer, outputPath: Buffer) {
     return new Promise<string>((resolve, reject) => {
       docxConverter(inputPath, outputPath, (err: any, result: string) => {
@@ -2732,57 +1176,5 @@ export class DocumentsService {
         }
       });
     });
-  }
-
-  searchInTree(data, name) {
-    for (let i = 0; i < data.length; i++) {
-      const item = data[i];
-      if (item.name === name) {
-        return {
-          id: item._id,
-          name: item.name,
-        };
-      }
-      if (item.children && item.children.length > 0) {
-        const result = this.searchInTree(item.children, name);
-        if (result) {
-          return result;
-        }
-      }
-    }
-    throw new HttpException(
-      'No se encontró el elemento o tiene hijos no válidos',
-      400,
-    );
-  }
-
-  async checkOfficeValidity(
-    oficina: string,
-  ): Promise<{ id: string; name: string }> {
-    const response = await this.httpService
-      .get(
-        `${this.apiOrganizationChartMain}?name=${encodeURIComponent(oficina)}`,
-      )
-      .toPromise();
-
-    const exacMatch = response.data.find((result) => result.name === oficina);
-    const organigramaList = response.data;
-
-    try {
-      const officeInfo = this.searchInTree(organigramaList, oficina);
-      return officeInfo;
-    } catch (error) {
-      throw new HttpException(
-        `la oficina ${oficina} no existe en el organigrama`,
-        404,
-      );
-    }
-  }
-
-  async validateOffice(oficina: string): Promise<void> {
-    const isValid = await this.checkOfficeValidity(oficina);
-    if (!isValid) {
-      throw new HttpException('Oficina no válida', 400);
-    }
   }
 }

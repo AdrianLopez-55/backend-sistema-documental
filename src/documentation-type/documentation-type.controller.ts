@@ -82,7 +82,7 @@ export class DocumentationTypeController {
     summary: 'get dcumentation types by pagination',
   })
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
-  @ApiQuery({ name: 'offset', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
   async findAllPaginate(@Query() paginationDto: PaginationDto, @Req() req) {
     return this.documentationTypeService.findAllPaginate(paginationDto);
   }

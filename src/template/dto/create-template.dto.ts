@@ -5,5 +5,8 @@ export class CreateTemplateDto {
   nameTemplate: string;
 
   @ApiProperty()
-  fileTemplateDocx: string;
+  descriptionTemplate: string;
+
+  @ApiProperty()
+  htmlContent: string;
 }

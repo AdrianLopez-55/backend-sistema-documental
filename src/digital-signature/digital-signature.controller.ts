@@ -90,6 +90,11 @@ export class DigitalSignatureController {
     );
   }
 
+  // @Get('verify/:documentId')
+  // async verifyDocument(@Param('documentId') documentId: string){
+  //   const document = this.digitalSignatureService.vali
+  // }
+
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Post('recover-pin')

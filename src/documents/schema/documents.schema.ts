@@ -7,6 +7,7 @@ import {
   DocumentationType,
   DocumentationTypeSchema,
 } from 'src/documentation-type/schema/documentation-type.schema';
+import { Template, TemplateSchema } from 'src/template/schemas/template.schema';
 
 export type DocumentDocument = Documents & Document;
 
@@ -32,6 +33,9 @@ export class Documents {
 
   @Prop({ type: DocumentationTypeSchema, ref: 'DocumentationType' })
   documentationType: DocumentationType;
+
+  // @Prop({ type: TemplateSchema, ref: 'Template' })
+  // documentationType: Template;
 
   @Prop({ uppercase: true })
   stateDocumentUserSend: string;

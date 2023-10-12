@@ -51,6 +51,7 @@ import {
 import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
 import { EmailService } from 'src/email/email.service';
 import { UnitysDto } from './dto/sendUnitysWithoutWorkflow.dto';
+import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
 
 @ApiTags('Documents')
 @UseGuards(RolesGuard)
@@ -105,8 +106,9 @@ export class DocumentsController {
   }
 
   @Post('create-multi-documents')
-  async createMultiDocuments() {
-    return this.documentsService.createMultiDocuments();
+  async createMultiDocuments(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.createMultiDocuments(userId);
   }
 
   @ApiBearerAuth()
@@ -179,11 +181,8 @@ export class DocumentsController {
       'Gets the records of documents by pagination all documentos from all personnel',
   })
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
-  @ApiQuery({ name: 'offset', type: Number, example: 0, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
   async findAllPaginate(@Query() paginationDto: PaginationDto, @Req() req) {
-    console.log('entra');
-    console.log(PaginationDto.length);
-    // const userId = req.user;
     return this.documentsService.findAllPaginate(paginationDto);
   }
 
@@ -511,8 +510,11 @@ export class DocumentsController {
   }
 
   @Post('generate-pdf')
-  async generatePdf(@Body() htmlContent: string) {
-    const pdfBase64 = await this.documentsService.htmlConvertPdf(htmlContent);
+  // @ApiBody({ description: 'Contenido HTML' })
+  async generatePdf(@Body() sendHtmlFileDto: SendHtmlFileDto) {
+    const pdfBase64 = await this.documentsService.htmlConvertPdf(
+      sendHtmlFileDto,
+    );
     return pdfBase64;
   }
 

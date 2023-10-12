@@ -30,12 +30,15 @@ import { FindDocumentationTypeService } from './findDocumentationType.service';
 import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
 import { EmailService } from 'src/email/email.service';
 import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
+import { GetDocumentsService } from './getsDocuments.service';
+import { Template, TemplateSchema } from 'src/template/schemas/template.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Documents.name, schema: DocumentsSchema },
       { name: DocumentationType.name, schema: DocumentationTypeSchema },
+      { name: Template.name, schema: TemplateSchema },
       { name: Workflow.name, schema: WorkflowSchema },
       { name: Step.name, schema: StepSchema },
       { name: Permission.name, schema: PermissionSchema },
@@ -60,6 +63,7 @@ import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
     FindDocumentationTypeService,
     EmailService,
     SendDerivedDocumentsService,
+    GetDocumentsService,
   ],
 })
 export class DocumentsModule {}
