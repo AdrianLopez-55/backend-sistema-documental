@@ -12,6 +12,9 @@ export class Template {
   descriptionTemplate: string;
 
   @Prop()
+  htmlTemplate: string;
+
+  @Prop()
   idTemplate: string;
 }
 

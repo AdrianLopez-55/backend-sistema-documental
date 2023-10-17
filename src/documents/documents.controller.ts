@@ -52,6 +52,7 @@ import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
 import { EmailService } from 'src/email/email.service';
 import { UnitysDto } from './dto/sendUnitysWithoutWorkflow.dto';
 import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
+import * as fs from 'fs';
 
 @ApiTags('Documents')
 @UseGuards(RolesGuard)
@@ -105,10 +106,22 @@ export class DocumentsController {
     }
   }
 
-  @Post('create-multi-documents')
+  @Post('create-multi-documents-with-workflow')
   async createMultiDocuments(@Req() req) {
     const userId = req.user;
-    return this.documentsService.createMultiDocuments(userId);
+    return this.documentsService.createMultiDocumentsWithWorkflow(userId);
+  }
+
+  @Post('create-multi-documents-without-workflow')
+  async createMultiDocumentsWithoutWorkflow(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.createMultiDocumentswithoutWorkflow(userId);
+  }
+
+  @Post('create-multi-documents-on-hold')
+  async createMultiDocumentsOnHold(@Req() req) {
+    const userId = req.user;
+    return this.documentsService.createMultiDocumentsOnHold(userId);
   }
 
   @ApiBearerAuth()
@@ -249,15 +262,20 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
   @Get('obtain-received-and-derived-documents')
   @ApiOperation({
     summary: 'view received and derived documents',
     description:
       'this endpoint is used to view all documents received and derived by your person and that follow a defined work flow.',
   })
-  async getRecievedDocuments(@Req() req): Promise<Documents[]> {
+  async getRecievedDocuments(
+    @Query() paginationDto: PaginationDto,
+    @Req() req,
+  ) {
     const userId = req.user;
-    return this.documentsService.showRecievedDocument(userId);
+    return this.documentsService.showRecievedDocument(userId, paginationDto);
   }
 
   @ApiBearerAuth()
@@ -360,6 +378,95 @@ export class DocumentsController {
   async getDocumetsArchivedUser(@Req() req) {
     const userId = req.user;
     return this.documentsService.findDocumentsArchivedUser(userId);
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
+  @ApiQuery({
+    name: 'view',
+    type: String,
+    example: 'EN ESPERA',
+    required: false,
+  })
+  @Get('get-all-table-paginate')
+  async getAllTablePaginate(
+    @Req() req,
+    @Query() paginationDto: PaginationDto,
+    @Query('view') view: string,
+  ) {
+    const userId = req.user;
+    switch (view) {
+      case 'DOCUMENTS ON HOLD':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'OBTAIN DOCUMENTS SEND WITH WORKFLOW':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'GET DOCUMENTS MARK COMPLETED':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'RECIBIDOS SIN WORKFLOW':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'OBTAIN RECEIVED AND DERIVED DOCUMENTS':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'OBTAIN DOCUMENT REVIEWED':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'OBTAIN MULTI UNITY DOCUMENT':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'GET DOCUMENTS SEND WITHOUT WORKFLOW':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'GET DOCUMENTS COMPLETED':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'GET DOCUMENTS OBSERVED':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      case 'GET DOCUMENTS ARCHIVED USER':
+        return this.documentsService.paginateAllTableDocuments(
+          userId,
+          paginationDto,
+          view,
+        );
+      default:
+        return await this.documentsService.findAllPaginate(paginationDto);
+    }
   }
 
   @ApiBearerAuth()
@@ -511,10 +618,37 @@ export class DocumentsController {
 
   @Post('generate-pdf')
   // @ApiBody({ description: 'Contenido HTML' })
-  async generatePdf(@Body() sendHtmlFileDto: SendHtmlFileDto) {
+  async generatePdf(
+    @Body() sendHtmlFileDto: SendHtmlFileDto,
+    // @Res() res: Response,
+  ) {
     const pdfBase64 = await this.documentsService.htmlConvertPdf(
       sendHtmlFileDto,
     );
+    const binaryData = Buffer.from(pdfBase64.pdfBase64, 'base64');
+
+    const path = require('path');
+    const tempFolder = path.join(process.cwd(), 'template');
+    const fileName = `${pdfBase64.nameFile}.pdf`;
+    const filePathPdf = path.join(tempFolder, fileName);
+    fs.writeFileSync(filePathPdf, binaryData);
+
+    const timeToLiveInMilliseconds = 1 * 60 * 1000;
+    setTimeout(() => {
+      fs.unlink(filePathPdf, (err) => {
+        if (err) {
+          console.error('error al eliminar el pdf: ', err);
+        } else {
+          console.log('Archivo pdf eliminado');
+        }
+      });
+    }, timeToLiveInMilliseconds);
+
+    //descarcarg el pdf
+    // res.setHeader('Content-Type', 'application/pdf');
+    // res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+    // const fileStream = fs.createReadStream(filePathPdf);
+    // fileStream.pipe(res);
     return pdfBase64;
   }
 

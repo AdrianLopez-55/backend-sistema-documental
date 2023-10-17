@@ -8,14 +8,21 @@ import {
   Delete,
   UseInterceptors,
   Body,
+  Query,
 } from '@nestjs/common';
 import { DigitalSignatureService } from './digital-signature.service';
 import { RolesGuard } from 'src/guard/roles.guard';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
 import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
 import { CredentialUserDto } from './dto/CredentialUser.dto';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Controller('digital-signature')
 @ApiTags('digital-signature')
@@ -87,6 +94,22 @@ export class DigitalSignatureController {
     const userId = req.user;
     return this.digitalSignatureService.getDocumentsWithDigitalSignatureUser(
       userId,
+    );
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
+  @Get('get-documents-signatured-paginate')
+  async getDocumentsSignaturedPaginate(
+    @Query() paginationDto: PaginationDto,
+    @Req() req,
+  ) {
+    const userId = req.user;
+    return await this.digitalSignatureService.getDocumentsSignaturePaginate(
+      userId,
+      paginationDto,
     );
   }
 

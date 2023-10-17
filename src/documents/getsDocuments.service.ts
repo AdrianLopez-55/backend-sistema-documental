@@ -4,10 +4,12 @@ import { DocumentDocument, Documents } from './schema/documents.schema';
 import { Model } from 'mongoose';
 import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class GetDocumentsService {
   private readonly apiPersonalGet = getConfig().api_personal_get;
+  private defaultLimit: number;
   constructor(
     @InjectModel(Documents.name)
     private readonly documentModel: Model<DocumentDocument>,
@@ -17,6 +19,7 @@ export class GetDocumentsService {
   async getDocumentReviewed(userId: string) {
     const documents = await this.documentModel.find().exec();
 
+    let showDocument = [];
     for (const document of documents) {
       if (document.userId) {
         try {
@@ -35,13 +38,17 @@ export class GetDocumentsService {
         }
       }
 
-      document.userReceivedDocument.find((entry) => {
-        return (
-          entry.idOfUser === userId && entry.stateDocumentUser === 'REVISADO'
-        );
-      });
+      if (
+        document.userReceivedDocument.find((entry) => {
+          return (
+            entry.idOfUser === userId && entry.stateDocumentUser === 'REVISADO'
+          );
+        })
+      ) {
+        showDocument.push(document);
+      }
     }
-    return document;
+    return showDocument;
   }
 
   async getRecievedDocumentsWithWorkflow(userId: string): Promise<Documents[]> {
@@ -72,6 +79,9 @@ export class GetDocumentsService {
         document.stateDocumetUser = 'RECIBIDO DIRECTO';
         showDocuments.push(document);
       }
+      // if (!filteredDocumentsUserSome) {
+      //   console.log('no se encontro');
+      // }
     }
     showDocuments.sort((a, b) => {
       const dateA = new Date(
@@ -85,17 +95,35 @@ export class GetDocumentsService {
     return showDocuments;
   }
 
-  async getRecievedDocument(idUser: string): Promise<Documents[]> {
+  async getRecievedDocument(
+    idUser: string,
+    paginationDto: PaginationDto,
+  ): Promise<{
+    documents: Documents[];
+    totalDocuments: number;
+    totalPages: number;
+  }> {
+    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+
+    const totalDocuments = await this.documentModel.countDocuments().exec();
+
     const documents = await this.documentModel
       .find({ active: true })
-      .sort({ numberDocument: 1 })
-      .setOptions({ sanitizeFilter: true })
-      .exec();
+      .skip(offset)
+      .limit(limit);
     const findDocument = await this.functionObtainAndDerivedDocument(
       documents,
       idUser,
     );
-    return findDocument;
+
+    const totalPages = Math.ceil(totalDocuments / limit);
+    return {
+      documents: findDocument,
+      totalDocuments,
+      totalPages,
+    };
+    // findDocument;
   }
 
   async getAllDocumentSent(userId: string): Promise<Documents[]> {
@@ -194,8 +222,8 @@ export class GetDocumentsService {
     const documents = await this.documentModel
       .find({
         workflow: null,
-        stateDocumentUserSend: 'ENVIADO DIRECTO',
-        userId: userId,
+        // stateDocumentUserSend: 'ENVIADO DIRECTO',
+        // userId: userId,
         active: true,
       })
       .sort({ numberDocument: 1 })
@@ -203,7 +231,6 @@ export class GetDocumentsService {
       .exec();
 
     const filteredDocuments = [];
-
     for (const document of documents) {
       if (document.userId) {
         try {
@@ -221,7 +248,20 @@ export class GetDocumentsService {
           document.userId = 'no se encontraron datos del usuario';
         }
       }
-      filteredDocuments.push(document);
+      if (document.stateDocumentUserSend === 'ENVIADO DIRECTO') {
+        filteredDocuments.push(document);
+      }
+      if (
+        document.bitacoraWithoutWorkflow.some((entry) => {
+          entry.recievedUsers.some((entry) => {
+            entry.idOfUser === userId;
+          });
+        })
+      ) {
+        filteredDocuments.push(document);
+      } else null;
+
+      // filteredDocuments.push(document);
     }
     return filteredDocuments;
   }
@@ -235,6 +275,7 @@ export class GetDocumentsService {
         stateDocumentUserSend: 'EN ESPERA',
         userId: userId,
       })
+      .sort({ numberDocument: -1 })
       .exec();
     for (const document of documents) {
       if (document.userId) {
@@ -254,6 +295,11 @@ export class GetDocumentsService {
         }
       }
     }
+    // documents.sort((a, b) => {
+    //   const dateA = new Date(a.createdAt).getTime();
+    //   const dateB = new Date(b.createdAt).getTime();
+    //   return dateB - dateA;
+    // });
     return documents;
   }
 
@@ -321,6 +367,12 @@ export class GetDocumentsService {
       );
       if (filteredDocumentsUserSome) {
         document.stateDocumetUser = 'RECIBIDO';
+        showDocuments.push(document);
+      }
+      if (
+        !filteredDocumentsUserSome &&
+        document.stateDocumetUser === 'DERIVADO'
+      ) {
         showDocuments.push(document);
       }
     }

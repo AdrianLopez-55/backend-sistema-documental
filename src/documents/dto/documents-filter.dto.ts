@@ -120,3 +120,5 @@ export class DocumentsFilter {
   })
   year: string;
 }
+
+export class TypeDocumentGetFilterDto {}

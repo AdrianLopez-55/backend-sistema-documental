@@ -9,4 +9,7 @@ export class SendHtmlFileDto {
 
   @ApiProperty()
   descriptionFile: string;
+
+  @ApiProperty()
+  base64File: string;
 }

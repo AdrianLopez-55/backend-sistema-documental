@@ -5,57 +5,62 @@ import { Model } from 'mongoose';
 
 @Injectable()
 export class SequenceService {
-  private globalCounter: number = 0;
-  private contadorLock: boolean = false;
-
+  private currentYear: string = new Date().getFullYear().toString();
+  private lastYear: string = this.currentYear;
+  private count: number = 0;
   constructor(
     @InjectModel(Documents.name) private documentModel: Model<Documents>,
   ) {}
 
-  // async getNextValueNumberDocument(): Promise<string> {
-  //   let currentYear = new Date().getFullYear().toString();
-  //   let year = await this.documentModel.findOne({ year: currentYear }).exec();
-  //   const yearNow = new Date().getFullYear().toString();
-  //   if (yearNow !== currentYear) {
-  //     currentYear = yearNow; // Actualiza el año almacenado
-  //     this.globalCounter = 1; // Reinicia el contador a 1
-  //   }
-  //   this.globalCounter += 1;
-  //   const count = await this.documentModel.countDocuments({}).exec();
-  //   const incrementValue = String(this.globalCounter).padStart(7, '0');
-  //   return `DOC-${incrementValue}-${currentYear}`;
-  // }
-
   async getNextValueNumberDocument(): Promise<string> {
-    const currentYear = new Date().getFullYear().toString();
-    let count = await this.documentModel.countDocuments({}).exec();
-    const incrementValue = String(count + 1).padStart(7, '0');
-    return `DOC-${incrementValue}-${currentYear}`;
+    const year = new Date().getFullYear().toString();
+    if (year !== this.currentYear) {
+      this.lastYear = this.currentYear;
+      this.currentYear = year;
+      this.count = 1;
+    } else {
+      this.count++;
+    }
+    // const currentYear = new Date().getFullYear().toString();
+    // let count = await this.documentModel.countDocuments({}).exec();
+    // const incrementValue = String(count + 1).padStart(7, '0');
+    const incrementalValue = String(this.count).padStart(7, '0');
+    // return `DOC-${incrementValue}-${currentYear}`;
+    return `DOC-${incrementalValue}-${year}`;
+
+    /*
+      async getNextValueNumberDocument(): Promise<string> {
+    const year = new Date().getFullYear().toString();
+    
+    if (year !== this.currentYear) {
+      this.currentYear = year;
+      this.setStoredYear(year); // Almacena el nuevo año en la base de datos.
+      // Reiniciar el contador para el nuevo año.
+      const count = 1;
+      const incrementValue = String(count).padStart(7, '0');
+      return `DOC-${incrementValue}-${year}`;
+    } else {
+      // Continuar incrementando el contador.
+      let count = await this.documentModel.countDocuments({}).exec();
+      count++;
+      this.setStoredCount(count); // Almacena el nuevo contador en la base de datos.
+      const incrementValue = String(count).padStart(7, '0');
+      return `DOC-${incrementValue}-${year}`;
+    }
   }
 
-  // async getNextValueNumberDocument(): Promise<string> {
-  //   if (!this.contadorLock) {
-  //     this.contadorLock = true;
+  // Implementa las funciones para almacenar/recuperar el año en la base de datos.
+  private getStoredYear(): string {
+    // Implementa la lógica para recuperar el año almacenado en la base de datos.
+  }
 
-  //     try {
-  //       const currentYear = new Date().getFullYear().toString();
-  //       let count = await this.documentModel.countDocuments({}).exec();
-  //       const incrementValue = String(count + 1).padStart(7, '0');
+  private setStoredYear(year: string): void {
+    // Implementa la lógica para almacenar el año en la base de datos.
+  }
 
-  //       // Crear el nuevo documento con el número de documento generado
-  //       await this.documentModel.create({
-  //         numberDocument: `DOC-${incrementValue}-${currentYear}`,
-  //         // Otros campos del documento
-  //       });
-
-  //       return `DOC-${incrementValue}-${currentYear}`;
-  //     } finally {
-  //       this.contadorLock = false;
-  //     }
-  //   } else {
-  //     // Esperar un breve período y luego intentar nuevamente (puedes ajustar el tiempo según tus necesidades)
-  //     await new Promise((resolve) => setTimeout(resolve, 100));
-  //     return this.getNextValueNumberDocument();
-  //   }
-  // }
+  private setStoredCount(count: number): void {
+    // Implementa la lógica para almacenar el contador en la base de datos.
+  }
+  */
+  }
 }

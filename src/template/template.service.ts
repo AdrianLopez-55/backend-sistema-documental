@@ -15,11 +15,13 @@ import puppeteer from 'puppeteer';
 import * as mimeTypes from 'mime-types';
 import getConfig from '../config/configuration';
 import { TemplateFilter } from './dto/template-filter';
+import { SendDocxBase64Dto } from './dto/sendDocxBase64.dto';
 // import HTMLtoDOCX from 'html-to-docx';
 
 @Injectable()
 export class TemplateService {
   private readonly apiFilesTemplate = getConfig().api_files_template;
+  private readonly apiFilesUploader = getConfig().api_files_uploader;
   constructor(
     @InjectModel(Template.name)
     private templateModel: Model<TemplateDocuments>,
@@ -33,8 +35,8 @@ export class TemplateService {
     if (findName) {
       throw new HttpException('nombre de template ya en uso', 400);
     }
-    // const { HTMLtoDOCX } = require('html-to-docx');
-    // const { fromHtml } = require('html-to-docx');
+
+    // DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
     const HTMLtoDOCX = require('html-to-docx');
     const { nameTemplate, descriptionTemplate, htmlContent } =
       createTemplateDto;
@@ -108,14 +110,48 @@ export class TemplateService {
       })
       .toPromise();
 
+    // crear el template
     const newTemplate = new this.templateModel({
       nameTemplate: nameTemplate,
       descriptionTemplate: descriptionTemplate,
+      htmlTemplate: htmlContent,
       idTemplate: fileDocx.data.file._id,
     });
 
     await newTemplate.save();
     return newTemplate;
+  }
+
+  async templatePreview(id: string) {
+    const template = await this.templateModel.findById(id).exec();
+    return {
+      nameTemplate: template.nameTemplate,
+      htmlTemplate: template.htmlTemplate,
+    };
+  }
+
+  async uploadFileTemplateDocx(sendDocxBase64Dto: SendDocxBase64Dto) {
+    const { base64Docx, descriptionTemplate, nameTemplate } = sendDocxBase64Dto;
+    if (base64Docx) {
+      const { mime, base64 } = this.extractFileData(base64Docx);
+      const fileObj = {
+        mime: mime,
+        base64: base64,
+      };
+
+      const fileDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: nameTemplate,
+          file: fileObj,
+        })
+        .toPromise();
+      const newTemplate = new this.templateModel({
+        nameTemplate: nameTemplate,
+        descriptionTemplate: descriptionTemplate,
+        idTemplate: fileDocx.data.file._id,
+      });
+      return await newTemplate.save();
+    }
   }
 
   async findAll() {
@@ -177,8 +213,9 @@ export class TemplateService {
         })
         .toPromise();
       template.idTemplate = fileDocx.data.file._id;
+      template.htmlTemplate = updateTemplateDto.htmlContent;
     }
-    return template;
+    return await template.save();
   }
 
   async filterParams(filter: TemplateFilter): Promise<Template[]> {
@@ -188,6 +225,16 @@ export class TemplateService {
     }
     const filteredTemplate = await this.templateModel.find(query).exec();
     return filteredTemplate;
+  }
+
+  //--FUNCION PARA OBTENER EL MIME Y EL BASE64 DE UN FILE
+  private extractFileData(base64Docx: string): {
+    mime: string;
+    base64: string;
+  } {
+    const mimeType = base64Docx.split(';')[0].split(':')[1];
+    const base64 = base64Docx.split(',')[1];
+    return { mime: mimeType, base64 };
   }
 
   /*

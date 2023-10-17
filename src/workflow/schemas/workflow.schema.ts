@@ -29,10 +29,10 @@ export class Workflow {
   @Prop()
   oficinaActual: string;
 
-  @Prop({ default: new Date().toLocaleString(), immutable: true })
+  @Prop({ default: new Date(), immutable: true })
   createdAt: Date;
 
-  @Prop({ default: new Date().toLocaleString() })
+  @Prop({ default: new Date() })
   updateAt: Date;
 
   @Prop({ default: true })

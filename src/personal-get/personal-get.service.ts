@@ -74,8 +74,12 @@ export class PersonalGetService {
       throw new HttpException('error al obtener los datos del personal', 404);
     }
   }
-  // async findAllPaginate(paginationDto: PaginationDto){
-  //   const { limit = this.defaultLimit, page =  1} = paginationDto;
-  //   const offset
-  // }
+  async findAllPaginate(page: number, limit: number) {
+    // const offset = (page - 1) * limit;
+    const personalList = await this.httpService
+      .get(`${this.apiPersonalGet}/paginacion ?page=${page}&limit=${limit}`)
+      .toPromise();
+    console.log(personalList.data);
+    return personalList.data;
+  }
 }

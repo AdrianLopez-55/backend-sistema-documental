@@ -20,8 +20,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { HttpService } from '@nestjs/axios';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { TemplateFilter } from './dto/template-filter';
+import { SendDocxBase64Dto } from './dto/sendDocxBase64.dto';
 
 @Controller('template')
 @ApiTags('template')
@@ -46,6 +47,11 @@ export class TemplateController {
     return await this.templateService.filterParams(filter);
   }
 
+  @Get('template-preview/:id')
+  async templatePreview(@Param('id') id: string) {
+    return await this.templateService.templatePreview(id);
+  }
+
   @Get('find-base64/:id')
   async findBase64Template(@Param('id') id: string) {
     return this.templateService.getBase64Template(id);
@@ -57,6 +63,11 @@ export class TemplateController {
     @Body() updateTemplateDto: UpdateTemplateDto,
   ) {
     return this.templateService.updateTemplate(id, updateTemplateDto);
+  }
+
+  @Post('base64-docx')
+  async base64Docx(@Body() sendDocxBase64Dto: SendDocxBase64Dto) {
+    return this.templateService.uploadFileTemplateDocx(sendDocxBase64Dto);
   }
 
   // @Post('upload-template')

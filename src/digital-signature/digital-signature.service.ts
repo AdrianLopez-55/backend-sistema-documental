@@ -17,9 +17,11 @@ import { CredentialUser } from './schemas/credentialUser.schema';
 import { PinUser } from './schemas/pinUser.schema';
 const bcrypt = require('bcrypt');
 import * as crypto from 'crypto';
+import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class DigitalSignatureService {
+  private defaultLimit: number;
   constructor(
     @InjectModel(Documents.name)
     private readonly documentsModel: Model<DocumentDocument>,
@@ -191,6 +193,28 @@ export class DigitalSignatureService {
     return document;
   }
 
+  async getDocumentsSignaturePaginate(
+    userId: string,
+    paginationDto: PaginationDto,
+  ) {
+    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+    const documents = await this.documentsModel
+      .find({
+        'digitalSignatureDocument.userDigitalSignature': userId,
+      })
+      .limit(limit)
+      .skip(offset);
+
+    const total = await this.documentsModel.countDocuments().exec();
+    return {
+      data: documents,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
+    return documents;
+  }
+
   async getUsersDigitalSignatures() {
     const credentialUsers = await this.credentialUserModel.find().exec();
     const pinUsers = await this.pinUserModel.find().exec();
@@ -226,9 +250,9 @@ export class DigitalSignatureService {
     createCredentialDto: CredentialUserDto,
   ) {
     const userPin = await this.pinUserModel.findOne({ userId: userId });
-    if (userPin) {
-      throw new HttpException('Usted ya cuenta con pin válido', 400);
-    }
+    // if (userPin) {
+    //   throw new HttpException('Usted ya cuenta con pin válido', 400);
+    // }
     const { password, pin } = createCredentialDto;
     const checkPassword = await compare(password, passwordUser);
     if (!checkPassword) {

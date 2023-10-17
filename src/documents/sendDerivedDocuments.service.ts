@@ -483,6 +483,7 @@ export class SendDerivedDocumentsService {
         idOfUser: user.idOfUser,
         idOffice: user.idOfficeUser,
         nameOficeUserRecieved: user.unityUser,
+        stateDocumentUser: 'RECIBIDO DIRECTO',
       })),
     });
     const userReceivedDocumentWithoutWorkflow = unityUsers.map((user) => ({
@@ -496,6 +497,13 @@ export class SendDerivedDocumentsService {
     document.userReceivedDocumentWithoutWorkflow =
       userReceivedDocumentWithoutWorkflow;
     document.stateDocumentUserSend = 'ENVIADO DIRECTO';
+    document.bitacoraWithoutWorkflow.find((entry) => {
+      entry.recievedUsers.find((entry) => {
+        if (entry.idOfUser === userId) {
+          return (entry.stateDocumentUser = 'ENVIADO DIRECTO');
+        }
+      });
+    });
     await document.save();
     return document;
   }

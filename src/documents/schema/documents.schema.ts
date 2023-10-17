@@ -117,11 +117,11 @@ export class Documents {
   @Prop({ default: true })
   active: boolean;
 
-  // @Prop({ default: Date.now(), immutable: true })
-  // createdAt: Date;
+  @Prop({ default: Date.now(), immutable: true })
+  createdAt: Date;
 
-  // @Prop({ default: Date.now() })
-  // updateAt: Date;
+  @Prop({ default: Date.now() })
+  updateAt: Date;
 
   @Prop()
   year: string;
@@ -199,6 +199,7 @@ export class Documents {
             idOfUser: String,
             idOffice: String,
             nameOficeUserRecieved: String,
+            stateDocumentUser: String,
           },
         ],
       },
@@ -213,6 +214,7 @@ export class Documents {
       idOfUser: string;
       idOffice: string;
       nameOficeUserRecieved: string;
+      stateDocumentUser: string;
     }[];
   }[];
 

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
 import { CreateDocumentDTO } from './dto/createDocument.dto';
@@ -39,6 +40,7 @@ import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
 import { GetDocumentsService } from './getsDocuments.service';
 import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
 import { Template } from 'src/template/schemas/template.schema';
+import { off } from 'process';
 
 @Injectable()
 export class DocumentsService {
@@ -61,7 +63,7 @@ export class DocumentsService {
     private getDocumentsService: GetDocumentsService,
   ) {}
 
-  async createMultiDocuments(userId: string) {
+  async createMultiDocumentsWithWorkflow(userId: string) {
     async function connectToDataBase() {
       const dbUrl = 'mongodb://localhost/documental';
       try {
@@ -74,7 +76,7 @@ export class DocumentsService {
     }
 
     await connectToDataBase();
-    const numberOfDocumentsToGenerate = 10000;
+    const numberOfDocumentsToGenerate = 3000;
     const DocumentsSchema = new mongoose.Schema({
       numberDocument: String,
       userId: String,
@@ -87,6 +89,12 @@ export class DocumentsService {
       active: Boolean,
       year: String,
       state: String,
+      userReceivedDocument: Array,
+      bitacoraWorkflow: Array,
+      oficinaActual: String,
+      oficinaPorPasar: String,
+      stateDocumetUser: String,
+      userInfo: Object,
     });
 
     const documentModel = mongoose.model<DocumentDocument>(
@@ -153,8 +161,227 @@ export class DocumentsService {
             observado: false,
           },
         ],
+        bitacoraWorkflow: [
+          {
+            oficinaActual: '65084336717fc4c1b23d1452',
+            nameOficinaActual: 'RECTORADO',
+            userSend: '64e84144561052a834987264',
+            dateSend: new Date(),
+            userDerived: '',
+            datedDerived: null,
+            receivedUsers: [
+              {
+                ciUser: '8845784',
+                idOfUser: '64e7c787eec126d6cb54296e',
+                nameOfficeUserRecieved: 'RECTORADO',
+                dateRecived: new Date(),
+                stateDocumentUser: 'RECIBIDO',
+                observado: false,
+              },
+            ],
+            oficinasPorPasar: [
+              {
+                paso: 1,
+                idOffice: '65084336717fc4c1b23d1452',
+                oficina: 'RECTORADO',
+                completado: true,
+              },
+              {
+                paso: 2,
+                idOffice: '65084467717fc4c1b23d1468',
+                oficina: 'VICERECTORADO',
+                completado: false,
+              },
+            ],
+            motivoBack: 'se envio documento a personal seleccionado',
+          },
+        ],
+        oficinaActual: 'RECTORADO',
+        oficinaPorPasar: 'VICERECTORADO',
+        stateDocumetUser: 'RECIBIDO',
         description: `description-${i + 1}`,
         fileRegister: null,
+      };
+
+      documentsToCreate.push(newDocument);
+    }
+    try {
+      for (const documentData of documentsToCreate) {
+        const newDocument = new documentModel(documentData);
+        await newDocument.save();
+      }
+    } catch (error) {
+      console.error('Error al crear registros de libros:', error);
+    } finally {
+      mongoose.connection.close();
+    }
+  }
+
+  async createMultiDocumentswithoutWorkflow(userId: string) {
+    async function connectToDataBase() {
+      const dbUrl = 'mongodb://localhost/documental';
+      try {
+        await mongoose.connect(dbUrl);
+        console.log('conectado a la base de datos');
+      } catch (error) {
+        console.log('Error al conectar a la base de datos:', error);
+        process.exit(1);
+      }
+    }
+
+    await connectToDataBase();
+    const numberOfDocumentsToGenerate = 3000;
+    const DocumentsSchema = new mongoose.Schema({
+      numberDocument: String,
+      userId: String,
+      title: String,
+      documentationType: Object,
+      stateDocumentUserSend: String,
+      workflow: Object,
+      description: String,
+      fileRegister: Object,
+      active: Boolean,
+      year: String,
+      state: String,
+      userReceivedDocumentWithoutWorkflow: Array,
+      bitacoraWithoutWorkflow: Array,
+    });
+
+    const documentModel = mongoose.model<DocumentDocument>(
+      'Document',
+      DocumentsSchema,
+    );
+    const documentsToCreate: Partial<DocumentDocument>[] = [];
+    for (let i = 0; i < numberOfDocumentsToGenerate; i++) {
+      const newDocument: Partial<DocumentDocument> = {
+        numberDocument: `DOC-0000${i + 1}-2023`,
+        userId: userId,
+        title: `titulo-${i + 1}`,
+        // documentationType: {
+        //   typeName: 'LICENCIA',
+        //   idTemplateDocType: `64f74c3d215abf8c9be98306`,
+        //   activeDocumentType: true,
+        //   createdAt: new Date(),
+        //   updateAt: new Date(),
+        //   dataUriTemplate: '',
+        // },
+        documentationType: {
+          typeName: 'LICENCIA',
+          idTemplateDocType: `description-${i + 1}`,
+          activeDocumentType: true,
+          dataUriTemplate: '',
+          createdAt: undefined,
+          updateAt: undefined,
+        },
+        stateDocumentUserSend: `ENVIADO DIRECTO`,
+        workflow: null,
+        description: `description-${i + 1}`,
+        fileRegister: null,
+        active: true,
+        year: `2023`,
+        state: `create`,
+        userReceivedDocumentWithoutWorkflow: [
+          {
+            ciUser: '8845784',
+            idOfUser: '64e7c787eec126d6cb54296e',
+            nameOfficeUserRecieved: 'RECTORADO',
+            dateRecived: new Date(),
+            stateDocumentUser: 'RECIBIDO DIRECTO',
+          },
+        ],
+        bitacoraWithoutWorkflow: [
+          {
+            idUserSendOrigin: '64e84144561052a834987264',
+            idOfficeUserSend: '65084336717fc4c1b23d1452',
+            nameOficeUser: 'RECTORADO',
+            recievedUsers: [
+              {
+                ciUser: '8845784',
+                idOfUser: '64e7c787eec126d6cb54296e',
+                idOffice: '65084336717fc4c1b23d1452',
+                nameOficeUserRecieved: 'RECTORADO',
+                stateDocumentUser: 'RECIBIDO DIRECTO',
+              },
+            ],
+          },
+        ],
+      };
+
+      documentsToCreate.push(newDocument);
+    }
+    try {
+      for (const documentData of documentsToCreate) {
+        const newDocument = new documentModel(documentData);
+        await newDocument.save();
+      }
+    } catch (error) {
+      console.error('Error al crear registros de libros:', error);
+    } finally {
+      mongoose.connection.close();
+    }
+  }
+
+  async createMultiDocumentsOnHold(userId: string) {
+    async function connectToDataBase() {
+      const dbUrl = 'mongodb://localhost/documental';
+      try {
+        await mongoose.connect(dbUrl);
+        console.log('conectado a la base de datos');
+      } catch (error) {
+        console.log('Error al conectar a la base de datos:', error);
+        process.exit(1);
+      }
+    }
+
+    await connectToDataBase();
+    const numberOfDocumentsToGenerate = 3000;
+    const DocumentsSchema = new mongoose.Schema({
+      numberDocument: String,
+      userId: String,
+      title: String,
+      documentationType: Object,
+      stateDocumentUserSend: String,
+      workflow: Object,
+      description: String,
+      fileRegister: mongoose.Schema.Types.Mixed,
+      active: Boolean,
+      year: String,
+      state: String,
+    });
+
+    const documentModel = mongoose.model<DocumentDocument>(
+      'Document',
+      DocumentsSchema,
+    );
+    const documentsToCreate: Partial<DocumentDocument>[] = [];
+    for (let i = 0; i < numberOfDocumentsToGenerate; i++) {
+      const newDocument: Partial<DocumentDocument> = {
+        numberDocument: `DOC-0000${i + 1}-2023`,
+        userId: userId,
+        title: `titulo-${i + 1}`,
+        // documentationType: {
+        //   typeName: 'LICENCIA',
+        //   idTemplateDocType: `64f74c3d215abf8c9be98306`,
+        //   activeDocumentType: true,
+        //   createdAt: new Date(),
+        //   updateAt: new Date(),
+        //   dataUriTemplate: '',
+        // },
+        documentationType: {
+          typeName: 'LICENCIA',
+          idTemplateDocType: `description-${i + 1}`,
+          activeDocumentType: true,
+          dataUriTemplate: '',
+          createdAt: undefined,
+          updateAt: undefined,
+        },
+        stateDocumentUserSend: `EN ESPERA`,
+        workflow: null,
+        description: `description-${i + 1}`,
+        fileRegister: null,
+        active: true,
+        year: `2023`,
+        state: `create`,
       };
 
       documentsToCreate.push(newDocument);
@@ -174,30 +401,158 @@ export class DocumentsService {
   //-------------------------------
 
   async htmlConvertPdf(sendHtmlFileDto: SendHtmlFileDto) {
-    const { htmlContent, nameFile, descriptionFile } = sendHtmlFileDto;
-    const browser = await puppeteer.launch({
-      headless: 'new',
-    });
-    const page = await browser.newPage();
+    const { htmlContent, nameFile, descriptionFile, base64File } =
+      sendHtmlFileDto;
+    if (htmlContent) {
+      if (base64File) {
+        throw new HttpException(
+          'solo puedes enviar o html o base64, no los dos al mismo tiempo',
+          400,
+        );
+      }
+      const browser = await puppeteer.launch({
+        headless: 'new',
+      });
+      const page = await browser.newPage();
 
-    await page.setContent(htmlContent);
+      await page.setContent(htmlContent);
 
-    const pdfBuffer = await page.pdf({
-      format: 'Letter',
-      // format: pageSize,
-      // printBackground: true,
-    });
+      const pdfBuffer = await page.pdf({
+        format: 'Letter',
+        // format: pageSize,
+        // printBackground: true,
+      });
 
-    await browser.close();
+      await browser.close();
 
-    const pdfBase64 = pdfBuffer.toString('base64');
+      const pdfBase64 = pdfBuffer.toString('base64');
 
-    return {
-      nameFile: nameFile,
-      descriptionFile: descriptionFile,
-      pdfBase64: pdfBase64,
-    };
+      return {
+        nameFile: nameFile,
+        descriptionFile: descriptionFile,
+        pdfBase64: pdfBase64,
+      };
+    }
+    //si en base64 se envia como docx
+    if (
+      base64File.startsWith(
+        'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      )
+    ) {
+      if (htmlContent) {
+        throw new HttpException(
+          'solo puedes enviar o html o base64, no los dos al mismo tiempo',
+          400,
+        );
+      }
+      const { mime, base64 } = this.extractFileData(base64File);
+      const fileObj = {
+        mime: mime,
+        base64: base64,
+      };
+      const response = await this.uploadFile(fileObj);
+      const fileRegister = this.createFileRegister(response.data.file);
+      const binaryData = Buffer.from(base64, 'base64');
+
+      //definir ruta y nombre del archivo temporal
+      const path = require('path');
+      const tempFolder = path.join(process.cwd(), 'template');
+      const fileName = `${nameFile}_file.docx`;
+      const filePathTemplateDoc = path.join(tempFolder, fileName);
+      fs.writeFileSync(filePathTemplateDoc, binaryData);
+      //borrar el template descargado
+      const timeToLiveInMillisencods = 1 * 60 * 1000;
+      setTimeout(() => {
+        fs.unlink(filePathTemplateDoc, (err) => {
+          if (err) {
+            console.error('error al eliminar file', err);
+          } else {
+            console.log('archivo eliminado', filePathTemplateDoc);
+          }
+        });
+      }, timeToLiveInMillisencods);
+      //convertir a pdf
+      const inputPath = path.join(
+        process.cwd(),
+        'template',
+        `${nameFile}_file.docx`,
+      );
+      const outPutDocumentTemplate = path.join(process.cwd(), 'template');
+      const outPuthFileName = `${nameFile}_file.pdf`;
+      const outPutPathTemplate = path.join(
+        outPutDocumentTemplate,
+        outPuthFileName,
+      );
+      await this.convertDocxToPdf(inputPath, outPutPathTemplate);
+      const rutaPdfGenerated = path.join(
+        process.cwd(),
+        'template',
+        `${nameFile}_file.pdf`,
+      );
+      const resultFile = fs.readFileSync(rutaPdfGenerated);
+      const base64String = resultFile.toString('base64');
+      const fileExtension = path.extname(`${nameFile}_file.pdf`).substring(1);
+      const mimeTypePdf = `application/${fileExtension}`;
+      const dataPdf = {
+        mime: mimeTypePdf,
+        base64: base64String,
+      };
+      const sentDataDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: `${nameFile}_file.pdf`,
+          file: dataPdf,
+        })
+        .toPromise();
+
+      const timeToLiveInMIlliseconds = 1 * 60 * 1000;
+      setTimeout(() => {
+        fs.unlink(rutaPdfGenerated, (err) => {
+          if (err) {
+            console.error('error al eliminar archivo temporal: ', err);
+          } else {
+            console.log('Archivo temporal eliminado: ', rutaPdfGenerated);
+          }
+        });
+        fs.unlink(outPutPathTemplate, (err) => {
+          if (err) {
+            console.error('Error al eliminar archivo temporal PDF: ', err);
+          } else {
+            console.log('Archivo temporal PDF eliminado: ', outPutPathTemplate);
+          }
+        });
+      }, timeToLiveInMIlliseconds);
+
+      return {
+        nameFile: nameFile,
+        descriptionFile: descriptionFile,
+        pdfBase64: base64String,
+      };
+    } else {
+      //si se envia como pdf
+      if (base64File.startsWith('data:@file/pdf')) {
+        if (htmlContent) {
+          throw new HttpException(
+            'solo puedes enviar o html o base64, no los dos al mismo tiempo',
+            400,
+          );
+        }
+        const { mime, base64 } = this.extractFileData(base64File);
+        const fileObj = {
+          mime: mime,
+          base64: base64,
+        };
+        const response = await this.uploadFile(fileObj);
+        const fileRegister = this.createFileRegister(response.data.file);
+        return {
+          nameFile: nameFile,
+          descriptionFile: descriptionFile,
+          pdfBase64: base64,
+        };
+      }
+    }
   }
+
+  async draftFileView() {}
   //-------------------------------
 
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
@@ -501,6 +856,13 @@ export class DocumentsService {
     );
   }
 
+  //-------------------------------------
+
+  async getAllDocumentsPaginate(userId: string, paginationDto: PaginationDto) {}
+
+  //-----------------------------------------------
+
+  //--funciones para recibir
   async getRecievedDocumentsMultiUnitys(userId: string) {
     return await this.getDocumentsService.getRecievedDocumentsMultiUnitys(
       userId,
@@ -570,6 +932,350 @@ export class DocumentsService {
       );
     }
   }
+  //----------------------------------------------------------------
+  //--------------PAGINACION DE TODAS LAS LISTAS
+  async paginateAllTableDocuments(
+    userId: string,
+    paginationDto: PaginationDto,
+    view: string,
+  ) {
+    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+    const offset = (page - 1) * limit;
+
+    const query: any = {
+      active: true,
+    };
+
+    // switch (view) {
+    //   case 'EN ESPERA':
+    //     return this.documentsService.paginateAllTableDocuments(
+    //       userId,
+    //       paginationDto,
+    //       view,
+    //     );
+    //   case 'INICIADO':
+    //     return this.documentsService.paginateAllTableDocuments(
+    //       userId,
+    //       paginationDto,
+    //       view,
+    //     );
+    // }
+
+    if (view === 'DOCUMENTS ON HOLD') {
+      query.stateDocumentUserSend = 'EN ESPERA';
+    } else if (view === 'OBTAIN DOCUMENTS SEND WITH WORKFLOW') {
+      query.stateDocumentUserSend = 'INICIADO';
+    } else if (view === 'GET DOCUMENTS MARK COMPLETED') {
+      const documents = await this.documentModel.find({ active: true }).exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        const findMarkDocuments = document.userReceivedDocument.some(
+          (entry) => {
+            return (
+              entry.idOfUser === userId &&
+              entry.stateDocumentUser === 'CONCLUIDO'
+            );
+          },
+        );
+        if (findMarkDocuments) {
+          showDocuments.push(document);
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+      const totalDocuments = showDocuments.length;
+      const paginatedDocuments = showDocuments.slice(offset, offset + limit);
+      return {
+        documents: paginatedDocuments,
+        totalDocuments,
+        totalPages: Math.ceil(totalDocuments / limit),
+      };
+    } else if (view === 'RECIBIDOS SIN WORKFLOW') {
+      const documents = await this.documentModel.find({ active: true }).exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        const filteredDocumentsUserSome =
+          document.userReceivedDocumentWithoutWorkflow.some((entry) => {
+            return entry.idOfUser === userId;
+          });
+        if (filteredDocumentsUserSome) {
+          document.stateDocumetUser = 'RECIBIDO DIRECTO';
+          showDocuments.push(document);
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+      const totalDocuments = showDocuments.length;
+      const paginatedDocuments = showDocuments.slice(offset, offset + limit);
+      return {
+        documents: paginatedDocuments,
+        totalDocuments,
+        totalPages: Math.ceil(totalDocuments / limit),
+      };
+    } else if (view === 'OBTAIN RECEIVED AND DERIVED DOCUMENTS') {
+      const documents = await this.documentModel.find({ active: true }).exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        const filteredDocumentsUserSome = document.userReceivedDocument.some(
+          (entry) => {
+            return (
+              entry.idOfUser === userId &&
+              entry.stateDocumentUser === 'RECIBIDO'
+            );
+          },
+        );
+        if (filteredDocumentsUserSome) {
+          // document.stateDocumetUser = 'RECIBIDO';
+          showDocuments.push(document);
+        }
+        if (
+          !filteredDocumentsUserSome &&
+          document.bitacoraWorkflow.some((entry) => {
+            return entry.receivedUsers.some((entry) => {
+              return (
+                entry.idOfUser === userId &&
+                entry.stateDocumentUser === 'DERIVADO'
+              );
+            });
+          })
+        ) {
+          showDocuments.push(document);
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+
+      const totalDocuments = showDocuments.length;
+      const paginateDocuments = showDocuments.slice(offset, offset + limit);
+      const totalPages = Math.ceil(totalDocuments / limit);
+      return {
+        documents: paginateDocuments,
+        totalDocuments,
+        totalPages,
+      };
+    } else if (view === 'OBTAIN DOCUMENT REVIEWED') {
+      const documents = await this.documentModel.find({ active: true }).exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        if (
+          document.userReceivedDocument.find((entry) => {
+            return entry.stateDocumentUser === 'REVISADO';
+          })
+        ) {
+          showDocuments.push(document);
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+      const totalDocuments = showDocuments.length;
+      const paginateDocuments = showDocuments.slice(offset, offset + limit);
+      const totalPages = Math.ceil(totalDocuments / limit);
+      return {
+        documents: paginateDocuments,
+        totalDocuments,
+        totalPages,
+      };
+    } else if (view === 'OBTAIN MULTI UNITY DOCUMENT') {
+      const documents = await this.documentModel
+        .find({
+          'sendMultiUnitysWithoutWorkflow.send.receivedUsers.idOfUser': userId,
+        })
+        .skip(offset)
+        .limit(limit)
+        .exec();
+      const totalDocuments = await this.documentModel
+        .countDocuments({
+          'sendMultiUnitysWithoutWorkflow.send.receivedUsers.idOfUser': userId,
+        })
+        .exec();
+
+      return {
+        documents,
+        totalDocuments,
+        totalPages: Math.ceil(totalDocuments / limit),
+      };
+    } else if (view === 'GET DOCUMENTS SEND WITHOUT WORKFLOW') {
+      const documents = await this.documentModel
+        .find({
+          workflow: null,
+          active: true,
+        })
+        .exec();
+      const showDocuments = [];
+      for (const document of documents) {
+        if (
+          document.stateDocumentUserSend === 'ENVIADO DIRECTO' &&
+          document.userId === userId
+        ) {
+          showDocuments.push(document);
+        } else {
+          if (
+            document.bitacoraWithoutWorkflow.some((entry) => {
+              return entry.recievedUsers.some((entry) => {
+                return (
+                  entry.idOfUser === userId &&
+                  entry.stateDocumentUser === 'ENVIADO DIRECTO'
+                );
+              });
+            })
+          ) {
+            showDocuments.push(document);
+          }
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+      const totalDocuments = showDocuments.length;
+      const paginateDocuments = showDocuments.slice(offset, offset + limit);
+      const totalPages = Math.ceil(totalDocuments / limit);
+      return {
+        documents: paginateDocuments,
+        totalDocuments,
+        totalPages,
+      };
+    } else if (view === 'GET DOCUMENTS COMPLETED') {
+      query.stateDocumentUserSend = 'CONCLUIDO';
+    } else if (view === 'GET DOCUMENTS OBSERVED') {
+      const documents = await this.documentModel.find().exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        const findMarkDocuments = document.userReceivedDocument.some(
+          (entry) => {
+            return (
+              entry.idOfUser === userId &&
+              entry.stateDocumentUser === 'OBSERVADO'
+            );
+          },
+        );
+        if (findMarkDocuments) {
+          showDocuments.push(document);
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+      const totalDocuments = showDocuments.length;
+      const paginateDocuments = showDocuments.slice(offset, offset + limit);
+      const totalPages = Math.ceil(totalDocuments / limit);
+      return {
+        documents: paginateDocuments,
+        totalDocuments,
+        totalPages,
+      };
+    } else if (view === 'GET DOCUMENTS ARCHIVED USER') {
+      query.stateDocumentUserSend = 'ARCHIVADO';
+    }
+
+    if (userId) {
+      query.userId = userId;
+    } else {
+      console.log('user id no disponible');
+    }
+
+    const documents = await this.documentModel
+      .find(query)
+      .limit(limit)
+      .skip(offset);
+    const total = await this.documentModel.countDocuments(query).exec();
+    return {
+      // data: showFilteredDocuments,
+      data: documents,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  //----------------------------------------
+  async functionObtainAndDerivedDocument(
+    documents: Documents[],
+    userId: string,
+  ) {
+    let showDocuments = [];
+    for (const document of documents) {
+      if (document.userId) {
+        try {
+          const res = await this.httpService
+            .get(`${this.apiPersonalGet}/${document.userId}`)
+            .toPromise();
+          document.userInfo = {
+            name: res.data.name,
+            lastName: res.data.lastName,
+            ci: res.data.ci,
+            email: res.data.email,
+            unity: res.data.unity,
+          };
+        } catch (error) {
+          document.userId = 'no se encontraron datos del usuario';
+        }
+      }
+      const filteredDocumentsUserSome = document.userReceivedDocument.some(
+        (entry) => {
+          return entry.idOfUser === userId;
+        },
+      );
+      if (filteredDocumentsUserSome) {
+        document.stateDocumetUser = 'RECIBIDO';
+        showDocuments.push(document);
+      }
+      if (
+        !filteredDocumentsUserSome &&
+        document.stateDocumetUser === 'DERIVADO'
+      ) {
+        showDocuments.push(document);
+      }
+    }
+    showDocuments.sort((a, b) => {
+      const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
+      const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
+      return dateB - dateA;
+    });
+    return showDocuments;
+  }
+
+  //----------------------------------------------
+
+  //--------------------------------------------------------------
 
   async getDocumentsReviewed(userId: string) {
     return await this.getDocumentsService.getDocumentReviewed(userId);
@@ -579,7 +1285,7 @@ export class DocumentsService {
     const document = await this.checkDocument(id);
     if (document.workflow === null) {
       throw new HttpException(
-        'no puedes devolver un documento que no inicio un flujo de trabajo',
+        'no puedes marcar como completado un documento que no inicio un flujo de trabajo',
         400,
       );
     }
@@ -636,8 +1342,11 @@ export class DocumentsService {
     );
   }
 
-  async showRecievedDocument(idUser: string): Promise<Documents[]> {
-    return await this.getDocumentsService.getRecievedDocument(idUser);
+  async showRecievedDocument(idUser: string, paginationDto: PaginationDto) {
+    return await this.getDocumentsService.getRecievedDocument(
+      idUser,
+      paginationDto,
+    );
   }
 
   async showAllDocumentSend(userId: string): Promise<Documents[]> {

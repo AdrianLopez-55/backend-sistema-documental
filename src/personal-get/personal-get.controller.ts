@@ -1,8 +1,18 @@
-import { Controller, Get, HttpException, Param, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpException,
+  Param,
+  Query,
+  Res,
+  Body,
+} from '@nestjs/common';
 import { PersonalGetService } from './personal-get.service';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import getConfig from '../config/configuration';
 import { Response } from 'express';
+import { PaginationDto } from 'src/common/pagination.dto';
+import { number } from 'joi';
 
 @ApiTags('personal-get')
 @Controller('personal-get')
@@ -22,6 +32,16 @@ export class PersonalGetController {
     } catch (error) {
       throw new HttpException('error al obtener datos de personal', 404);
     }
+  }
+
+  // @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  // @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
+  @Get('paginate')
+  async findAllPaginate(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.personalGetService.findAllPaginate(page, limit);
   }
 
   @Get('get-personal-data-id/:id')
