@@ -123,7 +123,7 @@ export class DocumentsService {
           createdAt: undefined,
           updateAt: undefined,
         },
-        stateDocumentUserSend: `EN ESPERA`,
+        stateDocumentUserSend: `INICIADO`,
         workflow: {
           nombre: 'WORKFLOW A',
           descriptionWorkflow: 'STRING',
@@ -230,7 +230,7 @@ export class DocumentsService {
     }
 
     await connectToDataBase();
-    const numberOfDocumentsToGenerate = 3000;
+    const numberOfDocumentsToGenerate = 4000;
     const DocumentsSchema = new mongoose.Schema({
       numberDocument: String,
       userId: String,
@@ -394,6 +394,7 @@ export class DocumentsService {
     } catch (error) {
       console.error('Error al crear registros de libros:', error);
     } finally {
+      mongoose.disconnect();
       mongoose.connection.close();
     }
   }
@@ -856,12 +857,6 @@ export class DocumentsService {
     );
   }
 
-  //-------------------------------------
-
-  async getAllDocumentsPaginate(userId: string, paginationDto: PaginationDto) {}
-
-  //-----------------------------------------------
-
   //--funciones para recibir
   async getRecievedDocumentsMultiUnitys(userId: string) {
     return await this.getDocumentsService.getRecievedDocumentsMultiUnitys(
@@ -938,35 +933,114 @@ export class DocumentsService {
     userId: string,
     paginationDto: PaginationDto,
     view: string,
+    filter: DocumentsFilter,
   ) {
     const { limit = this.defaultLimit, page = 1 } = paginationDto;
     const offset = (page - 1) * limit;
 
-    const query: any = {
-      active: true,
-    };
-
-    // switch (view) {
-    //   case 'EN ESPERA':
-    //     return this.documentsService.paginateAllTableDocuments(
-    //       userId,
-    //       paginationDto,
-    //       view,
-    //     );
-    //   case 'INICIADO':
-    //     return this.documentsService.paginateAllTableDocuments(
-    //       userId,
-    //       paginationDto,
-    //       view,
-    //     );
-    // }
+    const query: any = {};
+    //------------- PARA FILTRADO
+    if (filter.numberDocument) {
+      query['numberDocument'] = filter.numberDocument;
+    }
+    if (filter.userId) {
+      query['userId'] = filter.userId;
+    }
+    if (filter.title) {
+      query['title'] = new RegExp(filter.title, 'i');
+    }
+    if (filter.typeName) {
+      query['documentationType'] = {
+        $elemMatch: { documentationType: filter.typeName },
+      };
+    }
+    if (filter.stateDocumentUserSend) {
+      query['stateDocumentUserSend'] = new RegExp(
+        filter.stateDocumentUserSend,
+        'i',
+      );
+    }
+    if (filter.nombre) {
+      query['workflow'] = {
+        $elemMatch: { nombre: filter.nombre },
+      };
+    }
+    if (filter.descriptionWorkflow) {
+      query['workflow'] = {
+        $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+      };
+    }
+    if (filter.paso) {
+      query['workflow.step.pasos'] = {
+        $elemMatch: { paso: filter.paso },
+      };
+    }
+    if (filter.oficina) {
+      query['workflow.step.pasos'] = {
+        $elemMatch: { oficina: filter.oficina },
+      };
+    }
+    if (filter.completado) {
+      query['workflow.step.pasos'] = {
+        $elemMatch: { completado: filter.completado },
+      };
+    }
+    if (filter.pasoActual) {
+      query['workflow'] = {
+        $elemMatch: { pasoActual: filter.pasoActual },
+      };
+    }
+    if (filter.oficinaActual) {
+      query['workflow'] = {
+        $elemMatch: { oficinaActual: filter.completado },
+      };
+    }
+    if (filter.description) {
+      query['description'] = new RegExp(filter.description, 'i');
+    }
+    if (filter.active) {
+      query['active'] = filter.active;
+    }
+    if (filter.year) {
+      query['year'] = new RegExp(filter.year, 'i');
+    }
 
     if (view === 'DOCUMENTS ON HOLD') {
-      query.stateDocumentUserSend = 'EN ESPERA';
+      const documents = await this.documentModel.find(query).exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        if (document.stateDocumentUserSend === 'EN ESPERA') {
+          showDocuments.push(document);
+        }
+      }
+      showDocuments.sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocumentWithoutWorkflow[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      });
+      const totalDocuments = showDocuments.length;
+      const paginatedDocuments = showDocuments.slice(offset, offset + limit);
+      return {
+        documents: paginatedDocuments,
+        totalDocuments,
+        totalPages: Math.ceil(totalDocuments / limit),
+      };
+      // query.stateDocumentUserSend = 'EN ESPERA';
     } else if (view === 'OBTAIN DOCUMENTS SEND WITH WORKFLOW') {
+      const documents = await this.documentModel.find(query).exec();
+      let showDocuments = [];
+      for (const document of documents) {
+        if (document.stateDocumentUserSend === 'INICIADO') {
+          showDocuments.push(document);
+        }
+      }
       query.stateDocumentUserSend = 'INICIADO';
     } else if (view === 'GET DOCUMENTS MARK COMPLETED') {
-      const documents = await this.documentModel.find({ active: true }).exec();
+      const documents = await this.documentModel.find(query).exec();
       let showDocuments = [];
       for (const document of documents) {
         const findMarkDocuments = document.userReceivedDocument.some(
@@ -998,7 +1072,7 @@ export class DocumentsService {
         totalPages: Math.ceil(totalDocuments / limit),
       };
     } else if (view === 'RECIBIDOS SIN WORKFLOW') {
-      const documents = await this.documentModel.find({ active: true }).exec();
+      const documents = await this.documentModel.find(query).exec();
       let showDocuments = [];
       for (const document of documents) {
         const filteredDocumentsUserSome =
@@ -1027,7 +1101,7 @@ export class DocumentsService {
         totalPages: Math.ceil(totalDocuments / limit),
       };
     } else if (view === 'OBTAIN RECEIVED AND DERIVED DOCUMENTS') {
-      const documents = await this.documentModel.find({ active: true }).exec();
+      const documents = await this.documentModel.find(query).exec();
       let showDocuments = [];
       for (const document of documents) {
         const filteredDocumentsUserSome = document.userReceivedDocument.some(
@@ -1075,7 +1149,7 @@ export class DocumentsService {
         totalPages,
       };
     } else if (view === 'OBTAIN DOCUMENT REVIEWED') {
-      const documents = await this.documentModel.find({ active: true }).exec();
+      const documents = await this.documentModel.find(query).exec();
       let showDocuments = [];
       for (const document of documents) {
         if (
@@ -1171,7 +1245,7 @@ export class DocumentsService {
     } else if (view === 'GET DOCUMENTS COMPLETED') {
       query.stateDocumentUserSend = 'CONCLUIDO';
     } else if (view === 'GET DOCUMENTS OBSERVED') {
-      const documents = await this.documentModel.find().exec();
+      const documents = await this.documentModel.find(query).exec();
       let showDocuments = [];
       for (const document of documents) {
         const findMarkDocuments = document.userReceivedDocument.some(
@@ -1396,15 +1470,23 @@ export class DocumentsService {
   }
 
   async filterParams(filter: DocumentsFilter): Promise<Documents[]> {
-    const query = {};
+    // const query = {};
+    let query = this.documentModel.find();
+
     if (filter.numberDocument) {
-      query['numberDocument'] = filter.numberDocument;
+      // query['numberDocument'] = filter.numberDocument;
+      query = query.where(
+        'numberDocument',
+        new RegExp(filter.numberDocument, 'i'),
+      );
     }
     if (filter.userId) {
-      query['userId'] = filter.userId;
+      // query['userId'] = filter.userId;
+      query = query.where('userId', new RegExp(filter.userId, 'i'));
     }
     if (filter.title) {
-      query['title'] = filter.title;
+      // query['title'] = filter.title;
+      query = query.where('title', new RegExp(filter.title, 'i'));
     }
     if (filter.typeName) {
       query['documentationType'] = {
@@ -1424,11 +1506,11 @@ export class DocumentsService {
         $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
       };
     }
-    if (filter.step) {
-      query['workflow.step'] = {
-        $elemMatch: { step: filter.step },
-      };
-    }
+    // if (filter.step) {
+    //   query['workflow.step'] = {
+    //     $elemMatch: { step: filter.step },
+    //   };
+    // }
     if (filter.paso) {
       query['workflow.step.pasos'] = {
         $elemMatch: { paso: filter.paso },
@@ -1455,13 +1537,16 @@ export class DocumentsService {
       };
     }
     if (filter.description) {
-      query['description'] = filter.description;
+      // query['description'] = filter.description;
+      query = query.where('description', new RegExp(filter.description, 'i'));
     }
     if (filter.active) {
-      query['active'] = filter.active;
+      // query['active'] = filter.active;
+      query = query.where('active', filter.active);
     }
     if (filter.year) {
-      query['year'] = filter.year;
+      // query['year'] = filter.year;
+      query = query.where('year', filter.year);
     }
     const filteredDocuments = await this.documentModel
       .find(query)
@@ -1711,7 +1796,6 @@ export class DocumentsService {
     if (!documents) {
       throw new NotFoundException('Versión del documento no encontrada');
     }
-
     return documents;
   }
 

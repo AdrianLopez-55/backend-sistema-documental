@@ -151,7 +151,6 @@ export class GetDocumentsService {
         }
       }
     }
-
     return documents;
   }
 
@@ -260,8 +259,6 @@ export class GetDocumentsService {
       ) {
         filteredDocuments.push(document);
       } else null;
-
-      // filteredDocuments.push(document);
     }
     return filteredDocuments;
   }
@@ -295,11 +292,6 @@ export class GetDocumentsService {
         }
       }
     }
-    // documents.sort((a, b) => {
-    //   const dateA = new Date(a.createdAt).getTime();
-    //   const dateB = new Date(b.createdAt).getTime();
-    //   return dateB - dateA;
-    // });
     return documents;
   }
 

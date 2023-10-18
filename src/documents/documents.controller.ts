@@ -106,18 +106,24 @@ export class DocumentsController {
     }
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Post('create-multi-documents-with-workflow')
   async createMultiDocuments(@Req() req) {
     const userId = req.user;
     return this.documentsService.createMultiDocumentsWithWorkflow(userId);
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Post('create-multi-documents-without-workflow')
   async createMultiDocumentsWithoutWorkflow(@Req() req) {
     const userId = req.user;
     return this.documentsService.createMultiDocumentswithoutWorkflow(userId);
   }
 
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Post('create-multi-documents-on-hold')
   async createMultiDocumentsOnHold(@Req() req) {
     const userId = req.user;
@@ -387,7 +393,7 @@ export class DocumentsController {
   @ApiQuery({
     name: 'view',
     type: String,
-    example: 'EN ESPERA',
+    example: 'DOCUMENTS ON HOLD',
     required: false,
   })
   @Get('get-all-table-paginate')
@@ -395,6 +401,7 @@ export class DocumentsController {
     @Req() req,
     @Query() paginationDto: PaginationDto,
     @Query('view') view: string,
+    @Query() filter: DocumentsFilter,
   ) {
     const userId = req.user;
     switch (view) {
@@ -403,66 +410,77 @@ export class DocumentsController {
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'OBTAIN DOCUMENTS SEND WITH WORKFLOW':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'GET DOCUMENTS MARK COMPLETED':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'RECIBIDOS SIN WORKFLOW':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'OBTAIN RECEIVED AND DERIVED DOCUMENTS':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'OBTAIN DOCUMENT REVIEWED':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'OBTAIN MULTI UNITY DOCUMENT':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'GET DOCUMENTS SEND WITHOUT WORKFLOW':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'GET DOCUMENTS COMPLETED':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'GET DOCUMENTS OBSERVED':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       case 'GET DOCUMENTS ARCHIVED USER':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
           view,
+          filter,
         );
       default:
         return await this.documentsService.findAllPaginate(paginationDto);

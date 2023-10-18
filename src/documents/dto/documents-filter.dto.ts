@@ -1,4 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class DocumentsFilter {
   @ApiProperty({
@@ -6,6 +13,9 @@ export class DocumentsFilter {
     description: 'search document by number document',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
   numberDocument: string;
 
   @ApiProperty({
@@ -13,6 +23,9 @@ export class DocumentsFilter {
     description: 'search document by id user',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
   userId: string;
 
   @ApiProperty({
@@ -20,6 +33,9 @@ export class DocumentsFilter {
     description: 'search document by title',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
   title: string;
 
   @ApiProperty({
@@ -27,6 +43,9 @@ export class DocumentsFilter {
     description: 'search document by documentation type',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
   typeName: string;
 
   @ApiProperty({
@@ -34,6 +53,9 @@ export class DocumentsFilter {
     description: 'search document by state document user send',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
   stateDocumentUserSend: string;
 
   @ApiProperty({
@@ -41,6 +63,9 @@ export class DocumentsFilter {
     description: 'search document by workflow name',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(4)
   nombre: string;
 
   @ApiProperty({
@@ -48,27 +73,36 @@ export class DocumentsFilter {
     description: 'search document by description workflow',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
   descriptionWorkflow: string;
 
-  @ApiProperty({
-    example: 'STEP B',
-    description: 'search document by step name',
-    required: false,
-  })
-  step: string;
+  // @ApiProperty({
+  //   example: 'STEP B',
+  //   description: 'search document by step name',
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsString()
+  // @MinLength(8)
+  // step: string;
 
-  @ApiProperty({
-    example: 'this step is ...',
-    description: 'search document by description step',
-    required: false,
-  })
-  descriptionStep: string;
+  // @ApiProperty({
+  //   example: 'this step is ...',
+  //   description: 'search document by description step',
+  //   required: false,
+  // })
+  // descriptionStep: string;
 
   @ApiProperty({
     example: 1,
     description: 'search number paso in step pasos',
     required: false,
   })
+  @IsOptional()
+  @IsNumber()
+  @MinLength(8)
   paso: number;
 
   @ApiProperty({
@@ -76,6 +110,9 @@ export class DocumentsFilter {
     description: 'search name office in step',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
   oficina: string;
 
   @ApiProperty({
@@ -83,6 +120,9 @@ export class DocumentsFilter {
     description: 'search if a paso was completed',
     required: false,
   })
+  @IsOptional()
+  @IsBoolean()
+  @MinLength(8)
   completado: boolean;
 
   @ApiProperty({
@@ -90,6 +130,9 @@ export class DocumentsFilter {
     description: 'search paso actual worflow',
     required: false,
   })
+  @IsOptional()
+  @IsNumber()
+  @MinLength(8)
   pasoActual: number;
 
   @ApiProperty({
@@ -97,13 +140,19 @@ export class DocumentsFilter {
     description: 'search paso actual worflow',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
   oficinaActual: string;
 
   @ApiProperty({
-    example: 'VICERECTORADO',
+    example: 'is a description',
     description: 'search document from description',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
   description: string;
 
   @ApiProperty({
@@ -111,6 +160,9 @@ export class DocumentsFilter {
     description: 'search document is active or not',
     required: false,
   })
+  @IsOptional()
+  @IsBoolean()
+  @MinLength(8)
   active: boolean;
 
   @ApiProperty({
@@ -118,6 +170,9 @@ export class DocumentsFilter {
     description: 'search document for year',
     required: false,
   })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   year: string;
 }
 
