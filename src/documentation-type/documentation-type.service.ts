@@ -145,6 +145,7 @@ export class DocumentationTypeService {
     return await newDocument.save();
   }
 
+  //-----------------------
   async findAll() {
     const findAllDocumetationType = await this.documentationTypeModel
       .find()
@@ -456,7 +457,7 @@ export class DocumentationTypeService {
     };
 
     const response = await this.httpService
-      .post(`${getConfig().api_files_template}/files/upload-template-docx`, {
+      .post(`${getConfig().api_files_template}/files/upload-template`, {
         templateName: typeName,
         file: fileObj,
       })

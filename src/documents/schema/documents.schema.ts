@@ -8,6 +8,10 @@ import {
   DocumentationTypeSchema,
 } from 'src/documentation-type/schema/documentation-type.schema';
 import { Template, TemplateSchema } from 'src/template/schemas/template.schema';
+import {
+  EstadoUbiacion,
+  EstadoUbiacionSchema,
+} from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
 
 export type DocumentDocument = Documents & Document;
 
@@ -19,17 +23,20 @@ export class Documents {
   @Prop()
   userId: string;
 
-  @Prop({ type: Object })
-  userInfo: {
-    name: string;
-    lastName: string;
-    ci: string;
-    email: string;
-    unity: string;
-  };
+  // @Prop({ type: Object })
+  // userInfo: {
+  //   name: string;
+  //   lastName: string;
+  //   ci: string;
+  //   email: string;
+  //   unity: string;
+  // };
 
   @Prop({ uppercase: true })
   title: string;
+
+  @Prop({ uppercase: true })
+  description: string;
 
   @Prop({ type: DocumentationTypeSchema, ref: 'DocumentationType' })
   documentationType: DocumentationType;
@@ -37,11 +44,48 @@ export class Documents {
   // @Prop({ type: TemplateSchema, ref: 'Template' })
   // documentationType: Template;
 
+  // @Prop({
+  //   type: [
+  //     {
+  //       oficina: String,
+  //       estado: String,
+  //       recievedUsers: [
+  //         {
+  //           ciUser: String,
+  //           idOfUser: String,
+  //           nameOfficeUserRecieved: String,
+  //           dateRecived: Date,
+  //           stateDocumentUser: String,
+  //           observado: Boolean,
+  //         },
+  //       ],
+  //       activo: Boolean,
+  //     },
+  //   ],
+  // })
+  // estado_Ubicacion: {
+  //   oficina: string;
+  //   estado: string;
+  //   recievedUsers: {
+  //     ciUser: string;
+  //     idOfUser: string;
+  //     nameOfficeUserRecieved: string;
+  //     dateRecived: Date;
+  //     stateDocumentUser: string;
+  //     observado: boolean;
+  //   }[];
+  // }[];
+
+  @Prop({ type: EstadoUbiacionSchema, ref: 'EstadoUbiacion' })
+  estado_Ubicacion: EstadoUbiacion;
+
+  //-------------------------------------------
   @Prop({ uppercase: true })
   stateDocumentUserSend: string;
 
-  @Prop({ uppercase: true })
-  stateDocumetUser: string;
+  // @Prop({ uppercase: true })
+  // stateDocumetUser: string;
+  //--------------------------------------------
 
   //dato de seguimiento mas detallado para la persona que envio un documento
   @Prop({
@@ -65,24 +109,26 @@ export class Documents {
     observado: boolean;
   }[];
 
-  @Prop({
-    type: [
-      {
-        ciUser: String,
-        idOfUser: String,
-        nameOfficeUserRecieved: String,
-        dateRecived: Date,
-        stateDocumentUser: String,
-      },
-    ],
-  })
-  userReceivedDocumentWithoutWorkflow: {
-    ciUser: string;
-    idOfUser: string;
-    nameOfficeUserRecieved: string;
-    dateRecived: Date;
-    stateDocumentUser: string;
-  }[];
+  //----------------------------------------------
+  // @Prop({
+  //   type: [
+  //     {
+  //       ciUser: String,
+  //       idOfUser: String,
+  //       nameOfficeUserRecieved: String,
+  //       dateRecived: Date,
+  //       stateDocumentUser: String,
+  //     },
+  //   ],
+  // })
+  // userReceivedDocumentWithoutWorkflow: {
+  //   ciUser: string;
+  //   idOfUser: string;
+  //   nameOfficeUserRecieved: string;
+  //   dateRecived: Date;
+  //   stateDocumentUser: string;
+  // }[];
+  //--------------------------------------------------
 
   @Prop()
   oficinaActual: string;
@@ -93,20 +139,29 @@ export class Documents {
   @Prop({ type: WorkflowSchema, ref: 'Workflow', default: null })
   workflow: Workflow;
 
-  @Prop({ uppercase: true })
-  description: string;
+  @Prop({
+    type: [
+      {
+        idFile: String,
+      },
+    ],
+  })
+  fileRegister: {
+    idFile: string;
+  }[];
 
-  @Prop({ default: null })
-  fileRegister: mongoose.Schema.Types.Mixed;
-
-  @Prop()
-  fileBase64: string;
+  //------------------------------------------------
+  // @Prop()
+  // fileBase64: string;
+  //-----------------------------------------------------
 
   @Prop()
   idTemplate: string;
 
-  @Prop()
-  base64Template: string;
+  //------------------------------------------------------
+  // @Prop()
+  // base64Template: string;
+  //----------------------------------------------------
 
   @Prop([CommentSchema])
   comments: Comment[];
@@ -123,14 +178,16 @@ export class Documents {
   @Prop({ default: Date.now() })
   updateAt: Date;
 
-  @Prop()
-  year: string;
+  //--------------------------------------------
+  // @Prop()
+  // year: string;
+  //------------------------------------------------
 
-  @Prop({ default: 'create' })
-  state: string;
+  // @Prop({ default: 'create' })
+  // state: string;
 
-  @Prop()
-  counter: number;
+  // @Prop()
+  // counter: number;
 
   @Prop({
     type: [

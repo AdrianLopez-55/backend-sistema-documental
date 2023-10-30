@@ -67,7 +67,7 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
-  @UseInterceptors(LoggerInterceptor)
+  // @UseInterceptors(LoggerInterceptor)
   @Post()
   @ApiOperation({
     summary: 'registry new document',
@@ -85,7 +85,7 @@ export class DocumentsController {
       const numberDocument =
         await this.sequenceService.getNextValueNumberDocument();
 
-      if (createDocumentDTO.file === '') {
+      if (createDocumentDTO.file.length < 0) {
         createDocumentDTO.file = null;
       }
       const newRegisterDocument = {
@@ -114,6 +114,8 @@ export class DocumentsController {
     return this.documentsService.createMultiDocumentsWithWorkflow(userId);
   }
 
+  /*
+
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Post('create-multi-documents-without-workflow')
@@ -121,6 +123,8 @@ export class DocumentsController {
     const userId = req.user;
     return this.documentsService.createMultiDocumentswithoutWorkflow(userId);
   }
+
+  */
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
@@ -142,18 +146,18 @@ export class DocumentsController {
     return this.documentsService.findAll();
   }
 
-  @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
-  @Get('documents-on-hold')
-  @ApiOperation({
-    summary: 'see all documents that do not send anyone',
-    description:
-      'this endpoint is used to view all your documents that do not have a worklfow and have not yet been send to any other employee.',
-  })
-  async getAllDocumentsOnHold(@Req() req) {
-    const userId = req.user;
-    return this.documentsService.getDocumentsOnHold(userId);
-  }
+  // @ApiBearerAuth()
+  // @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  // @Get('documents-on-hold')
+  // @ApiOperation({
+  //   summary: 'see all documents that do not send anyone',
+  //   description:
+  //     'this endpoint is used to view all your documents that do not have a worklfow and have not yet been send to any other employee.',
+  // })
+  // async getAllDocumentsOnHold(@Req() req) {
+  //   const userId = req.user;
+  //   return this.documentsService.getDocumentsOnHold(userId);
+  // }
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
@@ -253,6 +257,7 @@ export class DocumentsController {
     return await this.documentsService.filterParams(filter);
   }
 
+  /*
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('recieved-without-workflow')
@@ -386,6 +391,48 @@ export class DocumentsController {
     return this.documentsService.findDocumentsArchivedUser(userId);
   }
 
+  */
+
+  //----------------------------------------------------------------------
+
+  @ApiBearerAuth()
+  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
+  @ApiQuery({
+    name: 'view',
+    type: String,
+    example: 'EN ESPERA',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'withWorkflow',
+    type: String,
+    example: 'true',
+    required: false,
+  })
+  @Get('get-documents-lista-todo')
+  async getDocuments(
+    @Req() req,
+    @Query() paginationDto: PaginationDto,
+    @Query('view') view: string,
+    @Query('withWorkflow') withWorkflow: string,
+    @Query() filter: DocumentsFilter,
+  ) {
+    const userId = req.user;
+    console.log('valor vista', view);
+    return await this.documentsService.obtainDocuments(
+      userId,
+      view,
+      withWorkflow,
+      paginationDto,
+      filter,
+    );
+  }
+
+  //------------------------------------------------------------------
+
+  /*
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
@@ -426,7 +473,7 @@ export class DocumentsController {
           view,
           filter,
         );
-      case 'RECIBIDOS SIN WORKFLOW':
+      case 'RECIEVED WITHOUT WORKFLOW':
         return this.documentsService.paginateAllTableDocuments(
           userId,
           paginationDto,
@@ -486,6 +533,7 @@ export class DocumentsController {
         return await this.documentsService.findAllPaginate(paginationDto);
     }
   }
+  */
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
@@ -512,19 +560,21 @@ export class DocumentsController {
     }
   }
 
+  /*
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('get-base64-document/:id')
   async getBase64Document(@Param('id') id: string) {
     return this.documentsService.getBase64Documents(id);
   }
+  
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('get-base64-template-document/:id')
   async getBase64TemplateDocument(@Param('id') id: string) {
     return this.documentsService.showBase64TemplateDoc(id);
-  }
+  }*/
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
@@ -593,8 +643,10 @@ export class DocumentsController {
     @Req() req,
   ) {
     const userId = req.user;
-    return this.documentsService.update(id, updateDocumentDTO, userId);
+    return this.documentsService.update(id, updateDocumentDTO);
   }
+
+  /*
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
@@ -613,6 +665,8 @@ export class DocumentsController {
     const userId = req.user;
     return this.documentsService.update(id, updateDocumentDTO, userId);
   }
+
+  */
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)

@@ -32,12 +32,24 @@ import { EmailService } from 'src/email/email.service';
 import { SendDerivedDocumentsService } from './sendDerivedDocuments.service';
 import { GetDocumentsService } from './getsDocuments.service';
 import { Template, TemplateSchema } from 'src/template/schemas/template.schema';
+import { EstadoUbicacionModule } from 'src/estado-ubicacion/estado-ubicacion.module';
+import { EstadoUbicacionService } from 'src/estado-ubicacion/estado-ubicacion.service';
+import {
+  EstadoUbiacion,
+  EstadoUbiacionSchema,
+} from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
+import { File, FileSchema } from 'src/file/schema/file.schema';
+import { FileModule } from 'src/file/file.module';
+import { SequenceModel, sequenceSchema } from './schema/sequence.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Documents.name, schema: DocumentsSchema },
+      { name: SequenceModel.name, schema: sequenceSchema },
+      { name: EstadoUbiacion.name, schema: EstadoUbiacionSchema },
       { name: DocumentationType.name, schema: DocumentationTypeSchema },
+      { name: File.name, schema: FileSchema },
       { name: Template.name, schema: TemplateSchema },
       { name: Workflow.name, schema: WorkflowSchema },
       { name: Step.name, schema: StepSchema },
@@ -49,6 +61,8 @@ import { Template, TemplateSchema } from 'src/template/schemas/template.schema';
     WorkflowModule,
     StepModule,
     DocumentationTypeModule,
+    EstadoUbicacionModule,
+    FileModule,
   ],
   controllers: [DocumentsController],
   providers: [
@@ -64,6 +78,7 @@ import { Template, TemplateSchema } from 'src/template/schemas/template.schema';
     EmailService,
     SendDerivedDocumentsService,
     GetDocumentsService,
+    EstadoUbicacionService,
   ],
 })
 export class DocumentsModule {}

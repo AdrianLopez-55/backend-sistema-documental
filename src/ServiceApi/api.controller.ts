@@ -39,7 +39,7 @@ export class ApiController {
       console.log(token);
       res.status(200).send(response.data);
 
-      return token;
+      // return token;
     } catch (error) {
       if (error.response) {
         const { status, data } = error.response;

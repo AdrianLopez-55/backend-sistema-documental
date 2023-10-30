@@ -59,11 +59,17 @@ async function bootstrap() {
       'View the data of the authenticated user in the microservice',
     )
     .addTag('Documents', 'endpoints related to the CRUD of a document')
+    .addTag('file', 'enpoints related to the update file for a document')
     .addTag(
       'documentation-type',
       'endpoints related to the CRUD of documentation types',
     )
     .addTag('workflows', 'endpoints related to creating a workflow')
+
+    .addTag(
+      'estado-ubicacion',
+      'endpoints for view states and location from a documents',
+    )
 
     .addTag(
       'step',

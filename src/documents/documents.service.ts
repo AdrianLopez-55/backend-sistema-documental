@@ -6,7 +6,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
-import { CreateDocumentDTO } from './dto/createDocument.dto';
+import { CreateDocumentDTO, FileDto } from './dto/createDocument.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { DocumentDocument, Documents } from './schema/documents.schema';
 import { Model } from 'mongoose';
@@ -41,6 +41,11 @@ import { GetDocumentsService } from './getsDocuments.service';
 import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
 import { Template } from 'src/template/schemas/template.schema';
 import { off } from 'process';
+import {
+  EstadoUbiacion,
+  EstadoUbiacionDocument,
+} from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
+import { File, FileDocument } from 'src/file/schema/file.schema';
 
 @Injectable()
 export class DocumentsService {
@@ -61,8 +66,13 @@ export class DocumentsService {
     private readonly findDocumentationTypeService: FindDocumentationTypeService,
     private sendDerivedDocumentsService: SendDerivedDocumentsService,
     private getDocumentsService: GetDocumentsService,
+    @InjectModel(EstadoUbiacion.name)
+    private readonly estadoUbiacionModel: Model<EstadoUbiacionDocument>,
+    @InjectModel(File.name)
+    private readonly fileModel: Model<FileDocument>,
   ) {}
 
+  /*
   async createMultiDocumentsWithWorkflow(userId: string) {
     async function connectToDataBase() {
       const dbUrl = 'mongodb://localhost/documental';
@@ -81,20 +91,21 @@ export class DocumentsService {
       numberDocument: String,
       userId: String,
       title: String,
+      description: String,
       documentationType: Object,
       stateDocumentUserSend: String,
       workflow: Object,
-      description: String,
-      fileRegister: mongoose.Schema.Types.Mixed,
+      fileRegister: Array,
       active: Boolean,
-      year: String,
-      state: String,
       userReceivedDocument: Array,
       bitacoraWorkflow: Array,
-      oficinaActual: String,
+      estado_Ubicacion: Object,
+      // year: String,
+      // state: String,
       oficinaPorPasar: String,
-      stateDocumetUser: String,
-      userInfo: Object,
+      oficinaActual: String,
+      // stateDocumetUser: String,
+      // userInfo: Object,
     });
 
     const documentModel = mongoose.model<DocumentDocument>(
@@ -115,6 +126,7 @@ export class DocumentsService {
         //   updateAt: new Date(),
         //   dataUriTemplate: '',
         // },
+        description: `description-${i + 1}`,
         documentationType: {
           typeName: 'LICENCIA',
           idTemplateDocType: `description-${i + 1}`,
@@ -125,37 +137,44 @@ export class DocumentsService {
         },
         stateDocumentUserSend: `INICIADO`,
         workflow: {
-          nombre: 'WORKFLOW A',
-          descriptionWorkflow: 'STRING',
+          nombre: 'WORKFLOW Z',
+          descriptionWorkflow: 'TEST',
           pasos: [
+            // {
+            //   paso: 1,
+            //   idOffice: '65084336717fc4c1b23d1452',
+            //   oficina: 'DIRECCION POSTGRADO',
+            //   completado: true,
+            // },
             {
               paso: 1,
-              idOffice: '65084336717fc4c1b23d1452',
-              oficina: 'RECTORADO',
+              idOffice: '65084413717fc4c1b23d145e',
+              oficina: 'DIRECCION POSTGRADO',
               completado: true,
             },
-            {
-              paso: 2,
-              idOffice: '65084467717fc4c1b23d1468',
-              oficina: 'VICERECTORADO',
-              completado: false,
-            },
+            // {
+            //   paso: 2,
+            //   idOffice: '65084467717fc4c1b23d1468',
+            //   oficina: 'VICERECTORADO',
+            //   completado: false,
+            // },
           ],
-          idStep: '65240c3d7ba0128f73a8749f',
-          oficinaActual: 'RECTORADO',
+          // idStep: '65240c3d7ba0128f73a8749f',
+          idStep: '652fdb69fd6e3fc5ee9feafa',
+          oficinaActual: 'DIRECCION POSTGRADO',
           updateAt: new Date(),
           activeWorkflow: true,
           pasoActual: 1,
           createdAt: undefined,
         },
         active: true,
-        year: `2023`,
-        state: `create`,
+        // year: `2023`,
+        // state: `create`,
         userReceivedDocument: [
           {
-            ciUser: '8845784',
-            idOfUser: '64e7c787eec126d6cb54296e',
-            nameOfficeUserRecieved: 'RECTORADO',
+            ciUser: '72838934',
+            idOfUser: '652e8e8af04daade67239462',
+            nameOfficeUserRecieved: 'DIRECCION POSTGRADO',
             dateRecived: new Date(),
             stateDocumentUser: 'RECIBIDO',
             observado: false,
@@ -163,17 +182,17 @@ export class DocumentsService {
         ],
         bitacoraWorkflow: [
           {
-            oficinaActual: '65084336717fc4c1b23d1452',
-            nameOficinaActual: 'RECTORADO',
-            userSend: '64e84144561052a834987264',
+            oficinaActual: '65084413717fc4c1b23d145e',
+            nameOficinaActual: 'DIRECCION POSTGRADO',
+            userSend: '652e9f133888a663eb8b979a',
             dateSend: new Date(),
             userDerived: '',
             datedDerived: null,
             receivedUsers: [
               {
-                ciUser: '8845784',
-                idOfUser: '64e7c787eec126d6cb54296e',
-                nameOfficeUserRecieved: 'RECTORADO',
+                ciUser: '72838934',
+                idOfUser: '652e8e8af04daade67239462',
+                nameOfficeUserRecieved: 'DIRECCION POSTGRADO',
                 dateRecived: new Date(),
                 stateDocumentUser: 'RECIBIDO',
                 observado: false,
@@ -182,24 +201,18 @@ export class DocumentsService {
             oficinasPorPasar: [
               {
                 paso: 1,
-                idOffice: '65084336717fc4c1b23d1452',
-                oficina: 'RECTORADO',
+                idOffice: '65084413717fc4c1b23d145e',
+                oficina: 'DIRECCION POSTGRADO',
                 completado: true,
-              },
-              {
-                paso: 2,
-                idOffice: '65084467717fc4c1b23d1468',
-                oficina: 'VICERECTORADO',
-                completado: false,
               },
             ],
             motivoBack: 'se envio documento a personal seleccionado',
           },
         ],
-        oficinaActual: 'RECTORADO',
-        oficinaPorPasar: 'VICERECTORADO',
-        stateDocumetUser: 'RECIBIDO',
-        description: `description-${i + 1}`,
+        oficinaActual: 'DIRECCION POSTGRADO',
+        oficinaPorPasar: '',
+        // stateDocumetUser: 'RECIBIDO',
+        
         fileRegister: null,
       };
 
@@ -216,6 +229,216 @@ export class DocumentsService {
       mongoose.connection.close();
     }
   }
+
+  */
+
+  async createMultiDocumentsWithWorkflow(userId: string) {
+    async function connectToDataBase() {
+      const dbUrl = 'mongodb://localhost/documental';
+      try {
+        await mongoose.connect(dbUrl);
+        console.log('conectado a la base de datos');
+      } catch (error) {
+        console.log('Error al conectar a la base de datos:', error);
+        process.exit(1);
+      }
+    }
+
+    await connectToDataBase();
+    const numberOfDocumentsToGenerate = 50000;
+    const DocumentsSchema = new mongoose.Schema({
+      numberDocument: String,
+      userId: String,
+      title: String,
+      description: String,
+      documentationType: Object,
+      stateDocumentUserSend: String,
+      workflow: Object,
+      fileRegister: Array,
+      active: Boolean,
+      userReceivedDocument: Array,
+      bitacoraWorkflow: Array,
+      estado_Ubicacion: Object,
+      // year: String,
+      // state: String,
+      oficinaPorPasar: String,
+      oficinaActual: String,
+      // stateDocumetUser: String,
+      // userInfo: Object,
+    });
+
+    const documentModel = mongoose.model<DocumentDocument>(
+      'Document',
+      DocumentsSchema,
+    );
+    const documentsToCreate: Partial<DocumentDocument>[] = [];
+    for (let i = 0; i < numberOfDocumentsToGenerate; i++) {
+      const newDocument: Partial<DocumentDocument> = {
+        numberDocument: `DOC-0000${i + 1}-2023`,
+        userId: userId,
+        title: `titulo-${i + 1}`,
+        // documentationType: {
+        //   typeName: 'LICENCIA',
+        //   idTemplateDocType: `64f74c3d215abf8c9be98306`,
+        //   activeDocumentType: true,
+        //   createdAt: new Date(),
+        //   updateAt: new Date(),
+        //   dataUriTemplate: '',
+        // },
+        description: `description-${i + 1}`,
+        documentationType: {
+          typeName: 'LICENCIA',
+          idTemplateDocType: `description-${i + 1}`,
+          activeDocumentType: true,
+          dataUriTemplate: '',
+          createdAt: undefined,
+          updateAt: undefined,
+        },
+        stateDocumentUserSend: `INICIADO`,
+        workflow: {
+          nombre: 'WORKFLOW A',
+          descriptionWorkflow: 'STRING',
+          pasos: [
+            // {
+            //   paso: 1,
+            //   idOffice: '65084336717fc4c1b23d1452',
+            //   oficina: 'DIRECCION POSTGRADO',
+            //   completado: true,
+            // },
+            {
+              paso: 1,
+              idOffice: '65084336717fc4c1b23d1452',
+              oficina: 'RECTORADO',
+              completado: true,
+            },
+            {
+              paso: 2,
+              idOffice: '65084467717fc4c1b23d1468',
+              oficina: 'VICERECTORADO',
+              completado: false,
+            },
+          ],
+          idStep: '65240c3d7ba0128f73a8749f',
+          // idStep: '652fdb69fd6e3fc5ee9feafa',
+          oficinaActual: 'RECTORADO',
+          updateAt: new Date(),
+          activeWorkflow: true,
+          pasoActual: 1,
+          createdAt: undefined,
+        },
+        active: true,
+        // year: `2023`,
+        // state: `create`,
+        userReceivedDocument: [
+          {
+            ciUser: '444888777',
+            idOfUser: '64e84144561052a834987264',
+            nameOfficeUserRecieved: 'RECTORADO',
+            dateRecived: new Date(),
+            stateDocumentUser: 'RECIBIDO',
+            observado: false,
+          },
+        ],
+        bitacoraWorkflow: [
+          {
+            oficinaActual: '65084413717fc4c1b23d145e',
+            nameOficinaActual: 'DIRECCION POSTGRADO',
+            userSend: '652e9f133888a663eb8b979a',
+            dateSend: new Date(),
+            userDerived: '',
+            datedDerived: null,
+            receivedUsers: [
+              {
+                ciUser: '72838934',
+                idOfUser: '652e8e8af04daade67239462',
+                nameOfficeUserRecieved: 'DIRECCION POSTGRADO',
+                dateRecived: new Date(),
+                stateDocumentUser: 'RECIBIDO',
+                observado: false,
+              },
+            ],
+            oficinasPorPasar: [
+              {
+                paso: 1,
+                idOffice: '65084413717fc4c1b23d145e',
+                oficina: 'DIRECCION POSTGRADO',
+                completado: true,
+              },
+            ],
+            motivoBack: 'se envio documento a personal seleccionado',
+          },
+        ],
+        oficinaActual: 'DIRECCION POSTGRADO',
+        oficinaPorPasar: '',
+        // stateDocumetUser: 'RECIBIDO',
+
+        fileRegister: [
+          {
+            idFile: '6536dce2a381cde8eefcf570',
+          },
+          {
+            idFile: '6536dce3a381cde8eefcf572',
+          },
+        ],
+        estado_Ubicacion: {
+          idDocument: '',
+          estado_ubi: [
+            {
+              stateOffice: 'EN ESPERA',
+              numberPasoOffice: null,
+              receivedUsers: [
+                {
+                  ciUser: '8845784',
+                  idOfUser: '',
+                  nameOfficeUserRecieved: '',
+                  dateRecived: null,
+                  stateDocumentUser: 'EN ESPERA',
+                  observado: false,
+                },
+              ],
+              activo: true,
+              nameOffices: [],
+            },
+            {
+              nameOffices: [
+                {
+                  office: 'RECTORADO',
+                },
+              ],
+              stateOffice: 'ENVIADO',
+              numberPasoOffice: null,
+              receivedUsers: [
+                {
+                  ciUser: '',
+                  idOfUser: '',
+                  nameOfficeUserRecieved: '',
+                  dateRecived: null,
+                  stateDocumentUser: 'RECIBIDO',
+                  observado: false,
+                },
+              ],
+              activo: false,
+            },
+          ],
+          createdAt: undefined,
+          updateAt: undefined,
+        },
+      };
+      documentsToCreate.push(newDocument);
+    }
+    try {
+      for (const documentData of documentsToCreate) {
+        const newDocument = new documentModel(documentData);
+        await newDocument.save();
+      }
+    } catch (error) {
+      console.error('Error al crear registros de libros:', error);
+    } finally {
+      mongoose.connection.close();
+    }
+  }
+
+  /*
 
   async createMultiDocumentswithoutWorkflow(userId: string) {
     async function connectToDataBase() {
@@ -282,24 +505,24 @@ export class DocumentsService {
         state: `create`,
         userReceivedDocumentWithoutWorkflow: [
           {
-            ciUser: '8845784',
-            idOfUser: '64e7c787eec126d6cb54296e',
-            nameOfficeUserRecieved: 'RECTORADO',
+            ciUser: '72838934',
+            idOfUser: '652e8e8af04daade67239462',
+            nameOfficeUserRecieved: 'DIRECCION POSTGRADO',
             dateRecived: new Date(),
             stateDocumentUser: 'RECIBIDO DIRECTO',
           },
         ],
         bitacoraWithoutWorkflow: [
           {
-            idUserSendOrigin: '64e84144561052a834987264',
+            idUserSendOrigin: '652e9f133888a663eb8b979a',
             idOfficeUserSend: '65084336717fc4c1b23d1452',
-            nameOficeUser: 'RECTORADO',
+            nameOficeUser: 'VICERECTORADO',
             recievedUsers: [
               {
-                ciUser: '8845784',
-                idOfUser: '64e7c787eec126d6cb54296e',
-                idOffice: '65084336717fc4c1b23d1452',
-                nameOficeUserRecieved: 'RECTORADO',
+                ciUser: '72838934',
+                idOfUser: '652e8e8af04daade67239462',
+                idOffice: '65084413717fc4c1b23d145e',
+                nameOficeUserRecieved: 'RECIBIDO DIRECTO',
                 stateDocumentUser: 'RECIBIDO DIRECTO',
               },
             ],
@@ -321,6 +544,8 @@ export class DocumentsService {
     }
   }
 
+  */
+
   async createMultiDocumentsOnHold(userId: string) {
     async function connectToDataBase() {
       const dbUrl = 'mongodb://localhost/documental';
@@ -334,18 +559,19 @@ export class DocumentsService {
     }
 
     await connectToDataBase();
-    const numberOfDocumentsToGenerate = 3000;
+    const numberOfDocumentsToGenerate = 50000;
     const DocumentsSchema = new mongoose.Schema({
       numberDocument: String,
       userId: String,
       title: String,
+      description: String,
       documentationType: Object,
       stateDocumentUserSend: String,
       workflow: Object,
-      description: String,
-      fileRegister: mongoose.Schema.Types.Mixed,
+      fileRegister: Array,
       active: Boolean,
-      year: String,
+      estado_Ubicacion: Object,
+      // year: String,
       state: String,
     });
 
@@ -356,7 +582,7 @@ export class DocumentsService {
     const documentsToCreate: Partial<DocumentDocument>[] = [];
     for (let i = 0; i < numberOfDocumentsToGenerate; i++) {
       const newDocument: Partial<DocumentDocument> = {
-        numberDocument: `DOC-0000${i + 1}-2023`,
+        numberDocument: `DOC-00${i + 1}-2023`,
         userId: userId,
         title: `titulo-${i + 1}`,
         // documentationType: {
@@ -367,6 +593,7 @@ export class DocumentsService {
         //   updateAt: new Date(),
         //   dataUriTemplate: '',
         // },
+        description: `description-${i + 1}`,
         documentationType: {
           typeName: 'LICENCIA',
           idTemplateDocType: `description-${i + 1}`,
@@ -377,11 +604,40 @@ export class DocumentsService {
         },
         stateDocumentUserSend: `EN ESPERA`,
         workflow: null,
-        description: `description-${i + 1}`,
-        fileRegister: null,
+        fileRegister: [
+          {
+            idFile: '6539b23808c66a03b72f5655',
+          },
+          {
+            idFile: '6539b23808c66a03b72f5657',
+          },
+        ],
         active: true,
-        year: `2023`,
-        state: `create`,
+        estado_Ubicacion: {
+          idDocument: '',
+          estado_ubi: [
+            {
+              stateOffice: 'EN ESPERA',
+              numberPasoOffice: null,
+              receivedUsers: [
+                {
+                  ciUser: '444888777',
+                  idOfUser: '64e84144561052a834987264',
+                  nameOfficeUserRecieved: '',
+                  dateRecived: null,
+                  stateDocumentUser: 'EN ESPERA',
+                  observado: false,
+                },
+              ],
+              activo: true,
+              nameOffices: [],
+            },
+          ],
+          createdAt: undefined,
+          updateAt: undefined,
+        },
+        // year: `2023`,
+        // state: `create`,
       };
 
       documentsToCreate.push(newDocument);
@@ -399,7 +655,7 @@ export class DocumentsService {
     }
   }
 
-  //-------------------------------
+  //----------------------------------------------------
 
   async htmlConvertPdf(sendHtmlFileDto: SendHtmlFileDto) {
     const { htmlContent, nameFile, descriptionFile, base64File } =
@@ -446,9 +702,12 @@ export class DocumentsService {
           400,
         );
       }
-      const { mime, base64 } = this.extractFileData(base64File);
+      // const { mime, base64 } = this.extractFileData(base64File);
+      const mimeType = base64File.split(';')[0].split(':')[1];
+      const base64 = base64File.split(',')[1];
+
       const fileObj = {
-        mime: mime,
+        mime: mimeType,
         base64: base64,
       };
       const response = await this.uploadFile(fileObj);
@@ -537,9 +796,11 @@ export class DocumentsService {
             400,
           );
         }
-        const { mime, base64 } = this.extractFileData(base64File);
+        // const { mime, base64 } = this.extractFileData(base64File);
+        const mimeType = base64File.split(';')[0].split(':')[1];
+        const base64 = base64File.split(',')[1];
         const fileObj = {
-          mime: mime,
+          mime: mimeType,
           base64: base64,
         };
         const response = await this.uploadFile(fileObj);
@@ -553,15 +814,16 @@ export class DocumentsService {
     }
   }
 
+  //-------------------------------------------------------
   async draftFileView() {}
   //-------------------------------
 
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
-      const { file, documentTypeName } = createDocumentDTO;
+      const { file, documentationType } = createDocumentDTO;
       const documentationTypeData =
         await this.findDocumentationTypeService.findDocumentationType(
-          documentTypeName,
+          documentationType,
         );
 
       // const documentationTypeData = await this.httpService
@@ -571,21 +833,64 @@ export class DocumentsService {
       // console.log(documentationTypeData.data[0]);
 
       if (file) {
-        const { mime, base64 } = this.extractFileData(file);
-        const fileObj = {
-          mime: mime,
-          base64: base64,
-        };
-        const response = await this.uploadFile(fileObj);
-        const fileRegister = this.createFileRegister(response.data.file);
+        const fileDataArray = await this.extractFileData(createDocumentDTO);
+
+        let fileRegisterData = [];
+        for (const fileData of fileDataArray) {
+          const { mime, base64 } = fileData;
+          const fileObj = {
+            mime: mime,
+            base64: base64,
+          };
+          const response = await this.uploadFile(fileObj);
+          const fileRegister = this.createFileRegister(response.data.file);
+          fileRegisterData.push(fileRegister);
+        }
         const newDocument = new this.documentModel({
           ...createDocumentDTO,
-          fileRegister,
+          fileRegister: fileRegisterData,
           documentationType: documentationTypeData,
           stateDocumentUserSend: 'EN ESPERA',
           userId: userId,
         });
-        return newDocument.save();
+
+        // await newDocument.save();
+        const loggedUser = await this.httpService
+          .get(`${this.apiPersonalGet}/${userId}`)
+          .toPromise();
+        const userOficce = loggedUser.data.unity;
+
+        const newFileRegister = new this.fileModel({
+          idDocument: newDocument._id,
+          fileRegister: fileRegisterData,
+        });
+        await newFileRegister.save();
+
+        const newEstadoUbicacion = new this.estadoUbiacionModel({
+          idDocument: newDocument._id,
+          estado_ubi: [
+            {
+              nameOffice: userOficce,
+              stateOffice: 'EN ESPERA',
+              numberPasoOffice: null,
+              receivedUsers: [
+                {
+                  ciUser: loggedUser.data.ci,
+                  idOfUser: userId,
+                  nameOfficeUserRecieved: '',
+                  dateRecived: '',
+                  stateDocumentUser: 'EN ESPERA',
+                  observado: false,
+                },
+              ],
+              activo: true,
+            },
+          ],
+        });
+        await newEstadoUbicacion.save();
+        newDocument.estado_Ubicacion = newEstadoUbicacion;
+        await newDocument.save();
+        return newDocument;
       } else {
         return this.functionCreateDocument(
           createDocumentDTO,
@@ -598,6 +903,27 @@ export class DocumentsService {
     }
   }
 
+  //-------------------------------------
+  //aumentar files a un dcumento
+  async addFilesDocument(id: string, createDocumentDto: CreateDocumentDTO) {
+    const document = await this.documentModel.findById(id).exec();
+    const { file } = createDocumentDto;
+    if (file) {
+      const fileDataArray = this.extractFileData(createDocumentDto);
+
+      for (const fileData of fileDataArray) {
+        const { mime, base64 } = fileData;
+        const fileObj = {
+          mime: mime,
+          base64: base64,
+        };
+        const response = await this.uploadFile(fileObj);
+        const fileRegister = this.createFileRegister(response.data.file);
+      }
+    }
+  }
+
+  /*
   async getBase64Documents(id: string) {
     const document = await this.checkDocument(id);
     if (document.fileRegister && typeof document.fileRegister === 'object') {
@@ -623,7 +949,9 @@ export class DocumentsService {
       );
     }
   }
+*/
 
+  /*
   async showBase64TemplateDoc(id: string) {
     const document = await this.checkDocument(id);
     const idTemplateFromDoc = document.documentationType.idTemplateDocType;
@@ -748,27 +1076,32 @@ export class DocumentsService {
     return showDocument;
   }
 
-  async update(
-    id: string,
-    updateDocumentDTO: UpdateDocumentDTO,
-    userId: string,
-  ) {
-    const { documentTypeName, file } = updateDocumentDTO;
+  */
+
+  async update(id: string, updateDocumentDTO: UpdateDocumentDTO) {
     const documentationType =
       await this.findDocumentationTypeService.findDocumentationType(
-        documentTypeName,
+        updateDocumentDTO.documentationType,
       );
-    if (file && file.startsWith('data')) {
-      const { mime, base64 } = this.extractFileData(file);
-      const fileObj = {
-        mime,
-        base64,
-      };
-      const response = await this.uploadFile(fileObj);
-      const fileRegister = this.createFileRegister(response.data.file);
+    const { file } = updateDocumentDTO;
+
+    if (file) {
+      const fileDataArray = await this.extractFileData(updateDocumentDTO);
+
+      let fileRegisterData = [];
+      for (const fileData of fileDataArray) {
+        const { mime, base64 } = fileData;
+        const fileObj = {
+          mime: mime,
+          base64: base64,
+        };
+        const response = await this.uploadFile(fileObj);
+        const fileRegister = this.createFileRegister(response.data.file);
+        fileRegisterData.push(fileRegister);
+      }
       const updateDocument = {
         ...updateDocumentDTO,
-        fileRegister,
+        fileRegister: fileRegisterData,
         documentationType,
       };
       const updateNewDocument = await this.documentModel
@@ -785,6 +1118,25 @@ export class DocumentsService {
         .exec();
       return updateNewDocument;
     }
+  }
+
+  //-----------------------------------------------------------
+
+  async obtainDocuments(
+    userId: string,
+    view: string,
+    withWorkflow: string,
+    paginationDto: PaginationDto,
+    filter: DocumentsFilter,
+  ) {
+    // console.log('entra al servicioooooooooo');
+    return await this.getDocumentsService.getDocuments(
+      userId,
+      view,
+      withWorkflow,
+      paginationDto,
+      filter,
+    );
   }
 
   async enviarDocument(
@@ -916,7 +1268,7 @@ export class DocumentsService {
 
       userMarkReviewed.stateDocumentUser = 'REVISADO';
       document.bitacoraWorkflow = updateBitacoraWorkflow;
-      document.stateDocumetUser = 'REVISADO';
+      // document.stateDocumetUser = 'REVISADO';
 
       await document.save();
       return document;
@@ -929,6 +1281,7 @@ export class DocumentsService {
   }
   //----------------------------------------------------------------
   //--------------PAGINACION DE TODAS LAS LISTAS
+  /*
   async paginateAllTableDocuments(
     userId: string,
     paginationDto: PaginationDto,
@@ -1071,7 +1424,7 @@ export class DocumentsService {
         totalDocuments,
         totalPages: Math.ceil(totalDocuments / limit),
       };
-    } else if (view === 'RECIBIDOS SIN WORKFLOW') {
+    } else if (view === 'RECIEVED WITHOUT WORKFLOW') {
       const documents = await this.documentModel.find(query).exec();
       let showDocuments = [];
       for (const document of documents) {
@@ -1291,6 +1644,12 @@ export class DocumentsService {
       .find(query)
       .limit(limit)
       .skip(offset);
+
+    documents.sort((a, b) => {
+      const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
+      const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
+      return dateB - dateA;
+    });
     const total = await this.documentModel.countDocuments(query).exec();
     return {
       // data: showFilteredDocuments,
@@ -1300,6 +1659,7 @@ export class DocumentsService {
     };
   }
 
+  */
   //----------------------------------------
   async functionObtainAndDerivedDocument(
     documents: Documents[],
@@ -1307,34 +1667,34 @@ export class DocumentsService {
   ) {
     let showDocuments = [];
     for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
+      // if (document.userId) {
+      //   try {
+      //     const res = await this.httpService
+      //       .get(`${this.apiPersonalGet}/${document.userId}`)
+      //       .toPromise();
+      //     document.userInfo = {
+      //       name: res.data.name,
+      //       lastName: res.data.lastName,
+      //       ci: res.data.ci,
+      //       email: res.data.email,
+      //       unity: res.data.unity,
+      //     };
+      //   } catch (error) {
+      //     document.userId = 'no se encontraron datos del usuario';
+      //   }
+      // }
       const filteredDocumentsUserSome = document.userReceivedDocument.some(
         (entry) => {
           return entry.idOfUser === userId;
         },
       );
       if (filteredDocumentsUserSome) {
-        document.stateDocumetUser = 'RECIBIDO';
+        // document.stateDocumetUser = 'RECIBIDO';
         showDocuments.push(document);
       }
       if (
-        !filteredDocumentsUserSome &&
-        document.stateDocumetUser === 'DERIVADO'
+        !filteredDocumentsUserSome
+        // document.stateDocumetUser === 'DERIVADO'
       ) {
         showDocuments.push(document);
       }
@@ -1390,7 +1750,7 @@ export class DocumentsService {
             entry.stateDocumentUser = 'CONCLUIDO';
           }
         });
-        document.stateDocumetUser = 'CONCLUIDO';
+        // document.stateDocumetUser = 'CONCLUIDO';
         document.stateDocumentUserSend = 'CONCLUIDO';
         await document.save();
         return document;
@@ -1511,31 +1871,31 @@ export class DocumentsService {
     //     $elemMatch: { step: filter.step },
     //   };
     // }
-    if (filter.paso) {
-      query['workflow.step.pasos'] = {
-        $elemMatch: { paso: filter.paso },
-      };
-    }
-    if (filter.oficina) {
-      query['workflow.step.pasos'] = {
-        $elemMatch: { oficina: filter.oficina },
-      };
-    }
-    if (filter.completado) {
-      query['workflow.step.pasos'] = {
-        $elemMatch: { completado: filter.completado },
-      };
-    }
-    if (filter.pasoActual) {
-      query['workflow'] = {
-        $elemMatch: { pasoActual: filter.pasoActual },
-      };
-    }
-    if (filter.oficinaActual) {
-      query['workflow'] = {
-        $elemMatch: { oficinaActual: filter.completado },
-      };
-    }
+    // if (filter.paso) {
+    //   query['workflow.step.pasos'] = {
+    //     $elemMatch: { paso: filter.paso },
+    //   };
+    // }
+    // if (filter.oficina) {
+    //   query['workflow.step.pasos'] = {
+    //     $elemMatch: { oficina: filter.oficina },
+    //   };
+    // }
+    // if (filter.completado) {
+    //   query['workflow.step.pasos'] = {
+    //     $elemMatch: { completado: filter.completado },
+    //   };
+    // }
+    // if (filter.pasoActual) {
+    //   query['workflow'] = {
+    //     $elemMatch: { pasoActual: filter.pasoActual },
+    //   };
+    // }
+    // if (filter.oficinaActual) {
+    //   query['workflow'] = {
+    //     $elemMatch: { oficinaActual: filter.completado },
+    //   };
+    // }
     if (filter.description) {
       // query['description'] = filter.description;
       query = query.where('description', new RegExp(filter.description, 'i'));
@@ -1553,22 +1913,22 @@ export class DocumentsService {
       .sort({ numberDocument: 1 })
       .exec();
     for (const document of filteredDocuments) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
+      // if (document.userId) {
+      //   try {
+      //     const res = await this.httpService
+      //       .get(`${this.apiPersonalGet}/${document.userId}`)
+      //       .toPromise();
+      //     document.userInfo = {
+      //       name: res.data.name,
+      //       lastName: res.data.lastName,
+      //       ci: res.data.ci,
+      //       email: res.data.email,
+      //       unity: res.data.unity,
+      //     };
+      //   } catch (error) {
+      //     document.userId = 'no se encontraron datos del usuario';
+      //   }
+      // }
     }
     return filteredDocuments;
   }
@@ -1607,22 +1967,22 @@ export class DocumentsService {
       .setOptions({ sanitizeFilter: true })
       .exec();
     for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
+      // if (document.userId) {
+      //   try {
+      //     const res = await this.httpService
+      //       .get(`${this.apiPersonalGet}/${document.userId}`)
+      //       .toPromise();
+      //     document.userInfo = {
+      //       name: res.data.name,
+      //       lastName: res.data.lastName,
+      //       ci: res.data.ci,
+      //       email: res.data.email,
+      //       unity: res.data.unity,
+      //     };
+      //   } catch (error) {
+      //     document.userId = 'no se encontraron datos del usuario';
+      //   }
+      // }
     }
     return documents;
   }
@@ -1634,22 +1994,22 @@ export class DocumentsService {
       .setOptions({ sanitizeFilter: true })
       .exec();
     for (const document of documents) {
-      if (document.userId) {
-        try {
-          const res = await this.httpService
-            .get(`${this.apiPersonalGet}/${document.userId}`)
-            .toPromise();
-          document.userInfo = {
-            name: res.data.name,
-            lastName: res.data.lastName,
-            ci: res.data.ci,
-            email: res.data.email,
-            unity: res.data.unity,
-          };
-        } catch (error) {
-          document.userId = 'no se encontraron datos del usuario';
-        }
-      }
+      // if (document.userId) {
+      //   try {
+      //     const res = await this.httpService
+      //       .get(`${this.apiPersonalGet}/${document.userId}`)
+      //       .toPromise();
+      //     document.userInfo = {
+      //       name: res.data.name,
+      //       lastName: res.data.lastName,
+      //       ci: res.data.ci,
+      //       email: res.data.email,
+      //       unity: res.data.unity,
+      //     };
+      //   } catch (error) {
+      //     document.userId = 'no se encontraron datos del usuario';
+      //   }
+      // }
     }
     return documents;
   }
@@ -1704,22 +2064,22 @@ export class DocumentsService {
     if (documents.active === false) {
       throw new HttpException(`documento con id: ${id} fue eliminado`, 404);
     }
-    if (documents.userId) {
-      try {
-        const res = await this.httpService
-          .get(`${this.apiPersonalGet}/${documents.userId}`)
-          .toPromise();
-        documents.userInfo = {
-          name: res.data.name,
-          lastName: res.data.lastName,
-          ci: res.data.ci,
-          email: res.data.email,
-          unity: res.data.unity,
-        };
-      } catch (error) {
-        documents.userId = 'no se encontraron datos del usuario';
-      }
-    }
+    // if (documents.userId) {
+    //   try {
+    //     const res = await this.httpService
+    //       .get(`${this.apiPersonalGet}/${documents.userId}`)
+    //       .toPromise();
+    //     documents.userInfo = {
+    //       name: res.data.name,
+    //       lastName: res.data.lastName,
+    //       ci: res.data.ci,
+    //       email: res.data.email,
+    //       unity: res.data.unity,
+    //     };
+    //   } catch (error) {
+    //     documents.userId = 'no se encontraron datos del usuario';
+    //   }
+    // }
     return documents;
   }
 
@@ -1731,22 +2091,22 @@ export class DocumentsService {
     if (documents.userId !== userId) {
       throw new HttpException('not is your document', 400);
     }
-    if (documents.userId) {
-      try {
-        const res = await this.httpService
-          .get(`${this.apiPersonalGet}/${documents.userId}`)
-          .toPromise();
-        documents.userInfo = {
-          name: res.data.name,
-          lastName: res.data.lastName,
-          ci: res.data.ci,
-          email: res.data.email,
-          unity: res.data.unity,
-        };
-      } catch (error) {
-        documents.userId = 'no se encontraron datos del usuario';
-      }
-    }
+    // if (documents.userId) {
+    //   try {
+    //     const res = await this.httpService
+    //       .get(`${this.apiPersonalGet}/${documents.userId}`)
+    //       .toPromise();
+    //     documents.userInfo = {
+    //       name: res.data.name,
+    //       lastName: res.data.lastName,
+    //       ci: res.data.ci,
+    //       email: res.data.email,
+    //       unity: res.data.unity,
+    //     };
+    //   } catch (error) {
+    //     documents.userId = 'no se encontraron datos del usuario';
+    //   }
+    // }
     return documents;
   }
 
@@ -1772,27 +2132,27 @@ export class DocumentsService {
         const res = await this.httpService
           .get(`${this.apiFilesUploader}/file/${documents.idTemplate}`)
           .toPromise();
-        documents.base64Template = res.data.file.base64;
+        // documents.base64Template = res.data.file.base64;
       } catch (error) {
         throw new HttpException('no se encontro datos', 404);
       }
     }
-    if (documents.userId) {
-      try {
-        const res = await this.httpService
-          .get(`${this.apiPersonalGet}/${documents.userId}`)
-          .toPromise();
-        documents.userInfo = {
-          name: res.data.name,
-          lastName: res.data.lastName,
-          ci: res.data.ci,
-          email: res.data.email,
-          unity: res.data.unity,
-        };
-      } catch (error) {
-        documents.userId = 'no se encontraron datos del usuario';
-      }
-    }
+    // if (documents.userId) {
+    //   try {
+    //     const res = await this.httpService
+    //       .get(`${this.apiPersonalGet}/${documents.userId}`)
+    //       .toPromise();
+    //     documents.userInfo = {
+    //       name: res.data.name,
+    //       lastName: res.data.lastName,
+    //       ci: res.data.ci,
+    //       email: res.data.email,
+    //       unity: res.data.unity,
+    //     };
+    //   } catch (error) {
+    //     documents.userId = 'no se encontraron datos del usuario';
+    //   }
+    // }
     if (!documents) {
       throw new NotFoundException('Versión del documento no encontrada');
     }
@@ -1846,20 +2206,20 @@ export class DocumentsService {
       await document.save();
       return document;
     }
-    if (document.stateDocumetUser === 'CONCLUIDO') {
-      document.stateDocumentUserSend = 'CONCLUIDO';
-      await document.save();
-      return document;
-    }
+    // if (document.stateDocumetUser === 'CONCLUIDO') {
+    //   document.stateDocumentUserSend = 'CONCLUIDO';
+    //   await document.save();
+    //   return document;
+    // }
 
-    if (
-      document.stateDocumetUser === 'DERIVADO' ||
-      document.stateDocumetUser === 'RECIBIDO'
-    ) {
-      document.stateDocumentUserSend = 'INICIADO';
-      await document.save();
-      return document;
-    }
+    // if (
+    //   // document.stateDocumetUser === 'DERIVADO' ||
+    //   // document.stateDocumetUser === 'RECIBIDO'
+    // ) {
+    //   document.stateDocumentUserSend = 'INICIADO';
+    //   await document.save();
+    //   return document;
+    // }
 
     await document.save();
     return document;
@@ -1918,11 +2278,9 @@ export class DocumentsService {
 
   //--FUNCION PARA OBTENER LOS DATOS NECESARIOS DEL DOCUMENTO OBTENIDO DEL SERVICIO FILE
   private createFileRegister(fileData: any): any {
-    const { _id, status, extension } = fileData;
+    const { _id } = fileData;
     return {
       idFile: _id,
-      status,
-      extension,
     };
   }
 
@@ -1937,10 +2295,23 @@ export class DocumentsService {
   }
 
   //--FUNCION PARA OBTENER EL MIME Y EL BASE64 DE UN FILE
-  private extractFileData(file: string): { mime: string; base64: string } {
-    const mimeType = file.split(';')[0].split(':')[1];
-    const base64 = file.split(',')[1];
-    return { mime: mimeType, base64 };
+  // private extractFileData(files: string[]): { mime: string; base64: string }[] {
+  //   for (const file of files) {
+  //     const mimeType = file.split(';')[0].split(':')[1];
+  //     const base64 = file.split(',')[1];
+  //     return { mime: mimeType, base64 };
+  //   }
+  // }
+  private extractFileData(
+    createDocumentDTO: CreateDocumentDTO,
+  ): { mime: string; base64: string }[] {
+    const fileDataArray: { mime: string; base64: string }[] = [];
+    for (const file of createDocumentDTO.file) {
+      const mimeType = file.split(';')[0].split(':')[1];
+      const base64 = file.split(',')[1];
+      fileDataArray.push({ mime: mimeType, base64 });
+    }
+    return fileDataArray;
   }
 
   //FUNCION PARA ENCONTRAR WORKFLOW POR NOMBRE

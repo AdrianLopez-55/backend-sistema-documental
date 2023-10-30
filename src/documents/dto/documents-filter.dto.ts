@@ -95,45 +95,45 @@ export class DocumentsFilter {
   // })
   // descriptionStep: string;
 
-  @ApiProperty({
-    example: 1,
-    description: 'search number paso in step pasos',
-    required: false,
-  })
-  @IsOptional()
-  @IsNumber()
-  @MinLength(8)
-  paso: number;
+  // @ApiProperty({
+  //   example: 1,
+  //   description: 'search number paso in step pasos',
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsNumber()
+  // @MinLength(8)
+  // paso: number;
 
-  @ApiProperty({
-    example: 'RECTORADO',
-    description: 'search name office in step',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  @MinLength(3)
-  oficina: string;
+  // @ApiProperty({
+  //   example: 'RECTORADO',
+  //   description: 'search name office in step',
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsString()
+  // @MinLength(3)
+  // oficina: string;
 
-  @ApiProperty({
-    example: true,
-    description: 'search if a paso was completed',
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  @MinLength(8)
-  completado: boolean;
+  // @ApiProperty({
+  //   example: true,
+  //   description: 'search if a paso was completed',
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsBoolean()
+  // @MinLength(8)
+  // completado: boolean;
 
-  @ApiProperty({
-    example: 2,
-    description: 'search paso actual worflow',
-    required: false,
-  })
-  @IsOptional()
-  @IsNumber()
-  @MinLength(8)
-  pasoActual: number;
+  // @ApiProperty({
+  //   example: 2,
+  //   description: 'search paso actual worflow',
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsNumber()
+  // @MinLength(8)
+  // pasoActual: number;
 
   @ApiProperty({
     example: 'VICERECTORADO',
@@ -164,6 +164,15 @@ export class DocumentsFilter {
   @IsBoolean()
   @MinLength(8)
   active: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'search by document by digital signature',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  userDigitalSignature: string;
 
   @ApiProperty({
     example: '2023',

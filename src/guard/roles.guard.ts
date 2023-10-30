@@ -32,8 +32,8 @@ export class RolesGuard implements CanActivate {
       'permissions',
       [context.getHandler(), context.getClass()],
     );
-    console.log('estos son requiredPermission, permisos requeridos');
-    console.log(requiredPermission);
+    // console.log('estos son requiredPermission, permisos requeridos');
+    // console.log(requiredPermission);
 
     if (!requiredPermission) {
       return true;
@@ -60,10 +60,10 @@ export class RolesGuard implements CanActivate {
       userDataRol = decodedToken.data.roles;
       userPassword = decodedToken.data.password;
       tokenDat = token;
-      console.log('esto es id del usuario mediante guard');
-      console.log(userDataId);
-      console.log('esto es roles id del usuario mediaten guard');
-      console.log(userDataRol);
+      // console.log('esto es id del usuario mediante guard');
+      // console.log(userDataId);
+      // console.log('esto es roles id del usuario mediaten guard');
+      // console.log(userDataRol);
       request['user'] = userDataId;
       request['userRol'] = userDataRol;
       request['password'] = userPassword;
@@ -86,8 +86,8 @@ export class RolesGuard implements CanActivate {
       const roleDetails = rolesWithDetails.map((response) => response.data);
 
       const roleNames = roleDetails.map((role) => role.rolName);
-      console.log('estos son nombre de los roles del usuario logeado');
-      console.log(roleNames);
+      // console.log('estos son nombre de los roles del usuario logeado');
+      // console.log(roleNames);
       if (!roleNames) {
         throw new HttpException('no tiene los permisos necesarios', 403);
       }
@@ -97,13 +97,13 @@ export class RolesGuard implements CanActivate {
         const findRole = await this.rolModel
           .findOne({ rolName: rolName })
           .exec();
-        console.log('es el findRole encontrado en mi cru de roles');
-        console.log(findRole);
+        // console.log('es el findRole encontrado en mi cru de roles');
+        // console.log(findRole);
 
         if (findRole) {
           const rolePermissions = findRole.permissionName;
-          console.log('estos son los permisos (ids) dentro del rol de mi crud');
-          console.log(rolePermissions);
+          // console.log('estos son los permisos (ids) dentro del rol de mi crud');
+          // console.log(rolePermissions);
           if (rolePermissions.length === 0) {
             hasRequiredPermissions = false;
           }
@@ -111,10 +111,10 @@ export class RolesGuard implements CanActivate {
             const findPermission = await this.permissionModel
               .findById(rolePermission)
               .exec();
-            console.log(
-              'estos son los datos que se encontro de los permisos dentro de mi crud de permisos',
-            );
-            console.log(findPermission);
+            // console.log(
+            //   'estos son los datos que se encontro de los permisos dentro de mi crud de permisos',
+            // );
+            // console.log(findPermission);
             if (findPermission) {
               const hasAllPermissions = requiredPermission.every((permission) =>
                 findPermission.permissionName.includes(permission),
@@ -122,8 +122,8 @@ export class RolesGuard implements CanActivate {
               const esIgual = requiredPermission.filter(
                 (permission) => permission == findPermission.permissionName,
               );
-              console.log('para ver si hay valor de permiso igual');
-              console.log(esIgual);
+              // console.log('para ver si hay valor de permiso igual');
+              // console.log(esIgual);
               // console.log('hasAllPermissions');
               // console.log(hasAllPermissions);
               if (esIgual.length > 0) {

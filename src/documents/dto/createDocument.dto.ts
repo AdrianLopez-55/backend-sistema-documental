@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsString, ValidateNested } from 'class-validator';
+
+export class FileDto {
+  @ApiProperty({ example: 'data:@file/jpeg;base64,/9jq' })
+  base64: string;
+}
 
 export class CreateDocumentDTO {
   @ApiProperty({ example: 'Memorandum-2023' })
@@ -8,7 +14,7 @@ export class CreateDocumentDTO {
 
   @ApiProperty({ example: 'Licencia' })
   @IsString()
-  documentTypeName: string;
+  documentationType: string;
 
   @ApiProperty({
     example: 'contract document registration for new staff. It is on revision',
@@ -17,7 +23,8 @@ export class CreateDocumentDTO {
   description: string;
 
   @ApiProperty({
-    example: 'data:@file/jpeg;base64,/9jq',
+    type: [String],
+    example: ['data:@file/jpeg;base64,/9jq'],
   })
-  file: string;
+  file: string[];
 }

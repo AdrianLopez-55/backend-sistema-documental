@@ -10,6 +10,10 @@ import {
 } from 'src/workflow/schemas/workflow.schema';
 import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
+import {
+  EstadoUbiacion,
+  EstadoUbiacionDocument,
+} from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
 
 @Injectable()
 export class SendDerivedDocumentsService {
@@ -25,8 +29,16 @@ export class SendDerivedDocumentsService {
     @InjectModel(Workflow.name)
     private readonly workflowModel: Model<WorkflowDocuments>,
     private readonly httpService: HttpService,
+    @InjectModel(EstadoUbiacion.name)
+    private readonly estadoUbicacionModel: Model<EstadoUbiacionDocument>,
   ) {}
 
+  // async getStateDocumentViewUser(userId: string){
+
+  // }
+
+  //Funcion para enviar documentos a todo el personal
+  //dentro de la primera unidad del workflow
   async sendDocumentToUnity(
     documentId: string,
     addWorkflowWithoutCiDocumentDto: AddWorkflowSinCiDocumentDto,
@@ -61,6 +73,7 @@ export class SendDerivedDocumentsService {
     }
   }
 
+  //aplicado estado ubicacion
   async sendDocumentWithCi(
     documentId: string,
     addWorkflowDocumentDto: AddWorkflowDocumentDto,
@@ -101,6 +114,7 @@ export class SendDerivedDocumentsService {
     }
   }
 
+  //estado-ubicacion colocado
   async derivarDocumentAll(
     documentId: string,
     userId: string,
@@ -188,7 +202,6 @@ export class SendDerivedDocumentsService {
         observado: false,
         stateDocumentUser: 'RECIBIDO',
       }));
-      const receivedUsersArray = [];
       if (matchingUsers.length > 0) {
         pasos[pasoActual].completado = true;
         workflow.pasoActual = pasoActual + 1;
@@ -232,11 +245,45 @@ export class SendDerivedDocumentsService {
             document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
           }
         }
+
+        const findEstadoUbicacion = await this.estadoUbicacionModel
+          .findOne({ idDocument: documentId })
+          .exec();
+
+        findEstadoUbicacion.estado_ubi.push({
+          nameOffices: [
+            {
+              office: pasos[pasoActual].oficina,
+            },
+          ],
+          stateOffice: 'DERIVADO',
+          numberPasoOffice: pasoActual,
+          receivedUsers: findEstadoUbicacion.estado_ubi
+            .filter((entry) => entry.numberPasoOffice === pasoActual)
+            .flatMap((item) => item.receivedUsers),
+          activo: false,
+        });
+
+        findEstadoUbicacion.estado_ubi.push({
+          nameOffices: [
+            {
+              office: nameOffce,
+            },
+          ],
+          stateOffice: 'RECIBIDO',
+          numberPasoOffice: pasoActual + 1,
+          receivedUsers: receivedUsers,
+          activo: true,
+        });
+
+        await findEstadoUbicacion.save();
+        document.estado_Ubicacion = findEstadoUbicacion;
+
         document.oficinaActual = workflow.oficinaActual;
 
         document.userReceivedDocument = receivedUsers;
         document.workflow = workflow;
-        document.stateDocumetUser = 'DERIVADO';
+        // document.stateDocumetUser = 'DERIVADO';
         document.stateDocumentUserSend = 'INICIADO';
       }
       await document.save();
@@ -246,6 +293,7 @@ export class SendDerivedDocumentsService {
     }
   }
 
+  //estado ubicacion puesto
   async derivarDocumentWithCi(
     documentId: string,
     ci: string[],
@@ -387,12 +435,54 @@ export class SendDerivedDocumentsService {
           document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
         }
       }
+
+      const findEstadoUbicacion = await this.estadoUbicacionModel
+        .findOne({ idDocument: documentId })
+        .exec();
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: pasos[pasoActual - 1].oficina,
+          },
+        ],
+        stateOffice: 'DERIVADO',
+        numberPasoOffice: pasoActual,
+        receivedUsers: findEstadoUbicacion.estado_ubi
+          .filter((entry) => entry.numberPasoOffice === pasoActual)
+          .flatMap((item) => item.receivedUsers),
+        activo: false,
+      });
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: nameOffce,
+          },
+        ],
+        stateOffice: 'RECIBIDO',
+        numberPasoOffice: pasoActual + 1,
+        receivedUsers: unityUsers.map((user) => ({
+          ciUser: user.ci,
+          idOfUser: user.idOfUser,
+          nameOfficeUserRecieved: user.unityUser,
+          dateRecived: new Date(),
+          observado: false,
+          stateDocumentUser: 'RECIBIDO',
+        })),
+        activo: true,
+      });
+
+      await findEstadoUbicacion.save();
+
+      document.estado_Ubicacion = findEstadoUbicacion;
+
       document.oficinaActual = workflow.oficinaActual;
 
       document.userReceivedDocument = newUserRecievedDocument;
       document.bitacoraWorkflow = updateBitacoraWorkflow;
       document.workflow = workflow;
-      document.stateDocumetUser = 'DERIVADO';
+      // document.stateDocumetUser = 'DERIVADO';
       document.stateDocumentUserSend = 'INICIADO';
       await document.save();
       return document;
@@ -401,20 +491,19 @@ export class SendDerivedDocumentsService {
     }
   }
 
+  //estado ubicacion puesto
   async sendDocumentSinWorkflow(
     documentId: string,
     ci: string[],
     userId: string,
   ) {
     const document = await this.checkDocument(documentId);
-
     if (document.workflow) {
       throw new HttpException(
         'este documento cuenta con un flujo de trabajo',
         400,
       );
     }
-
     await this.validateCi(ci);
 
     const loggedUser = await this.httpService
@@ -486,16 +575,22 @@ export class SendDerivedDocumentsService {
         stateDocumentUser: 'RECIBIDO DIRECTO',
       })),
     });
-    const userReceivedDocumentWithoutWorkflow = unityUsers.map((user) => ({
+    const userReceivedDocument = unityUsers.map((user) => ({
       ciUser: user.ci,
       idOfUser: user.idOfUser,
       nameOfficeUserRecieved: user.unityUser,
       dateRecived: new Date(),
       stateDocumentUser: 'RECIBIDO DIRECTO',
+      observado: false,
     }));
 
-    document.userReceivedDocumentWithoutWorkflow =
-      userReceivedDocumentWithoutWorkflow;
+    // document.estado_Ubicacion.push({
+    //   oficina:
+    // })
+
+    // document.userReceivedDocumentWithoutWorkflow =
+    //   userReceivedDocumentWithoutWorkflow;
+    document.userReceivedDocument = userReceivedDocument;
     document.stateDocumentUserSend = 'ENVIADO DIRECTO';
     document.bitacoraWithoutWorkflow.find((entry) => {
       entry.recievedUsers.find((entry) => {
@@ -504,10 +599,55 @@ export class SendDerivedDocumentsService {
         }
       });
     });
+
+    const findEstadoUbicacion = await this.estadoUbicacionModel
+      .findOne({ idDocument: documentId })
+      .exec();
+
+    findEstadoUbicacion.estado_ubi.push({
+      nameOffices: [
+        {
+          office: userOficce,
+        },
+      ],
+      stateOffice: 'ENVIADO',
+      numberPasoOffice: null,
+      receivedUsers: [
+        {
+          ciUser: loggedUser.data.ci,
+          idOfUser: userId,
+          nameOfficeUserRecieved: null,
+          dateRecived: null,
+          stateDocumentUser: 'ENVIADO',
+          observado: false,
+        },
+      ],
+      activo: false,
+    });
+
+    findEstadoUbicacion.estado_ubi.push({
+      nameOffices: unityUsers.map((user) => ({
+        office: user.unityUser,
+      })),
+      stateOffice: 'RECIBIDO DIRECTO',
+      numberPasoOffice: null,
+      receivedUsers: unityUsers.map((user) => ({
+        ciUser: user.ci,
+        idOfUser: user.idOfUser,
+        nameOfficeUserRecieved: user.unityUser,
+        dateRecived: new Date(),
+        stateDocumentUser: 'RECIBIDO DIRECTO',
+        observado: false,
+      })),
+      activo: true,
+    });
+    await findEstadoUbicacion.save();
+    document.estado_Ubicacion = findEstadoUbicacion;
     await document.save();
     return document;
   }
 
+  //estado ubicacion colocado
   async sendDocumentMultiUnitysWithoutWorkflow(
     documentId: string,
     unitys: string[],
@@ -605,8 +745,50 @@ export class SendDerivedDocumentsService {
     document.sendMultiUnitysWithoutWorkflow.push(...officeInfoList);
 
     // Actualizar el estado del documento
-    document.stateDocumetUser = 'ENVIADO DIRECTO';
+    // document.stateDocumetUser = 'ENVIADO DIRECTO';
     document.stateDocumentUserSend = 'ENVIADO DIRECTO';
+
+    // Obtén los nombres de las unidades
+    const unityNames = officeInfoList.map(
+      (officeInfo) => officeInfo.send[0].nameUnity,
+    );
+
+    const findEstadoUbicacion = await this.estadoUbicacionModel
+      .findOne({ idDocument: documentId })
+      .exec();
+
+    const usersFromSendMultiUnity = [];
+
+    document.sendMultiUnitysWithoutWorkflow.forEach((sendInfo) => {
+      // Iterar a través de la propiedad 'send' de sendMultiUnity
+      sendInfo.send.forEach((unityInfo) => {
+        unityInfo.receivedUsers.forEach((user) => {
+          usersFromSendMultiUnity.push(user);
+        });
+      });
+    });
+
+    findEstadoUbicacion.estado_ubi.push({
+      nameOffices: [
+        {
+          office: userOffice,
+        },
+      ],
+      stateOffice: 'ENVIADO DIRECTO',
+      numberPasoOffice: null,
+      receivedUsers: usersFromSendMultiUnity,
+      activo: false,
+    });
+
+    findEstadoUbicacion.estado_ubi.push({
+      nameOffices: unityNames.map((unityName) => ({ office: unityName })),
+      stateOffice: 'RECIBIDO',
+      numberPasoOffice: null,
+      receivedUsers: usersFromSendMultiUnity,
+      activo: true,
+    });
+    await findEstadoUbicacion.save();
+    document.estado_Ubicacion = findEstadoUbicacion;
 
     await document.save();
     return document;
@@ -647,6 +829,7 @@ export class SendDerivedDocumentsService {
     return workflowData;
   }
 
+  //estado ubicacion colocado
   private async sendDocument(
     id: string,
     workflowName: string,
@@ -754,11 +937,47 @@ export class SendDerivedDocumentsService {
           document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
         }
       }
+
+      const findEstadoUbicacion = await this.estadoUbicacionModel
+        .findOne({ idDocument: id })
+        .exec();
+
+      const getInfoPersonal = await this.httpService
+        .get(`${this.apiPersonalGet}/${userId}`)
+        .toPromise();
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: getInfoPersonal.data.unity,
+          },
+        ],
+        stateOffice: 'ENVIADO',
+        numberPasoOffice: null,
+        receivedUsers: receivedDocumentUsers,
+        activo: false,
+      });
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: workflow.oficinaActual,
+          },
+        ],
+        stateOffice: 'RECBIDO',
+        numberPasoOffice: pasoActual + 1,
+        receivedUsers: receivedDocumentUsers,
+        activo: true,
+      });
+
+      await findEstadoUbicacion.save();
+      document.estado_Ubicacion = findEstadoUbicacion;
+
       document.oficinaActual = workflow.oficinaActual;
       document.userReceivedDocument = receivedDocumentUsers;
       document.workflow = workflow;
       document.stateDocumentUserSend = 'INICIADO';
-      document.stateDocumetUser = '';
+      // document.stateDocumetUser = '';
       document.bitacoraWorkflow = newBitacora;
       await document.save();
       return document;
@@ -769,6 +988,7 @@ export class SendDerivedDocumentsService {
     }
   }
 
+  //estado ubicacion colocado
   private async sendDocumentWithoutCi(
     id: string,
     workflowName: string,
@@ -932,6 +1152,44 @@ export class SendDerivedDocumentsService {
             document.oficinaPorPasar = 'NO HAY OFICINA POR PASAR';
           }
         }
+
+        const findEstadoUbicacion = await this.estadoUbicacionModel
+          .findOne({ idDocument: id })
+          .exec();
+
+        findEstadoUbicacion.estado_ubi.push({
+          nameOffices: [
+            {
+              office: userOficce,
+            },
+          ],
+          stateOffice: 'ENVIADO',
+          numberPasoOffice: null,
+          receivedUsers: userReceivedDocument,
+          activo: false,
+        });
+
+        findEstadoUbicacion.estado_ubi.push({
+          nameOffices: [
+            {
+              office: nameOffce,
+            },
+          ],
+          stateOffice: 'RECIBIDO',
+          numberPasoOffice: pasoActual + 1,
+          receivedUsers: userReceivedDocument,
+          activo: true,
+        });
+
+        // const newEstadoUbicacion = findEstadoUbicacion.push({
+        //   idDocument: id,
+        //   nameOffice: userOficce,
+        //   stateOffice: 'ENVIADO',
+        //   receivedUsers: userReceivedDocument,
+        //   activo: false
+        // })
+        await findEstadoUbicacion.save();
+        document.estado_Ubicacion = findEstadoUbicacion;
         document.oficinaActual = workflow.oficinaActual;
         document.userReceivedDocument = userReceivedDocument;
         document.workflow = workflow;
@@ -948,6 +1206,7 @@ export class SendDerivedDocumentsService {
     }
   }
 
+  //devolver un documento, observarlo
   async selectPreviousStep(
     documentId: string,
     numberPaso: number,
@@ -978,6 +1237,9 @@ export class SendDerivedDocumentsService {
 
     if (numberPaso == 0 && pasoActual == 1) {
       const originalUserSend = document.userId;
+      const infoOriginalUserSend = await this.httpService
+        .get(`${this.apiPersonalGet}/${originalUserSend}`)
+        .toPromise();
       document.bitacoraWorkflow.push({
         oficinaActual: 'remitente original',
         nameOficinaActual: 'remitente original',
@@ -1027,18 +1289,52 @@ export class SendDerivedDocumentsService {
       ];
 
       document.bitacoraWorkflow = updateBitacoraWorkflow;
-      document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
       document.stateDocumentUserSend = 'OBSERVADO';
       const paso1 = pasos.find((paso) => paso.paso === 1);
       if (paso1) {
         paso1.completado = false;
       }
+
+      const findEstadoUbicacion = await this.estadoUbicacionModel
+        .findOne({ idDocument: documentId })
+        .exec();
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: document.oficinaActual,
+          },
+        ],
+        stateOffice: 'OBSERVADO Y DEVUELTO',
+        numberPasoOffice: pasoActual + 1,
+        receivedUsers: document.userReceivedDocument,
+        activo: false,
+      });
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: infoOriginalUserSend.data.unity,
+          },
+        ],
+        stateOffice: 'OBSERVADO',
+        numberPasoOffice: 0,
+        receivedUsers: document.userReceivedDocument,
+        activo: true,
+      });
+
+      await findEstadoUbicacion.save();
+      document.estado_Ubicacion = findEstadoUbicacion;
+
       await document.save();
       return document;
     }
 
     if (numberPaso == 0) {
       const originalUserSend = document.userId;
+      const infoOriginalUserSend = await this.httpService
+        .get(`${this.apiPersonalGet}/${originalUserSend}`)
+        .toPromise();
       document.bitacoraWorkflow.push({
         oficinaActual: 'remitente original',
         nameOficinaActual: 'remitente original',
@@ -1088,12 +1384,42 @@ export class SendDerivedDocumentsService {
       ];
 
       document.bitacoraWorkflow = updateBitacoraWorkflow;
-      document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
+      // document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
       document.stateDocumentUserSend = 'OBSERVADO';
       const paso1 = pasos.find((paso) => paso.paso === 1);
       if (paso1) {
         paso1.completado = false;
       }
+      const findEstadoUbicacion = await this.estadoUbicacionModel
+        .findOne({ idDocument: documentId })
+        .exec();
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: document.oficinaActual,
+          },
+        ],
+        stateOffice: 'OBSERVADO Y DEVUELTO',
+        numberPasoOffice: pasoActual + 1,
+        receivedUsers: document.userReceivedDocument,
+        activo: false,
+      });
+
+      findEstadoUbicacion.estado_ubi.push({
+        nameOffices: [
+          {
+            office: infoOriginalUserSend.data.unity,
+          },
+        ],
+        stateOffice: 'OBSERVADO',
+        numberPasoOffice: 0,
+        receivedUsers: document.userReceivedDocument,
+        activo: true,
+      });
+
+      await findEstadoUbicacion.save();
+      document.estado_Ubicacion = findEstadoUbicacion;
       await document.save();
       return document;
     }
@@ -1149,6 +1475,11 @@ export class SendDerivedDocumentsService {
       document.userReceivedDocument = receivedUsers;
     }
 
+    const nameOfTheOffice = await this.httpService
+      .get(`${this.apiOrganizationChartId}/${selectedPaso.idOffice}`)
+      .toPromise();
+    const nameOffce = nameOfTheOffice.data.name;
+
     const bitacoraEntry = document.bitacoraWorkflow.find((entry) => {
       return entry.receivedUsers.some((user) => user.idOfUser === userId);
     });
@@ -1168,18 +1499,50 @@ export class SendDerivedDocumentsService {
 
     document.workflow = workflow;
     document.stateDocumentUserSend = `OBSERVADO PARA EL PASO: ${document.workflow.pasoActual}`;
-    document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
+    // document.stateDocumetUser = 'OBSERVADO Y DEVUELTO';
+
+    const findEstadoUbicacion = await this.estadoUbicacionModel
+      .findOne({ idDocument: documentId })
+      .exec();
+
+    findEstadoUbicacion.estado_ubi.push({
+      nameOffices: [
+        {
+          office: document.oficinaActual,
+        },
+      ],
+      stateOffice: 'OBSERVADO Y DEVUELTO',
+      numberPasoOffice: pasoActual + 1,
+      receivedUsers: document.userReceivedDocument,
+      activo: false,
+    });
+
+    findEstadoUbicacion.estado_ubi.push({
+      nameOffices: [
+        {
+          office: nameOffce,
+        },
+      ],
+      stateOffice: 'OBSERVADO',
+      numberPasoOffice: numberPaso,
+      receivedUsers: document.userReceivedDocument,
+      activo: true,
+    });
+
+    await findEstadoUbicacion.save();
+    document.estado_Ubicacion = findEstadoUbicacion;
+
     await document.save();
     return document;
   }
 
   private async validarDerivacion(document: Documents, userId: string) {
-    if (document.stateDocumetUser !== 'REVISADO') {
-      throw new HttpException(
-        'Primero se debe marcar el documento como revisado para derivarlo',
-        400,
-      );
-    }
+    // if (document.stateDocumetUser !== 'REVISADO') {
+    //   throw new HttpException(
+    //     'Primero se debe marcar el documento como revisado para derivarlo',
+    //     400,
+    //   );
+    // }
     if (document.workflow === null) {
       throw new HttpException(
         'No puedes derivar un documento que no ha comenzado un flujo de trabajo',

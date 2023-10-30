@@ -50,6 +50,8 @@ import { Bitacora, BitacoraSchema } from './bitacora/schema/bitacora.schema';
 import { CustomErrorService } from './error.service';
 import { EmailService } from './email/email.service';
 import { EmailController } from './email/email.controller';
+import { EstadoUbicacionModule } from './estado-ubicacion/estado-ubicacion.module';
+import { FileModule } from './file/file.module';
 
 @Module({
   imports: [
@@ -89,6 +91,8 @@ import { EmailController } from './email/email.controller';
     // GatewayModule,
     RoadmapModule,
     BitacoraModule,
+    EstadoUbicacionModule,
+    FileModule,
   ],
   controllers: [PersonalGetController, EmailController],
   providers: [PersonalGetService, CustomErrorService, EmailService],
