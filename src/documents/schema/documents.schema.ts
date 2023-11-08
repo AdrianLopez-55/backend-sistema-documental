@@ -41,53 +41,12 @@ export class Documents {
   @Prop({ type: DocumentationTypeSchema, ref: 'DocumentationType' })
   documentationType: DocumentationType;
 
-  // @Prop({ type: TemplateSchema, ref: 'Template' })
-  // documentationType: Template;
-
-  // @Prop({
-  //   type: [
-  //     {
-  //       oficina: String,
-  //       estado: String,
-  //       recievedUsers: [
-  //         {
-  //           ciUser: String,
-  //           idOfUser: String,
-  //           nameOfficeUserRecieved: String,
-  //           dateRecived: Date,
-  //           stateDocumentUser: String,
-  //           observado: Boolean,
-  //         },
-  //       ],
-  //       activo: Boolean,
-  //     },
-  //   ],
-  // })
-  // estado_Ubicacion: {
-  //   oficina: string;
-  //   estado: string;
-  //   recievedUsers: {
-  //     ciUser: string;
-  //     idOfUser: string;
-  //     nameOfficeUserRecieved: string;
-  //     dateRecived: Date;
-  //     stateDocumentUser: string;
-  //     observado: boolean;
-  //   }[];
-  // }[];
-
   @Prop({ type: EstadoUbiacionSchema, ref: 'EstadoUbiacion' })
   estado_Ubicacion: EstadoUbiacion;
 
-  //-------------------------------------------
   @Prop({ uppercase: true })
   stateDocumentUserSend: string;
 
-  // @Prop({ uppercase: true })
-  // stateDocumetUser: string;
-  //--------------------------------------------
-
-  //dato de seguimiento mas detallado para la persona que envio un documento
   @Prop({
     type: [
       {
@@ -109,27 +68,6 @@ export class Documents {
     observado: boolean;
   }[];
 
-  //----------------------------------------------
-  // @Prop({
-  //   type: [
-  //     {
-  //       ciUser: String,
-  //       idOfUser: String,
-  //       nameOfficeUserRecieved: String,
-  //       dateRecived: Date,
-  //       stateDocumentUser: String,
-  //     },
-  //   ],
-  // })
-  // userReceivedDocumentWithoutWorkflow: {
-  //   ciUser: string;
-  //   idOfUser: string;
-  //   nameOfficeUserRecieved: string;
-  //   dateRecived: Date;
-  //   stateDocumentUser: string;
-  // }[];
-  //--------------------------------------------------
-
   @Prop()
   oficinaActual: string;
 
@@ -150,18 +88,8 @@ export class Documents {
     idFile: string;
   }[];
 
-  //------------------------------------------------
-  // @Prop()
-  // fileBase64: string;
-  //-----------------------------------------------------
-
   @Prop()
   idTemplate: string;
-
-  //------------------------------------------------------
-  // @Prop()
-  // base64Template: string;
-  //----------------------------------------------------
 
   @Prop([CommentSchema])
   comments: Comment[];
@@ -178,16 +106,9 @@ export class Documents {
   @Prop({ default: Date.now() })
   updateAt: Date;
 
-  //--------------------------------------------
-  // @Prop()
-  // year: string;
-  //------------------------------------------------
-
-  // @Prop({ default: 'create' })
-  // state: string;
-
-  // @Prop()
-  // counter: number;
+  //---------- NUEVO -------------
+  @Prop({ default: new Date().getFullYear().toString() })
+  year: string;
 
   @Prop({
     type: [

@@ -3,11 +3,13 @@ import {
   IsBoolean,
   IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
+  Min,
   MinLength,
 } from 'class-validator';
 
-export class DocumentsFilter {
+export class FilterDocumentsAll {
   @ApiProperty({
     example: 'DOC-0000020-2023',
     description: 'search document by number document',
@@ -183,6 +185,15 @@ export class DocumentsFilter {
   @IsString()
   @MinLength(2)
   year: string;
-}
 
-export class TypeDocumentGetFilterDto {}
+  @IsOptional()
+  @IsPositive()
+  @IsNumber()
+  @Min(1)
+  limit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  page?: number;
+}

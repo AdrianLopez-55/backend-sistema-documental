@@ -14,7 +14,7 @@ export class CreateDocumentDTO {
 
   @ApiProperty({ example: 'Licencia' })
   @IsString()
-  documentationType: string;
+  documentTypeName: string;
 
   @ApiProperty({
     example: 'contract document registration for new staff. It is on revision',

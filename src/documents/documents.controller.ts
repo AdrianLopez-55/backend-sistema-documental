@@ -53,6 +53,7 @@ import { EmailService } from 'src/email/email.service';
 import { UnitysDto } from './dto/sendUnitysWithoutWorkflow.dto';
 import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
 import * as fs from 'fs';
+import { FilterDocumentsAll } from './dto/filterDocumentsAll';
 
 @ApiTags('Documents')
 @UseGuards(RolesGuard)
@@ -411,22 +412,49 @@ export class DocumentsController {
     example: 'true',
     required: false,
   })
+  @ApiQuery({
+    name: 'startDate',
+    type: Date,
+    required: false,
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: Date,
+    required: false,
+  })
+  @ApiQuery({
+    name: 'startDateRecived',
+    type: Date,
+    required: false,
+  })
+  @ApiQuery({
+    name: 'endDateRecived',
+    type: Date,
+    required: false,
+  })
   @Get('get-documents-lista-todo')
   async getDocuments(
     @Req() req,
     @Query() paginationDto: PaginationDto,
     @Query('view') view: string,
     @Query('withWorkflow') withWorkflow: string,
-    @Query() filter: DocumentsFilter,
+    @Query() filterAll: FilterDocumentsAll,
+    @Query('startDate') startDate: Date,
+    @Query('endDate') endDate: Date,
+    @Query('startDateRecived') startDateRecived: Date,
+    @Query('endDateRecived') endDateRecived: Date,
   ) {
     const userId = req.user;
     console.log('valor vista', view);
+    const dateRange = { startDate, endDate };
+    const dateRangeRecived = { startDateRecived, endDateRecived };
     return await this.documentsService.obtainDocuments(
       userId,
       view,
       withWorkflow,
-      paginationDto,
-      filter,
+      filterAll,
+      dateRange,
+      dateRangeRecived,
     );
   }
 

@@ -5,7 +5,8 @@ import { Model } from 'mongoose';
 import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
 import { PaginationDto } from 'src/common/pagination.dto';
-import { DocumentsFilter } from './dto/documents-filter.dto';
+// import { DocumentsFilter } from './dto/documents-dto';
+import { FilterDocumentsAll } from './dto/filterDocumentsAll';
 
 @Injectable()
 export class GetDocumentsService {
@@ -22,83 +23,105 @@ export class GetDocumentsService {
     userId: string,
     view: string,
     withWorkflow: string,
-    paginationDto: PaginationDto,
-    filter: DocumentsFilter,
+    filterAll: FilterDocumentsAll,
+    dateRange: { startDate: Date; endDate: Date },
+    dateRangeRecived: { startDateRecived: Date; endDateRecived: Date },
   ) {
-    const { limit = this.defaultLimit, page = 1 } = paginationDto;
-    const offset = (page - 1) * limit;
-    let showDocument = [];
-    const documents = await this.documentModel.find().exec();
+    const {
+      numberDocument,
+      active,
+      description,
+      descriptionWorkflow,
+      nombre,
+      oficinaActual,
+      stateDocumentUserSend,
+      title,
+      typeName,
+      userDigitalSignature,
+      year,
+      limit = this.defaultLimit,
+      page = 1,
+    } = filterAll;
+
     if (view === undefined) {
       let query = this.documentModel.find({ userId: userId });
 
-      if (filter.numberDocument) {
-        query = query.where(
-          'numberDocument',
-          new RegExp(filter.numberDocument, 'i'),
-        );
+      if (numberDocument) {
+        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
       }
 
-      if (filter.userId) {
-        query = query.where('userId', new RegExp(filter.userId, 'i'));
+      if (userId) {
+        query = query.where('userId', new RegExp(userId, 'i'));
       }
-      if (filter.title) {
-        query = query.where('title', new RegExp(filter.title, 'i'));
+      if (title) {
+        query = query.where('title', new RegExp(title, 'i'));
       }
-      if (filter.typeName) {
+      if (typeName) {
         query['documentationType'] = {
-          $elemMatch: { documentationType: filter.typeName },
+          $elemMatch: { documentationType: typeName },
         };
       }
-      if (filter.stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+      if (stateDocumentUserSend) {
+        query['stateDocumentUserSend'] = stateDocumentUserSend;
       }
-      if (filter.nombre) {
+      if (nombre) {
         query['workflow'] = {
-          $elemMatch: { nombre: filter.nombre },
+          $elemMatch: { nombre: nombre },
         };
       }
-      if (filter.descriptionWorkflow) {
+      if (descriptionWorkflow) {
         query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
         };
       }
-      if (filter.oficinaActual) {
+      if (oficinaActual) {
         query['workflow'] = {
-          $elemMatch: { oficinaActual: filter.oficinaActual },
+          $elemMatch: { oficinaActual: oficinaActual },
         };
       }
-      if (filter.description) {
-        query = query.where('userId', new RegExp(filter.description, 'i'));
+      if (description) {
+        query = query.where('userId', new RegExp(description, 'i'));
       }
-      if (filter.active) {
-        // query['active'] = filter.active;
-        query = query.where('active', filter.active);
+      if (active) {
+        // query['active'] = active;
+        query = query.where('active', active);
       }
 
-      if (filter.userDigitalSignature) {
-        query['digitalSignatureDocument'] = {
-          $elemMatch: { userDigitalSignature: filter.userDigitalSignature },
-        };
-      }
-
-      if (filter.userDigitalSignature) {
+      if (userDigitalSignature) {
         query = query.where(
           'digitalSignatureDocument.userDigitalSignature',
-          new RegExp(filter.userDigitalSignature, 'i'),
+          userId,
         );
       }
+
+      if (dateRange.startDate && dateRange.endDate) {
+        query = query.where('createdAt', {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        });
+      }
+
+      //--filtrar documentos recividos
+      if (
+        dateRangeRecived.startDateRecived &&
+        dateRangeRecived.endDateRecived
+      ) {
+        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        query = query.elemMatch('userReceivedDocument', {
+          dateRecived: {
+            $gte: dateRangeRecived.startDateRecived,
+            $lte: dateRangeRecived.endDateRecived,
+          },
+        });
+      }
+
+      const offset = (page - 1) * limit;
 
       const filteredDocuments = await this.documentModel
         .find(query)
         .limit(limit)
-        .skip(offset);
-
-      filteredDocuments.sort((a, b) => {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      });
+        .skip(offset)
+        .sort({ createdAt: -1 });
 
       const total = await this.documentModel.countDocuments(query).exec();
       return {
@@ -113,60 +136,97 @@ export class GetDocumentsService {
           'userReceivedDocument.observado': false,
           // workflow: { $ne: null },
         });
+        console.log('esto es user id', userId);
 
-        if (filter.numberDocument) {
+        if (numberDocument) {
           query = query.where(
             'numberDocument',
-            new RegExp(filter.numberDocument, 'i'),
+            new RegExp(numberDocument, 'i'),
           );
         }
-        if (filter.userId) {
-          query = query.where('userId', new RegExp(filter.userId, 'i'));
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
         }
-        if (filter.title) {
-          query = query.where('title', new RegExp(filter.title, 'i'));
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
         }
-        if (filter.typeName) {
+        if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: filter.typeName },
+            $elemMatch: { documentationType: typeName },
           };
         }
-        if (filter.stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
-        if (filter.nombre) {
+        if (nombre) {
           query['workflow'] = {
-            $elemMatch: { nombre: filter.nombre },
+            $elemMatch: { nombre: nombre },
           };
         }
-        if (filter.descriptionWorkflow) {
+        if (descriptionWorkflow) {
           query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
           };
         }
-        if (filter.oficinaActual) {
+        if (oficinaActual) {
           query['workflow'] = {
-            $elemMatch: { oficinaActual: filter.oficinaActual },
+            $elemMatch: { oficinaActual: oficinaActual },
           };
         }
-        if (filter.description) {
-          query = query.where('userId', new RegExp(filter.description, 'i'));
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (filter.active) {
-          // query['active'] = filter.active;
-          query = query.where('active', filter.active);
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
         }
 
+        if (userDigitalSignature) {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
+
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        // const documents = await this.documentModel
+        //   .find({ active: true })
+        //   .exec();
+
+        // const filteredDocuments = documents.filter((document) => {
+        //   return document.userReceivedDocument.some((entry) => {
+        //     return entry.idOfUser === userId;
+        //   });
+        // });
+
+        const offset = (page - 1) * limit;
         const filteredDocuments = await this.documentModel
           .find(query)
           .limit(limit)
-          .skip(offset);
+          .skip(offset)
+          .sort({ createdAt: -1 });
 
-        filteredDocuments.sort((a, b) => {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+        console.log('filteredDocuments', filteredDocuments);
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -177,72 +237,91 @@ export class GetDocumentsService {
         };
       }
       if (withWorkflow === 'true') {
-        // const results = await Promise.all([
-        //   this.getRecievedDocumentsWithWorkflow(userId),
-        // ]);
-        // const validResults = results.filter((result) => result.length > 0);
-        // showDocument = [].concat(...validResults);
         let query = this.documentModel.find({
           'userReceivedDocument.idOfUser': userId,
           workflow: { $ne: null },
         });
-        if (filter.numberDocument) {
+        if (numberDocument) {
           query = query.where(
             'numberDocument',
-            new RegExp(filter.numberDocument, 'i'),
+            new RegExp(numberDocument, 'i'),
           );
         }
-        if (filter.userId) {
-          query = query.where('userId', new RegExp(filter.userId, 'i'));
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
         }
-        if (filter.title) {
-          query = query.where('title', new RegExp(filter.title, 'i'));
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
         }
-        if (filter.typeName) {
+        if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: filter.typeName },
+            $elemMatch: { documentationType: typeName },
           };
         }
-        if (filter.stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
-        if (filter.nombre) {
+        if (nombre) {
           query['workflow'] = {
-            $elemMatch: { nombre: filter.nombre },
+            $elemMatch: { nombre: nombre },
           };
         }
-        if (filter.descriptionWorkflow) {
+        if (descriptionWorkflow) {
           query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
           };
         }
-        if (filter.oficinaActual) {
+        if (oficinaActual) {
           query['workflow'] = {
-            $elemMatch: { oficinaActual: filter.oficinaActual },
+            $elemMatch: { oficinaActual: oficinaActual },
           };
         }
-        if (filter.description) {
-          query = query.where('userId', new RegExp(filter.description, 'i'));
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (filter.active) {
-          // query['active'] = filter.active;
-          query = query.where('active', filter.active);
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
         }
-        if (filter.userDigitalSignature) {
+        if (userDigitalSignature) {
           query['digitalSignatureDocument.userDigitalSignature'] =
-            filter.userDigitalSignature;
+            userDigitalSignature;
         }
+
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        const offset = (page - 1) * limit;
 
         const filteredDocuments = await this.documentModel
           .find(query)
           .limit(limit)
-          .skip(offset);
+          .skip(offset)
+          .sort({ createdAt: -1 });
 
-        filteredDocuments.sort((a, b) => {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+        // filteredDocuments.sort((a, b) => {
+        //   return (
+        //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        //   );
+        // });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -253,68 +332,94 @@ export class GetDocumentsService {
         };
       }
       if (withWorkflow === 'false') {
-        // const results = await Promise.all([
-        //   this.getRecievedDocumentsMultiUnitys(userId),
-        // ]);
-        // const validResults = results.filter((result) => result.length > 0);
-        // showDocument = [].concat(...validResults);
         let query = this.documentModel.find({
           'userReceivedDocument.idOfUser': userId,
           workflow: null,
         });
-        if (filter.numberDocument) {
+        if (numberDocument) {
           query = query.where(
             'numberDocument',
-            new RegExp(filter.numberDocument, 'i'),
+            new RegExp(numberDocument, 'i'),
           );
         }
-        if (filter.userId) {
-          query = query.where('userId', new RegExp(filter.userId, 'i'));
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
         }
-        if (filter.title) {
-          query = query.where('title', new RegExp(filter.title, 'i'));
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
         }
-        if (filter.typeName) {
+        if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: filter.typeName },
+            $elemMatch: { documentationType: typeName },
           };
         }
-        if (filter.stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
-        if (filter.nombre) {
+        if (nombre) {
           query['workflow'] = {
-            $elemMatch: { nombre: filter.nombre },
+            $elemMatch: { nombre: nombre },
           };
         }
-        if (filter.descriptionWorkflow) {
+        if (descriptionWorkflow) {
           query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
           };
         }
-        if (filter.oficinaActual) {
+        if (oficinaActual) {
           query['workflow'] = {
-            $elemMatch: { oficinaActual: filter.oficinaActual },
+            $elemMatch: { oficinaActual: oficinaActual },
           };
         }
-        if (filter.description) {
-          query = query.where('userId', new RegExp(filter.description, 'i'));
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (filter.active) {
-          // query['active'] = filter.active;
-          query = query.where('active', filter.active);
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
         }
+
+        if (userDigitalSignature) {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        const offset = (page - 1) * limit;
 
         const filteredDocuments = await this.documentModel
           .find(query)
           .limit(limit)
-          .skip(offset);
+          .skip(offset)
+          .sort({ createdAt: -1 });
 
-        filteredDocuments.sort((a, b) => {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+        // filteredDocuments.sort((a, b) => {
+        //   return (
+        //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        //   );
+        // });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -324,70 +429,86 @@ export class GetDocumentsService {
           totalPages: Math.ceil(total / limit),
         };
       }
-      // const results = await Promise.all([
-      //   this.getRecievedDocumentsWithWorkflow(userId),
-      //   this.getRecievedDocumentsMultiUnitys(userId),
-      // ]);
-      // const validResults = results.filter((result) => result.length > 0);
-      // showDocument = [].concat(...validResults);
     } else if (view === 'REVISADOS') {
       let query = this.documentModel.find({
         'userReceivedDocument.stateDocumentUser': 'REVISADO',
         userId: userId,
       });
-      if (filter.numberDocument) {
+      if (numberDocument) {
+        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
+      }
+      if (userId) {
+        query = query.where('userId', new RegExp(userId, 'i'));
+      }
+      if (title) {
+        query = query.where('title', new RegExp(title, 'i'));
+      }
+      if (typeName) {
+        query['documentationType'] = {
+          $elemMatch: { documentationType: typeName },
+        };
+      }
+      if (stateDocumentUserSend) {
+        query['stateDocumentUserSend'] = stateDocumentUserSend;
+      }
+      if (nombre) {
+        query['workflow'] = {
+          $elemMatch: { nombre: nombre },
+        };
+      }
+      if (descriptionWorkflow) {
+        query['workflow'] = {
+          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
+        };
+      }
+      if (oficinaActual) {
+        query['workflow'] = {
+          $elemMatch: { oficinaActual: oficinaActual },
+        };
+      }
+      if (description) {
+        query = query.where('userId', new RegExp(description, 'i'));
+      }
+      if (active) {
+        // query['active'] = active;
+        query = query.where('active', active);
+      }
+
+      if (userDigitalSignature) {
         query = query.where(
-          'numberDocument',
-          new RegExp(filter.numberDocument, 'i'),
+          'digitalSignatureDocument.userDigitalSignature',
+          userId,
         );
       }
-      if (filter.userId) {
-        query = query.where('userId', new RegExp(filter.userId, 'i'));
+
+      if (dateRange.startDate && dateRange.endDate) {
+        query = query.where('createdAt', {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        });
       }
-      if (filter.title) {
-        query = query.where('title', new RegExp(filter.title, 'i'));
+
+      //--filtrar documentos recividos
+      if (
+        dateRangeRecived.startDateRecived &&
+        dateRangeRecived.endDateRecived
+      ) {
+        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        query = query.elemMatch('userReceivedDocument', {
+          dateRecived: {
+            $gte: dateRangeRecived.startDateRecived,
+            $lte: dateRangeRecived.endDateRecived,
+          },
+        });
       }
-      if (filter.typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: filter.typeName },
-        };
-      }
-      if (filter.stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
-      }
-      if (filter.nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: filter.nombre },
-        };
-      }
-      if (filter.descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
-        };
-      }
-      if (filter.oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: filter.oficinaActual },
-        };
-      }
-      if (filter.description) {
-        query = query.where('userId', new RegExp(filter.description, 'i'));
-      }
-      if (filter.active) {
-        // query['active'] = filter.active;
-        query = query.where('active', filter.active);
-      }
+
+      const offset = (page - 1) * limit;
 
       const filteredDocuments = await this.documentModel
         .find(query)
         .limit(limit)
-        .skip(offset);
-
-      filteredDocuments.sort((a, b) => {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      });
+        .skip(offset)
+        .sort({ createdAt: -1 });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -423,59 +544,89 @@ export class GetDocumentsService {
           ],
         });
 
-        if (filter.numberDocument) {
+        if (numberDocument) {
           query = query.where(
             'numberDocument',
-            new RegExp(filter.numberDocument, 'i'),
+            new RegExp(numberDocument, 'i'),
           );
         }
-        if (filter.userId) {
-          query = query.where('userId', new RegExp(filter.userId, 'i'));
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
         }
-        if (filter.title) {
-          query = query.where('title', new RegExp(filter.title, 'i'));
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
         }
-        if (filter.typeName) {
+        if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: filter.typeName },
+            $elemMatch: { documentationType: typeName },
           };
         }
-        if (filter.stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
-        if (filter.nombre) {
+        if (nombre) {
           query['workflow'] = {
-            $elemMatch: { nombre: filter.nombre },
+            $elemMatch: { nombre: nombre },
           };
         }
-        if (filter.descriptionWorkflow) {
+        if (descriptionWorkflow) {
           query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
           };
         }
-        if (filter.oficinaActual) {
+        if (oficinaActual) {
           query['workflow'] = {
-            $elemMatch: { oficinaActual: filter.oficinaActual },
+            $elemMatch: { oficinaActual: oficinaActual },
           };
         }
-        if (filter.description) {
-          query = query.where('userId', new RegExp(filter.description, 'i'));
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (filter.active) {
-          // query['active'] = filter.active;
-          query = query.where('active', filter.active);
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
         }
+
+        if (userDigitalSignature) {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        const offset = (page - 1) * limit;
 
         const filteredDocuments = await this.documentModel
           .find(query)
           .limit(limit)
-          .skip(offset);
+          .skip(offset)
+          .sort({ createdAt: -1 });
 
-        filteredDocuments.sort((a, b) => {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+        // filteredDocuments.sort((a, b) => {
+        //   return (
+        //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        //   );
+        // });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -484,75 +635,90 @@ export class GetDocumentsService {
           total: total,
           totalPages: Math.ceil(total / limit),
         };
-
-        // const results = await Promise.all([
-        //   this.getAllDocumentsSentWithoutWorkflow(userId),
-        //   this.getAllDocumentSent(userId),
-        // ]);
-        // const validResults = results.filter((result) => result.length > 0);
-        // showDocument = [].concat(...validResults);
       }
       if (withWorkflow && withWorkflow === 'true') {
-        // const results = await Promise.all([this.getAllDocumentSent(userId)]);
-        // const validResults = results.filter((result) => result.length > 0);
-        // showDocument = [].concat(...validResults);
         let query = this.documentModel.find({
           userId: userId,
           stateDocumentUserSend: 'INICIADO',
         });
-        if (filter.numberDocument) {
+        if (numberDocument) {
           query = query.where(
             'numberDocument',
-            new RegExp(filter.numberDocument, 'i'),
+            new RegExp(numberDocument, 'i'),
           );
         }
-        if (filter.userId) {
-          query = query.where('userId', new RegExp(filter.userId, 'i'));
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
         }
-        if (filter.title) {
-          query = query.where('title', new RegExp(filter.title, 'i'));
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
         }
-        if (filter.typeName) {
+        if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: filter.typeName },
+            $elemMatch: { documentationType: typeName },
           };
         }
-        if (filter.stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
-        if (filter.nombre) {
+        if (nombre) {
           query['workflow'] = {
-            $elemMatch: { nombre: filter.nombre },
+            $elemMatch: { nombre: nombre },
           };
         }
-        if (filter.descriptionWorkflow) {
+        if (descriptionWorkflow) {
           query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
           };
         }
-        if (filter.oficinaActual) {
+        if (oficinaActual) {
           query['workflow'] = {
-            $elemMatch: { oficinaActual: filter.oficinaActual },
+            $elemMatch: { oficinaActual: oficinaActual },
           };
         }
-        if (filter.description) {
-          query = query.where('userId', new RegExp(filter.description, 'i'));
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (filter.active) {
-          // query['active'] = filter.active;
-          query = query.where('active', filter.active);
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
         }
+
+        if (userDigitalSignature) {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
+
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        const offset = (page - 1) * limit;
 
         const filteredDocuments = await this.documentModel
           .find(query)
           .limit(limit)
-          .skip(offset);
-
-        filteredDocuments.sort((a, b) => {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+          .skip(offset)
+          .sort({ createdAt: -1 });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -563,68 +729,88 @@ export class GetDocumentsService {
         };
       }
       if (withWorkflow && withWorkflow === 'false') {
-        // const results = await Promise.all([
-        //   this.getAllDocumentsSentWithoutWorkflow(userId),
-        // ]);
-        // const validResults = results.filter((result) => result.length > 0);
-        // showDocument = [].concat(...validResults);
         let query = this.documentModel.find({
           userId: userId,
           stateDocumentUserSend: 'ENVIADO DIRECTO',
         });
-        if (filter.numberDocument) {
+        if (numberDocument) {
           query = query.where(
             'numberDocument',
-            new RegExp(filter.numberDocument, 'i'),
+            new RegExp(numberDocument, 'i'),
           );
         }
-        if (filter.userId) {
-          query = query.where('userId', new RegExp(filter.userId, 'i'));
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
         }
-        if (filter.title) {
-          query = query.where('title', new RegExp(filter.title, 'i'));
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
         }
-        if (filter.typeName) {
+        if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: filter.typeName },
+            $elemMatch: { documentationType: typeName },
           };
         }
-        if (filter.stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
-        if (filter.nombre) {
+        if (nombre) {
           query['workflow'] = {
-            $elemMatch: { nombre: filter.nombre },
+            $elemMatch: { nombre: nombre },
           };
         }
-        if (filter.descriptionWorkflow) {
+        if (descriptionWorkflow) {
           query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
           };
         }
-        if (filter.oficinaActual) {
+        if (oficinaActual) {
           query['workflow'] = {
-            $elemMatch: { oficinaActual: filter.oficinaActual },
+            $elemMatch: { oficinaActual: oficinaActual },
           };
         }
-        if (filter.description) {
-          query = query.where('userId', new RegExp(filter.description, 'i'));
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (filter.active) {
-          // query['active'] = filter.active;
-          query = query.where('active', filter.active);
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
         }
+
+        if (userDigitalSignature) {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
+
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        const offset = (page - 1) * limit;
 
         const filteredDocuments = await this.documentModel
           .find(query)
           .limit(limit)
-          .skip(offset);
-
-        filteredDocuments.sort((a, b) => {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+          .skip(offset)
+          .sort({ createdAt: -1 });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -638,59 +824,81 @@ export class GetDocumentsService {
       let query = this.documentModel.find({
         'userReceivedDocument.stateDocumentUser': 'CONCLUIDO',
       });
-      if (filter.numberDocument) {
+      if (numberDocument) {
+        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
+      }
+      if (userId) {
+        query = query.where('userId', new RegExp(userId, 'i'));
+      }
+      if (title) {
+        query = query.where('title', new RegExp(title, 'i'));
+      }
+      if (typeName) {
+        query['documentationType'] = {
+          $elemMatch: { documentationType: typeName },
+        };
+      }
+      if (stateDocumentUserSend) {
+        query['stateDocumentUserSend'] = stateDocumentUserSend;
+      }
+      if (nombre) {
+        query['workflow'] = {
+          $elemMatch: { nombre: nombre },
+        };
+      }
+      if (descriptionWorkflow) {
+        query['workflow'] = {
+          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
+        };
+      }
+      if (oficinaActual) {
+        query['workflow'] = {
+          $elemMatch: { oficinaActual: oficinaActual },
+        };
+      }
+      if (description) {
+        query = query.where('userId', new RegExp(description, 'i'));
+      }
+      if (active) {
+        // query['active'] = active;
+        query = query.where('active', active);
+      }
+
+      if (userDigitalSignature) {
         query = query.where(
-          'numberDocument',
-          new RegExp(filter.numberDocument, 'i'),
+          'digitalSignatureDocument.userDigitalSignature',
+          userId,
         );
       }
-      if (filter.userId) {
-        query = query.where('userId', new RegExp(filter.userId, 'i'));
+
+      if (dateRange.startDate && dateRange.endDate) {
+        query = query.where('createdAt', {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        });
       }
-      if (filter.title) {
-        query = query.where('title', new RegExp(filter.title, 'i'));
+
+      //--filtrar documentos recividos
+      if (
+        dateRangeRecived.startDateRecived &&
+        dateRangeRecived.endDateRecived
+      ) {
+        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        query = query.elemMatch('userReceivedDocument', {
+          dateRecived: {
+            $gte: dateRangeRecived.startDateRecived,
+            $lte: dateRangeRecived.endDateRecived,
+          },
+        });
       }
-      if (filter.typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: filter.typeName },
-        };
-      }
-      if (filter.stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
-      }
-      if (filter.nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: filter.nombre },
-        };
-      }
-      if (filter.descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
-        };
-      }
-      if (filter.oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: filter.oficinaActual },
-        };
-      }
-      if (filter.description) {
-        query = query.where('userId', new RegExp(filter.description, 'i'));
-      }
-      if (filter.active) {
-        // query['active'] = filter.active;
-        query = query.where('active', filter.active);
-      }
+
+      const offset = (page - 1) * limit;
 
       const filteredDocuments = await this.documentModel
         .find(query)
         .limit(limit)
-        .skip(offset);
-
-      filteredDocuments.sort((a, b) => {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      });
+        .skip(offset)
+        .sort({ createdAt: -1 });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -699,70 +907,85 @@ export class GetDocumentsService {
         total: total,
         totalPages: Math.ceil(total / limit),
       };
-
-      // const results = await Promise.all([
-      //   this.getAllDocumentsCompleted(userId),
-      //   this.getDocumentsMarkComplete(userId),
-      // ]);
-      // const validResults = results.filter((result) => result.length > 0);
-      // showDocument = [].concat(...validResults);
     } else if (view === 'OBSERVADO') {
       let query = this.documentModel.find({
         'userReceivedDocument.stateDocumentUser': 'OBSERVADO',
       });
-      if (filter.numberDocument) {
+      if (numberDocument) {
+        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
+      }
+      if (userId) {
+        query = query.where('userId', new RegExp(userId, 'i'));
+      }
+      if (title) {
+        query = query.where('title', new RegExp(title, 'i'));
+      }
+      if (typeName) {
+        query['documentationType'] = {
+          $elemMatch: { documentationType: typeName },
+        };
+      }
+      if (stateDocumentUserSend) {
+        query['stateDocumentUserSend'] = stateDocumentUserSend;
+      }
+      if (nombre) {
+        query['workflow'] = {
+          $elemMatch: { nombre: nombre },
+        };
+      }
+      if (descriptionWorkflow) {
+        query['workflow'] = {
+          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
+        };
+      }
+      if (oficinaActual) {
+        query['workflow'] = {
+          $elemMatch: { oficinaActual: oficinaActual },
+        };
+      }
+      if (description) {
+        query = query.where('userId', new RegExp(description, 'i'));
+      }
+      if (active) {
+        // query['active'] = active;
+        query = query.where('active', active);
+      }
+
+      if (userDigitalSignature) {
         query = query.where(
-          'numberDocument',
-          new RegExp(filter.numberDocument, 'i'),
+          'digitalSignatureDocument.userDigitalSignature',
+          userId,
         );
       }
-      if (filter.userId) {
-        query = query.where('userId', new RegExp(filter.userId, 'i'));
+
+      if (dateRange.startDate && dateRange.endDate) {
+        query = query.where('createdAt', {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        });
       }
-      if (filter.title) {
-        query = query.where('title', new RegExp(filter.title, 'i'));
+
+      //--filtrar documentos recividos
+      if (
+        dateRangeRecived.startDateRecived &&
+        dateRangeRecived.endDateRecived
+      ) {
+        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        query = query.elemMatch('userReceivedDocument', {
+          dateRecived: {
+            $gte: dateRangeRecived.startDateRecived,
+            $lte: dateRangeRecived.endDateRecived,
+          },
+        });
       }
-      if (filter.typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: filter.typeName },
-        };
-      }
-      if (filter.stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
-      }
-      if (filter.nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: filter.nombre },
-        };
-      }
-      if (filter.descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
-        };
-      }
-      if (filter.oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: filter.oficinaActual },
-        };
-      }
-      if (filter.description) {
-        query = query.where('userId', new RegExp(filter.description, 'i'));
-      }
-      if (filter.active) {
-        // query['active'] = filter.active;
-        query = query.where('active', filter.active);
-      }
+
+      const offset = (page - 1) * limit;
 
       const filteredDocuments = await this.documentModel
         .find(query)
         .limit(limit)
-        .skip(offset);
-
-      filteredDocuments.sort((a, b) => {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      });
+        .skip(offset)
+        .sort({ createdAt: -1 });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -771,146 +994,181 @@ export class GetDocumentsService {
         total: total,
         totalPages: Math.ceil(total / limit),
       };
-
-      // const results = await Promise.all([
-      //   this.getDocumentsByUserIdAndObservation(userId),
-      // ]);
-      // const validResults = results.filter((result) => result.length > 0);
-      // showDocument = [].concat(...validResults);
     } else if (view === 'EN ESPERA') {
-      // const results = await Promise.all([
-      //   await this.getDocumentsOnHold(userId),
-      // ]);
-      // const validResults = results.filter((result) => result.length > 0);
-      // showDocument = [].concat(...validResults);
-      let query = this.documentModel.find({
-        userId: userId,
-        stateDocumentUserSend: 'EN ESPERA',
-      });
-      if (filter.numberDocument) {
-        query = query.where(
-          'numberDocument',
-          new RegExp(filter.numberDocument, 'i'),
-        );
-      }
-      if (filter.userId) {
-        query = query.where('userId', new RegExp(filter.userId, 'i'));
-      }
-      if (filter.title) {
-        query = query.where('title', new RegExp(filter.title, 'i'));
-      }
-      if (filter.typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: filter.typeName },
-        };
-      }
-      if (filter.stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
-      }
-      if (filter.nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: filter.nombre },
-        };
-      }
-      if (filter.descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
-        };
-      }
-      if (filter.oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: filter.oficinaActual },
-        };
-      }
-      if (filter.description) {
-        query = query.where('userId', new RegExp(filter.description, 'i'));
-      }
-      if (filter.active) {
-        // query['active'] = filter.active;
-        query = query.where('active', filter.active);
-      }
+      try {
+        let query = this.documentModel.find({
+          userId: userId,
+          stateDocumentUserSend: 'EN ESPERA',
+        });
+        if (numberDocument) {
+          query = query.where(
+            'numberDocument',
+            new RegExp(numberDocument, 'i'),
+          );
+        }
+        if (userId) {
+          query = query.where('userId', new RegExp(userId, 'i'));
+        }
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
+        }
+        if (typeName) {
+          query['documentationType'] = {
+            $elemMatch: { documentationType: typeName },
+          };
+        }
+        if (stateDocumentUserSend) {
+          query['stateDocumentUserSend'] = stateDocumentUserSend;
+        }
+        if (nombre) {
+          query['workflow'] = {
+            $elemMatch: { nombre: nombre },
+          };
+        }
+        if (descriptionWorkflow) {
+          query['workflow'] = {
+            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
+          };
+        }
+        if (oficinaActual) {
+          query['workflow'] = {
+            $elemMatch: { oficinaActual: oficinaActual },
+          };
+        }
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
+        }
+        if (active) {
+          // query['active'] = active;
+          query = query.where('active', active);
+        }
 
-      const filteredDocuments = await this.documentModel
-        .find(query)
-        .limit(limit)
-        .skip(offset);
+        if (userDigitalSignature) {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
 
-      filteredDocuments.sort((a, b) => {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      });
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
 
-      const total = await this.documentModel.countDocuments(query).exec();
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
 
-      return {
-        data: filteredDocuments,
-        total: total,
-        totalPages: Math.ceil(total / limit),
-      };
+        const offset = (page - 1) * limit;
+
+        const filteredDocuments = await this.documentModel
+          .find(query)
+          .limit(limit)
+          .skip(offset)
+          .sort({ createdAt: -1 });
+
+        const total = await this.documentModel.countDocuments(query).exec();
+
+        return {
+          data: filteredDocuments,
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        };
+      } catch (error) {
+        throw new HttpException(`Ocurio algo: ${error}`, 500);
+      }
     } else if (view === 'ARCHIVADOS') {
-      // const results = await Promise.all([
-      //   await this.findDocumentsArchivedUser(userId),
-      // ]);
-      // const validResults = results.filter((result) => result.length > 0);
-      // showDocument = [].concat(...validResults);
       let query = this.documentModel.find({
         userId: userId,
         stateDocumentUserSend: 'ARCHIVADO',
       });
-      if (filter.numberDocument) {
+      if (numberDocument) {
+        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
+      }
+      if (userId) {
+        query = query.where('userId', new RegExp(userId, 'i'));
+      }
+      if (title) {
+        query = query.where('title', new RegExp(title, 'i'));
+      }
+      if (typeName) {
+        query['documentationType'] = {
+          $elemMatch: { documentationType: typeName },
+        };
+      }
+      if (stateDocumentUserSend) {
+        query['stateDocumentUserSend'] = stateDocumentUserSend;
+      }
+      if (nombre) {
+        query['workflow'] = {
+          $elemMatch: { nombre: nombre },
+        };
+      }
+      if (descriptionWorkflow) {
+        query['workflow'] = {
+          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
+        };
+      }
+      if (oficinaActual) {
+        query['workflow'] = {
+          $elemMatch: { oficinaActual: oficinaActual },
+        };
+      }
+      if (description) {
+        query = query.where('userId', new RegExp(description, 'i'));
+      }
+      if (active) {
+        // query['active'] = active;
+        query = query.where('active', active);
+      }
+
+      if (userDigitalSignature) {
         query = query.where(
-          'numberDocument',
-          new RegExp(filter.numberDocument, 'i'),
+          'digitalSignatureDocument.userDigitalSignature',
+          userId,
         );
       }
-      if (filter.userId) {
-        query = query.where('userId', new RegExp(filter.userId, 'i'));
+
+      if (dateRange.startDate && dateRange.endDate) {
+        query = query.where('createdAt', {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        });
       }
-      if (filter.title) {
-        query = query.where('title', new RegExp(filter.title, 'i'));
+
+      //--filtrar documentos recividos
+      if (
+        dateRangeRecived.startDateRecived &&
+        dateRangeRecived.endDateRecived
+      ) {
+        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        query = query.elemMatch('userReceivedDocument', {
+          dateRecived: {
+            $gte: dateRangeRecived.startDateRecived,
+            $lte: dateRangeRecived.endDateRecived,
+          },
+        });
       }
-      if (filter.typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: filter.typeName },
-        };
-      }
-      if (filter.stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = filter.stateDocumentUserSend;
-      }
-      if (filter.nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: filter.nombre },
-        };
-      }
-      if (filter.descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: filter.descriptionWorkflow },
-        };
-      }
-      if (filter.oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: filter.oficinaActual },
-        };
-      }
-      if (filter.description) {
-        query = query.where('userId', new RegExp(filter.description, 'i'));
-      }
-      if (filter.active) {
-        // query['active'] = filter.active;
-        query = query.where('active', filter.active);
-      }
+
+      const offset = (page - 1) * limit;
 
       const filteredDocuments = await this.documentModel
         .find(query)
         .limit(limit)
-        .skip(offset);
-
-      filteredDocuments.sort((a, b) => {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      });
+        .skip(offset)
+        .sort({ createdAt: -1 });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -920,188 +1178,6 @@ export class GetDocumentsService {
         totalPages: Math.ceil(total / limit),
       };
     }
-
-    // const filteredDocuments = await this.filterResults(showDocument, filter);
-
-    // let filteredDocuments = showDocument;
-    /*
-
-
-    //filtrar los documentos
-    if (filter.numberDocument) {
-      filteredDocuments = filteredDocuments.filter((document) => {
-        return document.numberDocument === filter.numberDocument;
-      });
-    }
-
-    if (filter.userId) {
-      filteredDocuments = filteredDocuments.filter((document) => {
-        return document.userId === filter.userId;
-      });
-    }
-
-    if (filter.title) {
-      const titleSearchRegex = new RegExp(filter.title, 'i');
-      filteredDocuments = filteredDocuments.filter((document) => {
-        return titleSearchRegex.test(document.title);
-      });
-    }
-
-    if (filter.typeName) {
-      const typeNameSearchRegex = new RegExp(filter.typeName, 'i');
-      filteredDocuments = filteredDocuments.filter((document) => {
-        if (document.documentationType) {
-          return typeNameSearchRegex.test(document.documentationType.typeName);
-        }
-      });
-    }
-
-    if (filter.description) {
-      const descriptionSearchRegex = new RegExp(filter.title, 'i');
-      filteredDocuments = filteredDocuments.filter((document) => {
-        if (document.description) {
-          return descriptionSearchRegex.test(document.description);
-        }
-      });
-    }
-
-    if (filter.stateDocumentUserSend) {
-      const stateDocumentUserSendSearchRegex = new RegExp(filter.typeName, 'i');
-      filteredDocuments = filteredDocuments.filter((document) => {
-        if (document.stateDocumentUserSend) {
-          return stateDocumentUserSendSearchRegex.test(
-            document.stateDocumentUserSend,
-          );
-        }
-      });
-    }
-
-    if (filter.nombre) {
-      const nombreSearchRegex = new RegExp(filter.nombre, 'i');
-      filteredDocuments = filteredDocuments.filter((document) => {
-        if (document.workflow && document.workflow.nombre) {
-          return nombreSearchRegex.test(document.workflow.nombre);
-        }
-        // return false;
-      });
-    }
-
-    if (filter.descriptionWorkflow) {
-      const descriptionWorkflowSearchRegex = new RegExp(
-        filter.descriptionWorkflow,
-        'i',
-      );
-      filteredDocuments = filteredDocuments.filter((document) => {
-        if (document.workflow) {
-          return descriptionWorkflowSearchRegex.test(
-            document.workflow.descriptionWorkflow,
-          );
-        }
-      });
-    }
-
-    if (filter.oficinaActual) {
-      const oficinaActualSearchRegex = new RegExp(filter.oficinaActual, 'i');
-      filteredDocuments = filteredDocuments.filter((document) => {
-        if (document.oficinaActual) {
-          return oficinaActualSearchRegex.test(document.oficinaActual);
-        }
-      });
-    }
-
-    */
-
-    // await filteredDocuments.sort((a, b) => {
-    //   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    // });
-
-    //---------------------------------------------
-
-    // const total = showDocument.length;
-    // const paginateDocuments = showDocument.slice(offset, offset + limit);
-    // const totalpages = Math.ceil(total / limit);
-    // return {
-    //   documents: paginateDocuments,
-    //   total,
-    //   totalpages,
-    // };
-  }
-
-  filterResults(results, filter) {
-    return results.filter((document) => {
-      let matchesFilter = true;
-      if (
-        filter.numberDocument &&
-        document.numberDocument !== filter.numberDocument
-      ) {
-        matchesFilter = false;
-      }
-
-      if (filter.userId && document.userId !== filter.userId) {
-        matchesFilter = false;
-      }
-
-      if (filter.title && !new RegExp(filter.title, 'i').test(document.title)) {
-        matchesFilter = false;
-      }
-
-      if (filter.typeName) {
-        if (
-          !document.documentationType ||
-          !new RegExp(filter.typeName, 'i').test(
-            document.documentationType.typeName,
-          )
-        ) {
-          matchesFilter = false;
-        }
-      }
-
-      if (
-        filter.description &&
-        (!document.description ||
-          !new RegExp(filter.description, 'i').test(document.description))
-      ) {
-        matchesFilter = false;
-      }
-
-      if (
-        filter.stateDocumentUserSend &&
-        (!document.stateDocumentUserSend ||
-          !new RegExp(filter.stateDocumentUserSend, 'i').test(
-            document.stateDocumentUserSend,
-          ))
-      ) {
-        matchesFilter = false;
-      }
-
-      if (
-        filter.nombre &&
-        (!document.workflow ||
-          !new RegExp(filter.nombre, 'i').test(document.workflow.nombre))
-      ) {
-        matchesFilter = false;
-      }
-
-      if (
-        filter.descriptionWorkflow &&
-        (!document.workflow ||
-          !new RegExp(filter.descriptionWorkflow, 'i').test(
-            document.workflow.descriptionWorkflow,
-          ))
-      ) {
-        matchesFilter = false;
-      }
-
-      if (
-        filter.oficinaActual &&
-        (!document.oficinaActual ||
-          !new RegExp(filter.oficinaActual, 'i').test(document.oficinaActual))
-      ) {
-        matchesFilter = false;
-      }
-
-      return matchesFilter;
-    });
   }
 
   //-----------------------------------------------------------------

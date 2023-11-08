@@ -9,4 +9,7 @@ export class CreateTemplateDto {
 
   @ApiProperty()
   htmlContent: string;
+
+  @ApiProperty()
+  base64Docx: string;
 }

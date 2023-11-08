@@ -60,10 +60,7 @@ export class RolesGuard implements CanActivate {
       userDataRol = decodedToken.data.roles;
       userPassword = decodedToken.data.password;
       tokenDat = token;
-      // console.log('esto es id del usuario mediante guard');
-      // console.log(userDataId);
-      // console.log('esto es roles id del usuario mediaten guard');
-      // console.log(userDataRol);
+
       request['user'] = userDataId;
       request['userRol'] = userDataRol;
       request['password'] = userPassword;

@@ -46,6 +46,7 @@ import {
   EstadoUbiacionDocument,
 } from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
 import { File, FileDocument } from 'src/file/schema/file.schema';
+import { FilterDocumentsAll } from './dto/filterDocumentsAll';
 
 @Injectable()
 export class DocumentsService {
@@ -814,16 +815,12 @@ export class DocumentsService {
     }
   }
 
-  //-------------------------------------------------------
-  async draftFileView() {}
-  //-------------------------------
-
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
-      const { file, documentationType } = createDocumentDTO;
+      const { file, documentTypeName } = createDocumentDTO;
       const documentationTypeData =
         await this.findDocumentationTypeService.findDocumentationType(
-          documentationType,
+          documentTypeName,
         );
 
       // const documentationTypeData = await this.httpService
@@ -1081,7 +1078,7 @@ export class DocumentsService {
   async update(id: string, updateDocumentDTO: UpdateDocumentDTO) {
     const documentationType =
       await this.findDocumentationTypeService.findDocumentationType(
-        updateDocumentDTO.documentationType,
+        updateDocumentDTO.documentTypeName,
       );
     const { file } = updateDocumentDTO;
 
@@ -1126,16 +1123,18 @@ export class DocumentsService {
     userId: string,
     view: string,
     withWorkflow: string,
-    paginationDto: PaginationDto,
-    filter: DocumentsFilter,
+    filterAll: FilterDocumentsAll,
+    dateRange: { startDate: Date; endDate: Date },
+    dateRangeRecived: { startDateRecived: Date; endDateRecived: Date },
   ) {
     // console.log('entra al servicioooooooooo');
     return await this.getDocumentsService.getDocuments(
       userId,
       view,
       withWorkflow,
-      paginationDto,
-      filter,
+      filterAll,
+      dateRange,
+      dateRangeRecived,
     );
   }
 

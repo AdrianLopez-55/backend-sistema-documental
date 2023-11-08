@@ -35,11 +35,100 @@ export class TemplateService {
     if (findName) {
       throw new HttpException('nombre de template ya en uso', 400);
     }
-
     // DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
     const HTMLtoDOCX = require('html-to-docx');
-    const { nameTemplate, descriptionTemplate, htmlContent } =
+    const { nameTemplate, descriptionTemplate, htmlContent, base64Docx } =
       createTemplateDto;
+
+    if (htmlContent) {
+      if (base64Docx) {
+        throw new HttpException(
+          'solo se pude subir o html o base64, no ambos al mismo tiempo',
+          400,
+        );
+      }
+      //convertir html a docx:
+      const fileBuffer = await HTMLtoDOCX(
+        htmlContent,
+        null,
+        {
+          table: { row: { cantSplit: true } },
+          footer: true,
+          pageNumber: true,
+        },
+        true,
+      );
+
+      //guardar el archivo docx en template
+      const templateDir = path.join(process.cwd(), 'template');
+      const filePath = path.join(
+        templateDir,
+        `${nameTemplate.toUpperCase()}.docx`,
+      );
+      fs.writeFileSync(filePath, fileBuffer);
+
+      //obtener mime del docx
+      // const mimeTypeDocx = mimeTypes.lookup('.docx');
+      const fileExtension = path.extname(filePath).substring(1);
+      const mimeTypeDocx = `application/${fileExtension}`;
+
+      //obtener la base64 de docx
+      const docxBase64 = fileBuffer.toString('base64');
+
+      const fileObj = {
+        mime: mimeTypeDocx,
+        base64: docxBase64,
+      };
+
+      const fileDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: nameTemplate,
+          file: fileObj,
+        })
+        .toPromise();
+
+      // crear el template
+      const newTemplate = new this.templateModel({
+        nameTemplate: nameTemplate,
+        descriptionTemplate: descriptionTemplate,
+        htmlTemplate: htmlContent,
+        idTemplate: fileDocx.data.file._id,
+      });
+
+      await newTemplate.save();
+      return newTemplate;
+    } else {
+      const prefixToCheck: string =
+        'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      if (base64Docx.startsWith(prefixToCheck)) {
+        if (htmlContent) {
+          throw new HttpException(
+            'solo se puede subir o html o base64, no ambos',
+            400,
+          );
+        }
+        const mimeType = base64Docx.split(';')[0].split(':')[1];
+        const base64Data = base64Docx.split(',')[1];
+
+        const fileObj = {
+          mime: mimeType,
+          base64: base64Data,
+        };
+        const response = await this.httpService
+          .post(`${this.apiFilesUploader}/files/upload`, { file: fileObj })
+          .toPromise();
+        const fileRegister = response.data.file._id;
+        // crear el template
+        const newTemplate = new this.templateModel({
+          nameTemplate: nameTemplate,
+          descriptionTemplate: descriptionTemplate,
+          htmlTemplate: '',
+          idTemplate: fileRegister,
+        });
+      } else {
+        throw new HttpException('solo se pueden subir archivos .docx', 400);
+      }
+    }
 
     //--convertir html a pdf usando puppeteer
     // const browser = await puppeteer.launch({
@@ -69,57 +158,6 @@ export class TemplateService {
     //   descriptionTemplate: descriptionTemplate,
     //   idTemplate: filePdf.data.file._id,
     // });
-
-    //convertir html a docx:
-    const fileBuffer = await HTMLtoDOCX(
-      htmlContent,
-      null,
-      {
-        table: { row: { cantSplit: true } },
-        footer: true,
-        pageNumber: true,
-      },
-      true,
-    );
-
-    //guardar el archivo docx en template
-    const templateDir = path.join(process.cwd(), 'template');
-    const filePath = path.join(
-      templateDir,
-      `${nameTemplate.toUpperCase()}.docx`,
-    );
-    fs.writeFileSync(filePath, fileBuffer);
-
-    //obtener mime del docx
-    // const mimeTypeDocx = mimeTypes.lookup('.docx');
-    const fileExtension = path.extname(filePath).substring(1);
-    const mimeTypeDocx = `application/${fileExtension}`;
-
-    //obtener la base64 de docx
-    const docxBase64 = fileBuffer.toString('base64');
-
-    const fileObj = {
-      mime: mimeTypeDocx,
-      base64: docxBase64,
-    };
-
-    const fileDocx = await this.httpService
-      .post(`${this.apiFilesTemplate}/files/upload-template`, {
-        templateName: nameTemplate,
-        file: fileObj,
-      })
-      .toPromise();
-
-    // crear el template
-    const newTemplate = new this.templateModel({
-      nameTemplate: nameTemplate,
-      descriptionTemplate: descriptionTemplate,
-      htmlTemplate: htmlContent,
-      idTemplate: fileDocx.data.file._id,
-    });
-
-    await newTemplate.save();
-    return newTemplate;
   }
 
   async templatePreview(id: string) {

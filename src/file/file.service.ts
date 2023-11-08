@@ -132,7 +132,29 @@ export class FileService {
     const base64s = [];
 
     for (const base64 of sendHtmlFileDto.base64File) {
-      if (base64.startsWith(prefixToCheck)) {
+      if (base64.startsWith('data')) {
+        if (htmlContent) {
+          throw new HttpException(
+            'solo puedes enviar o html o base64, no los dos al mismo tiempo',
+            400,
+          );
+        }
+        const mimeType = base64.split(';')[0].split(':')[1];
+        const base64Data = base64.split(',')[1];
+        const fileObj = {
+          mime: mimeType,
+          base64: base64Data,
+        };
+        const response = await this.uploadFile(fileObj);
+        const fileRegister = this.createFileRegister(response.data.file);
+        const newFile = new this.fileModel({
+          idDocument: null,
+          fileRegister,
+        });
+        await newFile.save();
+
+        return newFile;
+      } else if (base64.startsWith(prefixToCheck)) {
         if (htmlContent) {
           throw new HttpException(
             'solo puedes enviar o html o base64, no los dos al mismo tiempo',
