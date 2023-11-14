@@ -18,6 +18,7 @@ import {
   CredentialUserSchema,
 } from './schemas/credentialUser.schema';
 import { PinUser, PinUserSchema } from './schemas/pinUser.schema';
+import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
 
 @Module({
   imports: [
@@ -32,6 +33,6 @@ import { PinUser, PinUserSchema } from './schemas/pinUser.schema';
     HttpModule,
   ],
   controllers: [DigitalSignatureController],
-  providers: [DigitalSignatureService],
+  providers: [DigitalSignatureService, LoggerInterceptor],
 })
 export class DigitalSignatureModule {}

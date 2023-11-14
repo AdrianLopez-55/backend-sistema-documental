@@ -5,4 +5,10 @@ export class CreateDocumentationTypeDto {
   @ApiProperty()
   @IsString()
   typeName: string;
+
+  @ApiProperty()
+  htmlContent: string;
+
+  @ApiProperty()
+  base64Docx: string;
 }

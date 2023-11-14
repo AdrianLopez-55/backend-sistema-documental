@@ -13,16 +13,16 @@ export class DocumentationType {
   @Prop()
   idTemplateDocType: string;
 
-  @Prop()
-  dataUriTemplate: string;
+  // @Prop()
+  // dataUriTemplate: string;
 
   @Prop({ default: true })
   activeDocumentType: boolean;
 
-  @Prop({ type: Date, default: Date.now(), immutable: true })
+  @Prop({ type: Date, default: () => new Date(), immutable: true })
   createdAt: Date;
 
-  @Prop({ type: Date, default: Date.now() })
+  @Prop({ type: Date, default: () => new Date() })
   updateAt: Date;
 }
 

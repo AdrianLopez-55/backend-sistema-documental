@@ -48,7 +48,7 @@ import {
   DeriveDocumentEmployedDto,
   SendDocumentWithoutWorkflowDto,
 } from './dto/sendDocumentWithoutWorkflow.dto';
-import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
+import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
 import { EmailService } from 'src/email/email.service';
 import { UnitysDto } from './dto/sendUnitysWithoutWorkflow.dto';
 import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
@@ -604,6 +604,11 @@ export class DocumentsController {
     return this.documentsService.showBase64TemplateDoc(id);
   }*/
 
+  @Get('base64Document/:id')
+  async base64Document(@Param('id') id: string) {
+    return await this.documentsService.showBase64TemplateDoc(id);
+  }
+
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   @Get('get-documents-user/:userId')
@@ -623,22 +628,22 @@ export class DocumentsController {
     }
   }
 
-  @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
-  @Get('send-email/:id')
-  async sendEmail(@Param('documentId') documentId: string) {
-    // Lógica para obtener la dirección de correo electrónico del usuario destinatario
-    const userEmail = 'adriplev@gmail.com'; // Debes obtener la dirección de correo electrónico del usuario de alguna manera
+  // @ApiBearerAuth()
+  // @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  // @Get('send-email/:id')
+  // async sendEmail(@Param('documentId') documentId: string) {
+  //   // Lógica para obtener la dirección de correo electrónico del usuario destinatario
+  //   const userEmail = 'adriplev@gmail.com'; // Debes obtener la dirección de correo electrónico del usuario de alguna manera
 
-    // Datos para el correo electrónico
-    const subject = 'Nuevo documento enviado';
-    const text = 'Has recibido un nuevo documento.';
+  //   // Datos para el correo electrónico
+  //   const subject = 'Nuevo documento enviado';
+  //   const text = 'Has recibido un nuevo documento.';
 
-    // Envía el correo electrónico
-    await this.emailService.sendEmail(userEmail, subject, text);
+  //   // Envía el correo electrónico
+  //   await this.emailService.sendEmail(userEmail, subject, text);
 
-    return 'Correo electrónico enviado con éxito';
-  }
+  //   return 'Correo electrónico enviado con éxito';
+  // }
 
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)

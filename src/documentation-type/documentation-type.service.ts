@@ -35,6 +35,7 @@ import { PaginationDto } from 'src/common/pagination.dto';
 @Injectable()
 export class DocumentationTypeService {
   private defaultLimit: number;
+  private readonly apiFilesTemplate = getConfig().api_files_template;
 
   constructor(
     @InjectModel(DocumentationType.name)
@@ -46,8 +47,8 @@ export class DocumentationTypeService {
   async create(
     createDocumentationTypeDto: CreateDocumentationTypeDto,
   ): Promise<DocumentationTypeDocument> {
-    const { typeName } = createDocumentationTypeDto;
-    const typeNameUppercase = typeName.toUpperCase();
+    const { typeName, htmlContent, base64Docx } = createDocumentationTypeDto;
+    // const typeNameUppercase = typeName.toUpperCase();
     const existingdocumentatuoType = await this.documentationTypeModel
       .findOne({ typeName })
       .exec();
@@ -60,129 +61,169 @@ export class DocumentationTypeService {
       );
     }
 
-    //---------------------template -------
-    const fileName = `${typeNameUppercase}_template.docx`;
-    const documentData = {
-      documentationTypeTag: `${typeNameUppercase}`,
-      numberDocumentTag: '{numberDocumentTag}',
-      title: '{title}',
-      descriptionTag: '{descriptionTag}',
-      createdAtTag: '{createdAt}',
-    };
-
-    const titleParagraph = new Paragraph({
-      text: documentData.documentationTypeTag,
-      alignment: AlignmentType.CENTER,
-      heading: HeadingLevel.HEADING_1,
-    });
-    const separatorLineParagraph = new Paragraph({
-      text: '---------------------------------------------',
-    });
-    const numberDocumentParagraph = new Paragraph({
-      text: `Número de Documento: ${documentData.numberDocumentTag}`,
-    });
-    const referenceTitleParagraph = new Paragraph({
-      text: `Asunto: ${documentData.title}`,
-    });
-    const dateTitleParagraph = new Paragraph({
-      text: `Fecha: ${documentData.createdAtTag}`,
-    });
-    const titleContenidoParagraph = new Paragraph({
-      text: 'Contenido:',
-    });
-    const descriptionParagraph = new Paragraph({
-      text: `${documentData.descriptionTag}`,
-    });
-
-    const doc = new Document({
-      sections: [
-        {
-          children: [
-            titleParagraph,
-            separatorLineParagraph,
-            numberDocumentParagraph,
-            referenceTitleParagraph,
-            dateTitleParagraph,
-            titleContenidoParagraph,
-            descriptionParagraph,
-          ],
-        },
-      ],
-    });
-
-    const templateDirectory = path.join(process.cwd(), 'template');
-    if (!fs.existsSync(templateDirectory)) {
-      fs.mkdirSync(templateDirectory);
-    }
-    const filePath = path.join(templateDirectory, fileName);
-    const buffer = await Packer.toBuffer(doc);
-    fs.writeFileSync(filePath, buffer);
-
-    const dataUri = await this.fileToDataUri(filePath, fileName);
-    if (!fileName) {
-      throw new HttpException('no hay nombre', 400);
-    }
-    if (!dataUri) {
-      throw new HttpException('no hay id de archivo', 400);
-    }
-
-    const timeToLive = 1 * 60 * 1000;
-    setTimeout(() => {
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          console.log('error al borar archivo', err);
-        } else {
-          console.log('archivo temporal eliminado', filePath);
-        }
-      });
-    }, timeToLive);
-
-    const newDocument = new this.documentationTypeModel({
-      typeName,
-      idTemplateDocType: dataUri._idFile,
-    });
-
-    return await newDocument.save();
-  }
-
-  //-----------------------
-  async findAll() {
-    const findAllDocumetationType = await this.documentationTypeModel
-      .find()
-      .exec();
-    for (const doc of findAllDocumetationType) {
-      if (doc.idTemplateDocType) {
-        const obtainBase64Template = await this.httpService
-          .get(
-            `${getConfig().api_files_uploader}/file/${doc.idTemplateDocType}`,
-          )
-          .toPromise();
-        const dataTemplate =
-          'data:' +
-          obtainBase64Template.data.file.mime +
-          ';base64,' +
-          obtainBase64Template.data.file.base64;
-        doc.dataUriTemplate = dataTemplate;
+    //----DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
+    const HTMLtoDOCX = require('html-to-docx');
+    if (htmlContent) {
+      if (base64Docx) {
+        throw new HttpException(
+          'solo se puede enviar o html o .docx, no ambos',
+          400,
+        );
       }
+      // const fileBuffer = await HTMLtoDOCX(
+      //   htmlContent,
+      //   null,
+      //   {
+      //     table: { row: { cansSplit: true } },
+      //     footer: true,
+      //     pageNumber: true,
+      //   },
+      // );
+      const datatas = (async () => {
+        const fileBuffer = await HTMLtoDOCX(htmlContent, {
+          // table: { row: { cantSplit: true } },
+          // footer: true,
+          // pageNumber: true,
+        });
+        //guardar el archivo docx en template
+        const templateDir = path.join(process.cwd(), 'template');
+        const filePath = path.join(
+          templateDir,
+          `${typeName.toUpperCase()}.docx`,
+        );
+        fs.writeFileSync(filePath, fileBuffer);
+
+        //obtener mime docx
+        const fileExtension = path.extname(filePath).substring(1);
+        const mimeTypeDocx = `@file/${fileExtension}`;
+        // const mimeTypeDocx =
+        //   '@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+        //obtener la base64 de docx
+        const arrayBufferView = new Uint8Array(fileBuffer);
+        const base64 = Buffer.from(arrayBufferView).toString('base64');
+        const docxBase64 = fileBuffer.toString('base64');
+
+        fs.readFile(filePath, (err, data) => {
+          if (err) {
+            console.error('Error al leer el archivo:', err);
+            return;
+          }
+
+          // Convierte los datos a base64
+          const base64Data = data.toString('base64');
+
+          // Ahora base64Data contiene el contenido del archivo .docx en base64
+          console.log('Contenido del archivo en base64:', base64Data);
+        });
+
+        const fileObj = {
+          mime: mimeTypeDocx,
+          base64: docxBase64,
+        };
+
+        const fileDocx = await this.httpService
+          .post(`${this.apiFilesTemplate}/files/upload-template`, {
+            templateName: typeName,
+            file: fileObj,
+          })
+          .toPromise();
+        const timeToLiveFile = 1 * 60 * 1000;
+        setTimeout(() => {
+          fs.unlink(filePath, (err) => {
+            if (err) {
+              console.error('error al eliminar el archivo temporal', err);
+            } else {
+              console.log('archivo temporal eliminado', filePath);
+            }
+          });
+        }, timeToLiveFile);
+
+        //crear el tipo de documento con su template
+        const newTypeDocument = new this.documentationTypeModel({
+          typeName,
+          idTemplateDocType: fileDocx.data.file._id,
+        });
+        return await newTypeDocument.save();
+      })();
+      return datatas;
+    } else {
+      const prefixToCheck: string =
+        'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      if (base64Docx.startsWith(prefixToCheck)) {
+        if (htmlContent) {
+          throw new HttpException(
+            'solo se puede subir o html o base64, no ambos al mismo tiempo',
+            400,
+          );
+        }
+      }
+      const mimeType = base64Docx.split(';')[0].split(':')[1];
+      const base64Data = base64Docx.split(',')[1];
+
+      const fileObj = {
+        mime: mimeType,
+        base64: base64Data,
+      };
+      const fileDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: typeName,
+          file: fileObj,
+        })
+        .toPromise();
+
+      const newTypeDocument = new this.documentationTypeModel({
+        typeName,
+        idTemplateDocType: fileDocx.data.file._id,
+      });
+      return await newTypeDocument.save();
     }
-    return findAllDocumetationType.sort((a, b) =>
-      a.typeName.localeCompare(b.typeName),
-    );
   }
 
-  async findAllPaginate(paginationDto: PaginationDto) {
-    const { limit = this.defaultLimit, page = 1 } = paginationDto;
+  async findAllPaginate(
+    filter: DocumentationTypeFilter,
+    dateRange: { startDate: Date; endDate: Date },
+  ) {
+    const {
+      limit = this.defaultLimit,
+      page = 1,
+      activeDocumentType,
+      idTemplateDocType,
+      typeName,
+    } = filter;
+
+    let query = this.documentationTypeModel.find({ activeDocumentType: true });
+
+    if (typeName) {
+      query = query.where('typeName', new RegExp(typeName, 'i'));
+    }
+
+    if (idTemplateDocType) {
+      query = query.where('idTemplateDocType');
+    }
+
+    if (activeDocumentType) {
+      query = query.where('activeDocumentType');
+    }
+
+    if (dateRange.startDate && dateRange.endDate) {
+      query = query.where('createdAt', {
+        $gte: dateRange.startDate,
+        $lte: dateRange.endDate,
+      });
+    }
     const offset = (page - 1) * limit;
 
-    const documentationTypes = await this.documentationTypeModel
-      .find({ activeDocumentType: true })
+    const filteredDocumentationType = await this.documentationTypeModel
+      .find(query)
       .limit(limit)
-      .skip(offset);
-    for (const documentType of documentationTypes) {
-    }
-    const total = await this.documentationTypeModel.countDocuments().exec();
+      .skip(offset)
+      .sort({ createdAt: -1 });
+    const total = await this.documentationTypeModel
+      .countDocuments(query)
+      .exec();
     return {
-      data: documentationTypes,
+      data: filteredDocumentationType,
       total: total,
       totalPages: Math.ceil(total / limit),
     };
@@ -192,22 +233,6 @@ export class DocumentationTypeService {
     const documentTypeActives = await this.documentationTypeModel
       .find({ activeDocumentType: true })
       .exec();
-
-    for (const doc of documentTypeActives) {
-      if (doc.idTemplateDocType) {
-        const obtainBase64Template = await this.httpService
-          .get(
-            `${getConfig().api_files_uploader}/file/${doc.idTemplateDocType}`,
-          )
-          .toPromise();
-        const dataTemplate =
-          'data:' +
-          obtainBase64Template.data.file.mime +
-          ';base64,' +
-          obtainBase64Template.data.file.base64;
-        doc.dataUriTemplate = dataTemplate;
-      }
-    }
     return documentTypeActives.sort((a, b) =>
       a.typeName.localeCompare(b.typeName),
     );
@@ -229,21 +254,6 @@ export class DocumentationTypeService {
     if (documentatioType.activeDocumentType === false) {
       throw new HttpException('tipo de documento borrado', 400);
     }
-    if (documentatioType.idTemplateDocType) {
-      const obtainBase64Template = await this.httpService
-        .get(
-          `${getConfig().api_files_uploader}/file/${
-            documentatioType.idTemplateDocType
-          }`,
-        )
-        .toPromise();
-      const dataTemplate =
-        'data:' +
-        obtainBase64Template.data.file.mime +
-        ';base64,' +
-        obtainBase64Template.data.file.base64;
-      documentatioType.dataUriTemplate = dataTemplate;
-    }
     return documentatioType;
   }
 
@@ -251,7 +261,9 @@ export class DocumentationTypeService {
     id: string,
     updateDocumentationTypeDto: UpdateDocumentationTypeDto,
   ) {
-    const documentationType = await this.documentationTypeModel.findById(id);
+    const documentationType = await this.documentationTypeModel
+      .findById(id)
+      .exec();
     if (!documentationType) {
       throw new HttpException('no se encontro documento', 400);
     }
@@ -259,7 +271,7 @@ export class DocumentationTypeService {
     if (documentationType.activeDocumentType === false) {
       throw new HttpException('documento borrado', 400);
     }
-    const { typeName } = updateDocumentationTypeDto;
+    const { typeName, htmlContent, base64Docx } = updateDocumentationTypeDto;
 
     const existingdocumentatuoType = await this.documentationTypeModel
       .findOne({ typeName })
@@ -268,95 +280,94 @@ export class DocumentationTypeService {
       throw new HttpException('nombre repetido', 400);
     }
 
-    if (typeName) {
-      const fileName = `${typeName}.docx`;
-      const documentData = {
-        documentationTypeTag: `${typeName}`,
-        numberDocumentTag: '{numberDocumentTag}',
-        title: '{title}',
-        descriptionTag: '{descriptionTag}',
-        createdAtTag: '{createdAt}',
+    //----DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
+    const HTMLtoDOCX = require('html-to-docx');
+    if (htmlContent) {
+      if (base64Docx) {
+        throw new HttpException(
+          'solo se puede enviar o html o .docx, no ambos',
+          400,
+        );
+      }
+      const fileBuffer = await HTMLtoDOCX(
+        htmlContent,
+        null,
+        {
+          table: { row: { cansSplit: true } },
+          footer: true,
+          pageNumber: true,
+        },
+        true,
+      );
+
+      //guardar el archivo docx en template
+      const templateDir = path.join(process.cwd(), 'template');
+      const filePath = path.join(templateDir, `${typeName.toUpperCase()}.docx`);
+      fs.writeFileSync(filePath, fileBuffer);
+
+      //obtener mime docx
+      const fileExtension = path.extname(filePath).substring(1);
+      const mimeTypeDocx = `application/${fileExtension}`;
+
+      //obtener la base64 de docx
+      const docxBase64 = fileBuffer.toString('base64');
+
+      const fileObj = {
+        mime: mimeTypeDocx,
+        base64: docxBase64,
       };
 
-      const titleParagraph = new Paragraph({
-        text: documentData.documentationTypeTag,
-        alignment: AlignmentType.CENTER,
-        heading: HeadingLevel.HEADING_1,
-      });
+      const fileDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: typeName,
+          file: fileObj,
+        })
+        .toPromise();
 
-      const separatorLineParagraph = new Paragraph({
-        text: '---------------------------------------------',
-      });
-
-      const numberDocumentParagraph = new Paragraph({
-        text: `Número de Documento: ${documentData.numberDocumentTag}`,
-      });
-
-      const referenceTitleParagraph = new Paragraph({
-        text: `Asunto: ${documentData.title}`,
-      });
-
-      const dateTitleParagraph = new Paragraph({
-        text: `Fecha: ${documentData.createdAtTag}`,
-      });
-
-      const titleContenidoParagraph = new Paragraph({
-        text: 'Contenido:',
-      });
-
-      const descriptionParagraph = new Paragraph({
-        text: `${documentData.descriptionTag}`,
-      });
-
-      const doc = new Document({
-        sections: [
-          {
-            children: [
-              titleParagraph,
-              separatorLineParagraph,
-              numberDocumentParagraph,
-              referenceTitleParagraph,
-              dateTitleParagraph,
-              titleContenidoParagraph,
-              descriptionParagraph,
-            ],
-          },
-        ],
-      });
-
-      const templateDirectory = path.join(process.cwd(), 'template');
-      if (!fs.existsSync(templateDirectory)) {
-        fs.mkdirSync(templateDirectory);
-      }
-      const filePath = path.join(templateDirectory, fileName);
-      const buffer = await Packer.toBuffer(doc);
-      fs.writeFileSync(filePath, buffer);
-
-      const timeToLive = 1 * 60 * 1000;
+      const timeToLiveFile = 1 * 60 * 1000;
       setTimeout(() => {
         fs.unlink(filePath, (err) => {
           if (err) {
-            console.log('error al borar archivo', err);
+            console.error('error al eliminar el archivo temporal', err);
           } else {
             console.log('archivo temporal eliminado', filePath);
           }
         });
-      }, timeToLive);
+      }, timeToLiveFile);
 
-      const dataUri = await this.fileToDataUri(filePath, fileName);
-      if (!fileName) {
-        throw new HttpException('no hay nombre', 400);
+      //sobreescribir datos de el tipo de documento con su template
+      documentationType.typeName = typeName;
+      documentationType.idTemplateDocType = fileDocx.data.file._id;
+      return await documentationType.save();
+    } else {
+      const prefixToCheck: string =
+        'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      if (base64Docx.startsWith(prefixToCheck)) {
+        if (htmlContent) {
+          throw new HttpException(
+            'solo se puede subir o html o base64, no ambos al mismo tiempo',
+            400,
+          );
+        }
       }
-      if (!dataUri) {
-        throw new HttpException('no hay id de archivo', 400);
-      }
+      const mimeType = base64Docx.split(';')[0].split(':')[1];
+      const base64Data = base64Docx.split(',')[1];
+
+      const fileObj = {
+        mime: mimeType,
+        base64: base64Data,
+      };
+      const fileDocx = await this.httpService
+        .post(`${this.apiFilesTemplate}/files/upload-template`, {
+          templateName: typeName,
+          file: fileObj,
+        })
+        .toPromise();
 
       documentationType.typeName = typeName;
-      documentationType.idTemplateDocType = dataUri._idFile;
+      documentationType.idTemplateDocType = fileDocx.data.file._id;
+      return await documentationType.save();
     }
-
-    await documentationType.save();
-    return documentationType;
   }
 
   async inactiverTypeDocument(id: string, activeDocumentType: boolean) {
@@ -400,12 +411,6 @@ export class DocumentationTypeService {
             }`,
           )
           .toPromise();
-        const dataTemplate =
-          'data:' +
-          obtainBase64Template.data.file.mime +
-          ';base64,' +
-          obtainBase64Template.data.file.base64;
-        documentationType.dataUriTemplate = dataTemplate;
       }
       return documentationType;
     } catch (error) {
@@ -414,58 +419,20 @@ export class DocumentationTypeService {
     }
   }
 
-  async filterParams(
-    filter: DocumentationTypeFilter,
-  ): Promise<DocumentationType[]> {
-    const query = {};
-
-    if (filter.typeName) {
-      query['typeName'] = { $regex: filter.typeName, $options: 'i' };
-    }
-
-    const filteredDocumetationType = await this.documentationTypeModel
-      .find(query)
-      .exec();
-
-    for (const doc of filteredDocumetationType) {
-      if (doc.idTemplateDocType) {
-        const obtainBase64Template = await this.httpService
-          .get(
-            `${getConfig().api_files_uploader}/file/${doc.idTemplateDocType}`,
-          )
-          .toPromise();
-        const dataTemplate =
-          'data:' +
-          obtainBase64Template.data.file.mime +
-          ';base64,' +
-          obtainBase64Template.data.file.base64;
-        doc.dataUriTemplate = dataTemplate;
-      }
-    }
-    return filteredDocumetationType;
-  }
-
-  async fileToDataUri(filePath: string, typeName: string) {
-    const fileData = fs.readFileSync(filePath);
-    const base64Data = fileData.toString('base64');
-    const fileExtension = path.extname(filePath).substring(1);
-    const mimeType = `application/${fileExtension}`;
-
-    const fileObj = {
-      mime: mimeType,
-      base64: base64Data,
-    };
-
-    const response = await this.httpService
-      .post(`${getConfig().api_files_template}/files/upload-template`, {
-        templateName: typeName,
-        file: fileObj,
-      })
+  async getBase64Template(id: string) {
+    const documentType = await this.documentationTypeModel.findById(id).exec();
+    documentType.idTemplateDocType;
+    const fileData = await this.httpService
+      .get(
+        `${getConfig().api_files_template}/file/template/${
+          documentType.idTemplateDocType
+        }`,
+      )
       .toPromise();
-    const { _id } = response.data.file;
-    const fileRegister = {
-      _idFile: _id,
+    return {
+      idTemplate: id,
+      DocumentationTypeName: documentType.typeName,
+      base64Docx: fileData.data.file.base64,
     };
-    return fileRegister;
   }
 }

@@ -1,9 +1,17 @@
-# SOLO PARA PRUEBAS
 version: '3.4'
 
 services:
+  my-nestjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8085:8085
+    depends_on:
+      - mongo
+  
   mongo:
-    container_name: mongo
+    container_name: mongo_v2
     image: 'mongo:4.4'
     environment:
       - MONGO_DATA_DIR=/data/db
@@ -15,29 +23,25 @@ services:
 volumes:
   mongo:
 
-
-
+# SOLO PARA PRUEBAS
 # version: '3.4'
 
 # services:
-#   # app:
-#   #   build:
-#   #     context: .
-#   #     dockerfile: Dockerfile
-#   #   ports:
-#   #     - 8085:8085
-#   #   depends_on:
-#   #     - mongodb-test
-  
-#   mongodb-test:
-#     image: mongo
+#   mongo:
+#     container_name: mongo_v2
+#     image: 'mongo:4.4'
+#     environment:
+#       - MONGO_DATA_DIR=/data/db
 #     ports:
-#       - 27017:27017
+#       - '27017:27017'
 #     volumes:
-#       - mongodb-test:/data/db
+#       - mongo:/data/db
 
 # volumes:
-#   mongodb-test:
+#   mongo:
+
+
+
 
 
 

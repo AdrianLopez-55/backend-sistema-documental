@@ -11,7 +11,7 @@ export class PinUser {
   @Prop({ unique: true })
   hasPin: string;
 
-  @Prop({ default: Date.now() })
+  @Prop({ type: Date, default: () => new Date() })
   createdAt: Date;
 }
 

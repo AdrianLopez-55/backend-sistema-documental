@@ -131,12 +131,7 @@ export class GetDocumentsService {
       };
     } else if (view === 'RECIBIDOS') {
       if (withWorkflow === undefined) {
-        let query = this.documentModel.find({
-          'userReceivedDocument.idOfUser': userId,
-          'userReceivedDocument.observado': false,
-          // workflow: { $ne: null },
-        });
-        console.log('esto es user id', userId);
+        let query = this.documentModel.find();
 
         if (numberDocument) {
           query = query.where(
@@ -200,7 +195,6 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
               $gte: dateRangeRecived.startDateRecived,
@@ -209,32 +203,41 @@ export class GetDocumentsService {
           });
         }
 
-        // const documents = await this.documentModel
-        //   .find({ active: true })
-        //   .exec();
-
-        // const filteredDocuments = documents.filter((document) => {
-        //   return document.userReceivedDocument.some((entry) => {
-        //     return entry.idOfUser === userId;
-        //   });
-        // });
-
         const offset = (page - 1) * limit;
-        const filteredDocuments = await this.documentModel
-          .find(query)
+        // const filteredDocuments = await this.documentModel
+        //   .find(query)
+        //   .limit(limit)
+        //   .skip(offset)
+        //   .sort({ createdAt: -1 });
+
+        const documents = await this.documentModel
+          .find()
+          .limit(limit)
+          .skip(offset);
+        console.log('documents', documents);
+        const filteredDocuments = await query
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
-
+          .sort({ createdAt: -1 })
+          .lean()
+          .exec();
         console.log('filteredDocuments', filteredDocuments);
-
-        const total = await this.documentModel.countDocuments(query).exec();
-
+        const findDocument = await this.functionObtainAndDerivedDocument(
+          documents,
+          userId,
+        );
+        const total = findDocument.length;
         return {
-          data: filteredDocuments,
+          data: findDocument,
           total: total,
           totalPages: Math.ceil(total / limit),
         };
+
+        // return {
+        //   data: filteredDocuments,
+        //   total: total,
+        //   totalPages: Math.ceil(total / limit),
+        // };
       }
       if (withWorkflow === 'true') {
         let query = this.documentModel.find({
@@ -311,11 +314,11 @@ export class GetDocumentsService {
 
         const offset = (page - 1) * limit;
 
-        const filteredDocuments = await this.documentModel
-          .find(query)
-          .limit(limit)
-          .skip(offset)
-          .sort({ createdAt: -1 });
+        // const filteredDocuments = await this.documentModel
+        //   .find(query)
+        //   .limit(limit)
+        //   .skip(offset)
+        //   .sort({ createdAt: -1 });
 
         // filteredDocuments.sort((a, b) => {
         //   return (
@@ -323,7 +326,30 @@ export class GetDocumentsService {
         //   );
         // });
 
-        const total = await this.documentModel.countDocuments(query).exec();
+        const documents = await this.documentModel
+          .find()
+          .limit(limit)
+          .skip(offset);
+        console.log('documents', documents);
+        const filteredDocuments = await query
+          .limit(limit)
+          .skip(offset)
+          .sort({ createdAt: -1 })
+          .lean()
+          .exec();
+        console.log('filteredDocuments', filteredDocuments);
+        const findDocument = await this.functionObtainWithWorkflowDocument(
+          documents,
+          userId,
+        );
+        const total = findDocument.length;
+        return {
+          data: findDocument,
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        };
+
+        // const total = await this.documentModel.countDocuments(query).exec();
 
         return {
           data: filteredDocuments,
@@ -409,11 +435,34 @@ export class GetDocumentsService {
 
         const offset = (page - 1) * limit;
 
-        const filteredDocuments = await this.documentModel
-          .find(query)
+        // const filteredDocuments = await this.documentModel
+        //   .find(query)
+        //   .limit(limit)
+        //   .skip(offset)
+        //   .sort({ createdAt: -1 });
+
+        const documents = await this.documentModel
+          .find()
+          .limit(limit)
+          .skip(offset);
+        console.log('documents', documents);
+        const filteredDocuments = await query
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ createdAt: -1 })
+          .lean()
+          .exec();
+        console.log('filteredDocuments', filteredDocuments);
+        const findDocument = await this.functionObtainWithoutWorkflowDocument(
+          documents,
+          userId,
+        );
+        const total = findDocument.length;
+        return {
+          data: findDocument,
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        };
 
         // filteredDocuments.sort((a, b) => {
         //   return (
@@ -421,13 +470,13 @@ export class GetDocumentsService {
         //   );
         // });
 
-        const total = await this.documentModel.countDocuments(query).exec();
+        // const total = await this.documentModel.countDocuments(query).exec();
 
-        return {
-          data: filteredDocuments,
-          total: total,
-          totalPages: Math.ceil(total / limit),
-        };
+        // return {
+        //   data: filteredDocuments,
+        //   total: total,
+        //   totalPages: Math.ceil(total / limit),
+        // };
       }
     } else if (view === 'REVISADOS') {
       let query = this.documentModel.find({
@@ -1572,23 +1621,8 @@ export class GetDocumentsService {
     userId: string,
   ) {
     let showDocuments = [];
+    console.log('documents', documents);
     for (const document of documents) {
-      // if (document.userId) {
-      //   try {
-      //     const res = await this.httpService
-      //       .get(`${this.apiPersonalGet}/${document.userId}`)
-      //       .toPromise();
-      //     document.userInfo = {
-      //       name: res.data.name,
-      //       lastName: res.data.lastName,
-      //       ci: res.data.ci,
-      //       email: res.data.email,
-      //       unity: res.data.unity,
-      //     };
-      //   } catch (error) {
-      //     document.userId = 'no se encontraron datos del usuario';
-      //   }
-      // }
       const filteredDocumentsUserSome = document.userReceivedDocument.some(
         (entry) => {
           return entry.idOfUser === userId;
@@ -1598,18 +1632,89 @@ export class GetDocumentsService {
         // document.stateDocumetUser = 'RECIBIDO';
         showDocuments.push(document);
       }
-      if (
-        !filteredDocumentsUserSome
-        // document.stateDocumetUser === 'DERIVADO'
-      ) {
-        showDocuments.push(document);
-      }
+      // if (
+      //   !filteredDocumentsUserSome
+      //   // document.stateDocumetUser === 'DERIVADO'
+      // ) {
+      //   showDocuments.push(document);
+      // }
     }
     showDocuments.sort((a, b) => {
       const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
       const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
       return dateB - dateA;
     });
+    console.log('show Documents', showDocuments);
+    return showDocuments;
+  }
+
+  private async functionObtainWithoutWorkflowDocument(
+    documents: Documents[],
+    userId: string,
+  ) {
+    let showDocuments = [];
+    console.log('documents', documents);
+    for (const document of documents) {
+      if (document.workflow === null) {
+        const filteredDocumentsUserSome = document.userReceivedDocument.some(
+          (entry) => {
+            return entry.idOfUser === userId;
+          },
+        );
+        if (filteredDocumentsUserSome) {
+          // document.stateDocumetUser = 'RECIBIDO';
+          showDocuments.push(document);
+        }
+      }
+
+      // if (
+      //   !filteredDocumentsUserSome
+      //   // document.stateDocumetUser === 'DERIVADO'
+      // ) {
+      //   showDocuments.push(document);
+      // }
+    }
+    showDocuments.sort((a, b) => {
+      const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
+      const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
+      return dateB - dateA;
+    });
+    console.log('show Documents', showDocuments);
+    return showDocuments;
+  }
+
+  private async functionObtainWithWorkflowDocument(
+    documents: Documents[],
+    userId: string,
+  ) {
+    let showDocuments = [];
+    console.log('documents', documents);
+    for (const document of documents) {
+      if (document.workflow !== null) {
+        const filteredDocumentsUserSome = document.userReceivedDocument.some(
+          (entry) => {
+            return entry.idOfUser === userId;
+          },
+        );
+        if (filteredDocumentsUserSome) {
+          // document.stateDocumetUser = 'RECIBIDO';
+          showDocuments.push(document);
+        }
+      }
+
+      // if (
+      //   !filteredDocumentsUserSome
+      //   // document.stateDocumetUser === 'DERIVADO'
+      // ) {
+      //   showDocuments.push(document);
+      // }
+    }
+    showDocuments.sort((a, b) => {
+      const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
+      const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
+      return dateB - dateA;
+    });
+    console.log('show Documents', showDocuments);
     return showDocuments;
   }
 

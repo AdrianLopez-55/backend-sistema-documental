@@ -14,6 +14,7 @@ import {
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
 import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
+import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
     HttpModule,
   ],
   controllers: [DocumentationTypeController],
-  providers: [DocumentationTypeService, CustomErrorService],
+  providers: [DocumentationTypeService, CustomErrorService, LoggerInterceptor],
 })
 export class DocumentationTypeModule {}

@@ -29,7 +29,7 @@ import { DocumentationTypeFilter } from './dto/documentType-filter.dto';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
 import { RolesGuard } from 'src/guard/roles.guard';
-import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
+// import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
 import { PaginationDto } from 'src/common/pagination.dto';
 
 @Controller('documentation-type')
@@ -46,30 +46,30 @@ export class DocumentationTypeController {
   // @UseInterceptors(LoggerInterceptor)
   @Post()
   @ApiOperation({ summary: 'Create a new documentation type' })
-  create(@Body() createDocumentationTypeDto: CreateDocumentationTypeDto) {
-    const newDocumentationType = this.documentationTypeService.create(
+  async create(@Body() createDocumentationTypeDto: CreateDocumentationTypeDto) {
+    const newDocumentationType = await this.documentationTypeService.create(
       createDocumentationTypeDto,
     );
     return newDocumentationType;
   }
 
-  @Get()
-  @ApiOperation({ summary: 'see all documentation type in the database' })
-  @ApiOkResponse({ description: 'document Types finds in the database' })
-  @ApiNotFoundResponse({ description: 'documentation Type not founds' })
-  findAll() {
-    return this.documentationTypeService.findAll();
-  }
+  // @Get()
+  // @ApiOperation({ summary: 'see all documentation type in the database' })
+  // @ApiOkResponse({ description: 'document Types finds in the database' })
+  // @ApiNotFoundResponse({ description: 'documentation Type not founds' })
+  // findAll() {
+  //   return this.documentationTypeService.findAll();
+  // }
 
-  @Get('filtrado')
-  @ApiOperation({
-    summary: 'Get records by parameter filtering',
-    description: 'Search for records by filtering',
-  })
-  async filterParam(@Query() filter: DocumentationTypeFilter) {
-    console.log(filter.typeName);
-    return await this.documentationTypeService.filterParams(filter);
-  }
+  // @Get('filtrado')
+  // @ApiOperation({
+  //   summary: 'Get records by parameter filtering',
+  //   description: 'Search for records by filtering',
+  // })
+  // async filterParam(@Query() filter: DocumentationTypeFilter) {
+  //   console.log(filter.typeName);
+  //   return await this.documentationTypeService.filterParams(filter);
+  // }
 
   @Get('active')
   @ApiOperation({ summary: 'see only document type actives' })
@@ -83,14 +83,36 @@ export class DocumentationTypeController {
   })
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
   @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
-  async findAllPaginate(@Query() paginationDto: PaginationDto, @Req() req) {
-    return this.documentationTypeService.findAllPaginate(paginationDto);
+  @ApiQuery({
+    name: 'startDate',
+    type: Date,
+    example: '2023-11-01',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: Date,
+    required: false,
+  })
+  async findAllPaginate(
+    @Query() filter: DocumentationTypeFilter,
+    @Query('startDate') startDate: Date,
+    @Query('endDate') endDate: Date,
+    @Req() req,
+  ) {
+    const dateRange = { startDate, endDate };
+    return this.documentationTypeService.findAllPaginate(filter, dateRange);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'see documentation type in the database by ID' })
   findOne(@Param('id') id: string) {
     return this.documentationTypeService.findOne(id);
+  }
+
+  @Get('base64Docx/:id')
+  async base64Docx(@Param('id') id: string) {
+    return this.documentationTypeService.getBase64Template(id);
   }
 
   // @ApiBearerAuth()

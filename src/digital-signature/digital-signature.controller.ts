@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
-import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
+// import { LoggerInterceptor } from '../interceptors/loggerinterceptors';
 import { CredentialUserDto } from './dto/CredentialUser.dto';
 import { PaginationDto } from 'src/common/pagination.dto';
 

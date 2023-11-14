@@ -5,7 +5,7 @@ import { Bitacora, BitacoraSchema } from './schema/bitacora.schema';
 import { HttpModule } from '@nestjs/axios';
 import { BitacoraService } from './bitacora.service';
 import { CustomErrorService } from 'src/error.service';
-import { LoggerInterceptor } from 'src/interceptors/loggerinterceptors';
+import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
 
 @Module({
   imports: [

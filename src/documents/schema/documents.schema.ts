@@ -100,10 +100,10 @@ export class Documents {
   @Prop({ default: true })
   active: boolean;
 
-  @Prop({ default: Date.now(), immutable: true })
+  @Prop({ type: Date, default: () => new Date(), immutable: true })
   createdAt: Date;
 
-  @Prop({ default: Date.now() })
+  @Prop({ type: Date, default: () => new Date() })
   updateAt: Date;
 
   //---------- NUEVO -------------

@@ -291,7 +291,6 @@ export class DocumentsService {
           typeName: 'LICENCIA',
           idTemplateDocType: `description-${i + 1}`,
           activeDocumentType: true,
-          dataUriTemplate: '',
           createdAt: undefined,
           updateAt: undefined,
         },
@@ -599,7 +598,6 @@ export class DocumentsService {
           typeName: 'LICENCIA',
           idTemplateDocType: `description-${i + 1}`,
           activeDocumentType: true,
-          dataUriTemplate: '',
           createdAt: undefined,
           updateAt: undefined,
         },
@@ -758,12 +756,12 @@ export class DocumentsService {
         mime: mimeTypePdf,
         base64: base64String,
       };
-      const sentDataDocx = await this.httpService
-        .post(`${this.apiFilesTemplate}/files/upload-template`, {
-          templateName: `${nameFile}_file.pdf`,
-          file: dataPdf,
-        })
-        .toPromise();
+      // const sentDataDocx = await this.httpService
+      //   .post(`${this.apiFilesTemplate}/files/upload-template`, {
+      //     templateName: `${nameFile}_file.pdf`,
+      //     file: dataPdf,
+      //   })
+      //   .toPromise();
 
       const timeToLiveInMIlliseconds = 1 * 60 * 1000;
       setTimeout(() => {
@@ -948,7 +946,6 @@ export class DocumentsService {
   }
 */
 
-  /*
   async showBase64TemplateDoc(id: string) {
     const document = await this.checkDocument(id);
     const idTemplateFromDoc = document.documentationType.idTemplateDocType;
@@ -959,45 +956,58 @@ export class DocumentsService {
 
     //--decodificar base64 a dats binarios
     const binaryData = Buffer.from(base64TemplateDoc, 'base64');
+    // binaryData = fs.readFileSync('path_to_your_document.docx');
+    console.log('binaryData: ', binaryData);
 
     //--especificar ruta y nombre del archivo temporal
     const path = require('path');
     const tempFolder = path.join(process.cwd(), 'template');
-    const fileName = `${document.documentationType.typeName}_template.docx`;
+    const fileName = `${document.documentationType.typeName}.docx`;
     const filePathTemplateDoc = path.join(tempFolder, fileName);
+    //esto es elarchivo docx del template de tipo de documento guardado en el archivo template
+    console.log(filePathTemplateDoc);
     fs.writeFileSync(filePathTemplateDoc, binaryData);
 
-    //---borrar el template descargado
-    const timeToLiveInMIllisecondsTemplate = 1 * 60 * 1000;
-    setTimeout(() => {
-      fs.unlink(filePathTemplateDoc, (err) => {
-        if (err) {
-          console.error('error al eliminar archivo temporal: ', err);
-        } else {
-          console.log('Archivo temporal eliminado: ', filePathTemplateDoc);
-        }
-      });
-    }, timeToLiveInMIllisecondsTemplate);
+    //---borrar el template, hacerlo temporal
 
-    const rutaTemplate = path.join(
+    // const timeToLiveInMIllisecondsTemplate = 10 * 60 * 1000;
+    // setTimeout(() => {
+    //   fs.unlink(filePathTemplateDoc, (err) => {
+    //     if (err) {
+    //       console.error('error al eliminar archivo temporal: ', err);
+    //     } else {
+    //       console.log('Archivo temporal eliminado: ', filePathTemplateDoc);
+    //     }
+    //   });
+    // }, timeToLiveInMIllisecondsTemplate);
+
+    const rutaTemplate = await path.join(
       process.cwd(),
       'template',
-      `${document.documentationType.typeName}_template.docx`,
+      `${document.documentationType.typeName.toUpperCase()}.docx`,
     );
-    const templatefile = fs.readFileSync(rutaTemplate);
+    const templatefile = fs.readFileSync(filePathTemplateDoc);
+    console.log('templatefile', templatefile);
+    const outPath = path.join(
+      process.cwd(),
+      'template',
+      `${document.documentationType.typeName.toUpperCase()}.docx`,
+    );
+    const templatefileDat = fs.readFileSync(outPath);
     const data = {
-      nameTemplate: document.documentationType.typeName,
-      numberDocumentTag: document.numberDocument,
-      title: document.title,
-      descriptionTag: document.description,
+      // nameTemplate: document.documentationType.typeName,
+      numberDocument: 'prueba number document',
+      // title: document.title,
+      // description: document.description,
     };
     const handler = new TemplateHandler();
-    const doc = await handler.process(templatefile, data);
+
+    const doc = await handler.process(templatefileDat, data);
     const fileNameDoc = `${document.documentationType.typeName}_${document.numberDocument}.docx`;
     const fileNamePdf = `${document.documentationType.typeName}_${document.numberDocument}.pdf`;
     const templateDirectorySave = path.join(process.cwd(), 'template');
     const filePathDoc = path.join(templateDirectorySave, fileNameDoc);
-    fs.writeFileSync(filePathDoc, doc);
+    fs.writeFileSync('myTemplate.docx', doc);
     //------------ convert to pdf ===============
     // const imputDocumentTemplate = fs.readFileSync(lugarDocument);
     const inputPath = path.join(
@@ -1036,44 +1046,33 @@ export class DocumentsService {
       })
       .toPromise();
 
-    const timeToLiveInMIlliseconds = 30 * 1000;
+    // const timeToLiveInMIlliseconds = 30 * 1000;
 
-    setTimeout(() => {
-      fs.unlink(filePathDoc, (err) => {
-        if (err) {
-          console.error('error al eliminar archivo temporal: ', err);
-        } else {
-          console.log('Archivo temporal eliminado: ', filePathDoc);
-        }
-      });
+    // setTimeout(() => {
+    //   fs.unlink(filePathDoc, (err) => {
+    //     if (err) {
+    //       console.error('error al eliminar archivo temporal: ', err);
+    //     } else {
+    //       console.log('Archivo temporal eliminado: ', filePathDoc);
+    //     }
+    //   });
 
-      fs.unlink(outputhPathTemplate, (err) => {
-        if (err) {
-          console.error('Error al eliminar archivo temporal PDF: ', err);
-        } else {
-          console.log('Archivo temporal PDF eliminado: ', outputhPathTemplate);
-        }
-      });
-    }, timeToLiveInMIlliseconds);
+    //   fs.unlink(outputhPathTemplate, (err) => {
+    //     if (err) {
+    //       console.error('Error al eliminar archivo temporal PDF: ', err);
+    //     } else {
+    //       console.log('Archivo temporal PDF eliminado: ', outputhPathTemplate);
+    //     }
+    //   });
+    // }, timeToLiveInMIlliseconds);
     document.idTemplate = sentDataDocx.data.file._id;
-    if (document.idTemplate) {
-      try {
-        const res = await this.httpService
-          .get(`${this.apiFilesUploader}/file/${document.idTemplate}`)
-          .toPromise();
-        document.base64Template = res.data.file.base64;
-      } catch (error) {
-        throw new HttpException('no se encontro datos', 404);
-      }
-    }
+    await document.save();
     const idDocument = id;
     const idTemplate = document.idTemplate;
-    const base64Template = document.base64Template;
+    const base64Template = base64String;
     let showDocument = { idDocument, idTemplate, base64Template };
     return showDocument;
   }
-
-  */
 
   async update(id: string, updateDocumentDTO: UpdateDocumentDTO) {
     const documentationType =

@@ -12,7 +12,6 @@ import { Response, Request } from 'express';
 import { ApiService } from './api.service';
 import { LoginCentralAuthDTO } from './api.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { User } from '../interfaces/user.interface';
 import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
 

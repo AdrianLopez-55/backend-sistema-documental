@@ -41,6 +41,7 @@ import {
 import { File, FileSchema } from 'src/file/schema/file.schema';
 import { FileModule } from 'src/file/file.module';
 import { SequenceModel, sequenceSchema } from './schema/sequence.schema';
+import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { SequenceModel, sequenceSchema } from './schema/sequence.schema';
     SendDerivedDocumentsService,
     GetDocumentsService,
     EstadoUbicacionService,
+    LoggerInterceptor,
   ],
 })
 export class DocumentsModule {}

@@ -14,7 +14,7 @@ export class CredentialUser {
   @Prop()
   privateKey: string;
 
-  @Prop({ default: Date.now() })
+  @Prop({ type: Date, default: () => new Date() })
   createdAt: Date;
 }
 

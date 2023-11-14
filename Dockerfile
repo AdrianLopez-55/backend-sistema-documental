@@ -13,7 +13,8 @@ COPY . .
 RUN npm install
 
 # Expone el puerto en el que se ejecuta la aplicación NestJS
-EXPOSE 3000
+# EXPOSE 3000
+EXPOSE 8085
 
 # Define las variables de entorno para la conexión a MongoDB
 ENV MONGO_URI mongodb://localhost/

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument, Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 
 export type BitacoraDocuments = Bitacora & Document;
 
