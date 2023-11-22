@@ -11,11 +11,7 @@ export class EstadoUbiacion {
   @Prop({
     type: [
       {
-        nameOffices: [
-          {
-            office: String,
-          },
-        ],
+        nameOffices: String,
         stateOffice: String,
         numberPasoOffice: Number,
         receivedUsers: [
@@ -23,6 +19,7 @@ export class EstadoUbiacion {
             ciUser: String,
             idOfUser: String,
             nameOfficeUserRecieved: String,
+            nameUser: String,
             dateRecived: Date,
             stateDocumentUser: String,
           },
@@ -32,9 +29,7 @@ export class EstadoUbiacion {
     ],
   })
   estado_ubi: {
-    nameOffices: {
-      office: string;
-    }[];
+    nameOffices: string;
     stateOffice: string;
     numberPasoOffice: number;
     receivedUsers: {
@@ -42,6 +37,7 @@ export class EstadoUbiacion {
       idOfUser: string;
       nameOfficeUserRecieved: string;
       dateRecived: Date;
+      nameUser: string;
       stateDocumentUser: string;
       observado: boolean;
     }[];

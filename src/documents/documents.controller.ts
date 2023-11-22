@@ -15,14 +15,11 @@ import {
   HttpException,
   UseInterceptors,
 } from '@nestjs/common';
-import { AuthGuard } from 'src/guards/auth.guard';
 import { DocumentsService } from './documents.service';
 import { UpdateDocumentDTO } from './dto/updateDocument.dto';
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -30,7 +27,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateDocumentDTO } from './dto/createDocument.dto';
-import { Request, Response, Express } from 'express';
+import { Request, Response } from 'express';
 import { ParseObjectIdPipe } from 'src/utilities/parse-object-id-pipe.pipe';
 import { CreateCommentDto } from './dto/createComment.dto';
 import { CreateMilestoneDto } from './dto/createMilestone.dto';

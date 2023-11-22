@@ -33,8 +33,6 @@ export class LoggerInterceptor implements NestInterceptor {
           .get(`${getConfig().api_personal_get}/${req.user}`)
           .toPromise();
         const dataPersonal = resPersonal.data;
-        console.log('esto es data  por interceptor');
-        console.log(data);
 
         let resPersonalDevolution;
         if (data.userId) {
@@ -57,6 +55,10 @@ export class LoggerInterceptor implements NestInterceptor {
               req.path.startsWith('/documents/send-document-without-workflow')
             ) {
               description = `se envio documento sin workflow con id: ${data._id} a usuario ${data.bitacoraWithoutWorkflow}`;
+            } else if (
+              req.path.startsWith('/documents/send-document-multiple-units')
+            ) {
+              description = `se envio documento ${data._id} a todo el personal de la unidad`;
             } else if (
               req.path.startsWith('/documents/derive-document-employeed')
             ) {
@@ -81,10 +83,12 @@ export class LoggerInterceptor implements NestInterceptor {
               description = `se añadio un comentario al documento ${data._id}`;
             } else if (req.path.startsWith('/documents/milestone')) {
               description = `se añadio metadatos al documento ${data._id}`;
-            } else if (req.path === '/digital-signature/generate') {
-              description = `se genero clave privada y publica para el usuario ${data.userId}`;
+            } else if (req.path === '/digital-signature/generate-credential') {
+              description = `se genero clave privada y publica y pin para el usuario ${data.userId}`;
             } else if (req.path === '/digital-signature/signature-document') {
               description = `se firmo un documento con id ${data._id}`;
+            } else if (req.path.startsWith('/digital-signature/recover-pin')) {
+              description = `usuario ${data.userId} recreo su pin`;
             } else if (req.path === '/roadmap') {
               description = `se creo una hoja de ruta con id ${data._id}`;
             } else if (req.path === '/roadmap/assignedDocument') {
@@ -124,24 +128,13 @@ export class LoggerInterceptor implements NestInterceptor {
               description = `tipo de documento eliminado con id ${data._id}`;
             } else if (req.path.startsWith('/workflow')) {
               description = `flujo de trabajo eliminado con id ${data._id}`;
-            }
-            // else if (req.path.startsWith('/step')) {
-            //   description = `step eliminado con id ${data._id}`;
-            // }
-            else if (req.path.startsWith('/rol')) {
+            } else if (req.path.startsWith('/rol')) {
               description = `rol fue eliminado con id ${data._id}`;
-            }
-            // else if (req.path.startsWith('/permissions')) {
-            //   description = `permiso eliminado con id ${data._id}`;
-            // }
-            else if (
+            } else if (
               req.path.startsWith('/digital-signature/delete-digital-signature')
             ) {
               description = `firma digital eliminada de documento con id ${data._id}`;
             }
-            // else if (req.path.startsWith('/roadmap')) {
-            //   description = `hoja de ruta eliminado con id ${data._id}`;
-            // }
             break;
           default:
             description = 'Accion predeterminada';
@@ -160,9 +153,6 @@ export class LoggerInterceptor implements NestInterceptor {
           timestamp: formattedDateTime,
         });
         await bitacoraEntry.save();
-        console.log('esto es bitacoraentry del intereptor');
-        console.log(data);
-
         return data;
       }),
     );

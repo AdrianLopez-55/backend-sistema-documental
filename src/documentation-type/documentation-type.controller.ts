@@ -15,16 +15,8 @@ import {
 import { DocumentationTypeService } from './documentation-type.service';
 import { CreateDocumentationTypeDto } from './dto/create-documentation-type.dto';
 import { UpdateDocumentationTypeDto } from './dto/update-documentation-type.dto';
-import {
-  ApiBearerAuth,
-  ApiNotFoundResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiQuery,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DocumentationType } from './schema/documentation-type.schema';
-import { Request, Response } from 'express';
 import { DocumentationTypeFilter } from './dto/documentType-filter.dto';
 import { Permissions } from 'src/guard/decorators/permissions.decorator';
 import { Permission } from 'src/guard/constants/Permission';
@@ -52,24 +44,6 @@ export class DocumentationTypeController {
     );
     return newDocumentationType;
   }
-
-  // @Get()
-  // @ApiOperation({ summary: 'see all documentation type in the database' })
-  // @ApiOkResponse({ description: 'document Types finds in the database' })
-  // @ApiNotFoundResponse({ description: 'documentation Type not founds' })
-  // findAll() {
-  //   return this.documentationTypeService.findAll();
-  // }
-
-  // @Get('filtrado')
-  // @ApiOperation({
-  //   summary: 'Get records by parameter filtering',
-  //   description: 'Search for records by filtering',
-  // })
-  // async filterParam(@Query() filter: DocumentationTypeFilter) {
-  //   console.log(filter.typeName);
-  //   return await this.documentationTypeService.filterParams(filter);
-  // }
 
   @Get('active')
   @ApiOperation({ summary: 'see only document type actives' })

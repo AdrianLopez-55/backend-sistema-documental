@@ -204,40 +204,31 @@ export class GetDocumentsService {
         }
 
         const offset = (page - 1) * limit;
-        // const filteredDocuments = await this.documentModel
-        //   .find(query)
-        //   .limit(limit)
-        //   .skip(offset)
-        //   .sort({ createdAt: -1 });
-
-        const documents = await this.documentModel
-          .find()
-          .limit(limit)
-          .skip(offset);
-        console.log('documents', documents);
-        const filteredDocuments = await query
-          .limit(limit)
-          .skip(offset)
-          .sort({ createdAt: -1 })
-          .lean()
-          .exec();
-        console.log('filteredDocuments', filteredDocuments);
-        const findDocument = await this.functionObtainAndDerivedDocument(
+        const documents = await this.documentModel.find();
+        const {
+          data: findDocument,
+          total,
+          totalPages,
+        } = await this.functionObtainAndDerivedDocument(
           documents,
           userId,
+          limit,
+          page,
         );
-        const total = findDocument.length;
+        // console.log('documents all', documents);
+        console.log(findDocument);
+        // const findDocument = await this.functionObtainAndDerivedDocument(
+        //   documents,
+        //   userId,
+        //   limit,
+        //   offset,
+        // );
+        // const total = findDocument.length;
         return {
           data: findDocument,
-          total: total,
-          totalPages: Math.ceil(total / limit),
+          total,
+          totalPages,
         };
-
-        // return {
-        //   data: filteredDocuments,
-        //   total: total,
-        //   totalPages: Math.ceil(total / limit),
-        // };
       }
       if (withWorkflow === 'true') {
         let query = this.documentModel.find({
@@ -326,33 +317,29 @@ export class GetDocumentsService {
         //   );
         // });
 
-        const documents = await this.documentModel
-          .find()
-          .limit(limit)
-          .skip(offset);
-        console.log('documents', documents);
-        const filteredDocuments = await query
-          .limit(limit)
-          .skip(offset)
-          .sort({ createdAt: -1 })
-          .lean()
-          .exec();
-        console.log('filteredDocuments', filteredDocuments);
+        const documents = await this.documentModel.find({
+          'userReceivedDocument.idOfUser': userId,
+          workflow: { $ne: null },
+        });
+        // .limit(limit)
+        // .skip(offset);
+        // console.log('documents', documents);
+        // const filteredDocuments = await query
+        //   .limit(limit)
+        //   .skip(offset)
+        //   .sort({ createdAt: -1 })
+        //   .lean()
+        //   .exec();
+        // console.log('filteredDocuments', filteredDocuments);
         const findDocument = await this.functionObtainWithWorkflowDocument(
           documents,
           userId,
+          limit,
+          offset,
         );
         const total = findDocument.length;
         return {
           data: findDocument,
-          total: total,
-          totalPages: Math.ceil(total / limit),
-        };
-
-        // const total = await this.documentModel.countDocuments(query).exec();
-
-        return {
-          data: filteredDocuments,
           total: total,
           totalPages: Math.ceil(total / limit),
         };
@@ -441,27 +428,32 @@ export class GetDocumentsService {
         //   .skip(offset)
         //   .sort({ createdAt: -1 });
 
-        const documents = await this.documentModel
-          .find()
-          .limit(limit)
-          .skip(offset);
-        console.log('documents', documents);
-        const filteredDocuments = await query
-          .limit(limit)
-          .skip(offset)
-          .sort({ createdAt: -1 })
-          .lean()
-          .exec();
-        console.log('filteredDocuments', filteredDocuments);
-        const findDocument = await this.functionObtainWithoutWorkflowDocument(
+        const documents = await this.documentModel.find();
+        // .limit(limit)
+        // .skip(offset);
+        // console.log('documents', documents);
+        // const filteredDocuments = await query
+        //   .limit(limit)
+        //   .skip(offset)
+        //   .sort({ createdAt: -1 })
+        //   .lean()
+        //   .exec();
+        // console.log('filteredDocuments', filteredDocuments);
+        const {
+          data: findDocument,
+          total,
+          totalPages,
+        } = await this.functionObtainWithoutWorkflowDocument(
           documents,
           userId,
+          limit,
+          page,
         );
-        const total = findDocument.length;
+        // const total = findDocument.length;
         return {
           data: findDocument,
-          total: total,
-          totalPages: Math.ceil(total / limit),
+          total,
+          totalPages,
         };
 
         // filteredDocuments.sort((a, b) => {
@@ -1309,6 +1301,7 @@ export class GetDocumentsService {
   }
 
   // no usar
+  /*
   async getRecievedDocument(
     idUser: string,
     paginationDto: PaginationDto,
@@ -1329,16 +1322,19 @@ export class GetDocumentsService {
     const findDocument = await this.functionObtainAndDerivedDocument(
       documents,
       idUser,
+      limit,
+      offset,
     );
 
     const totalPages = Math.ceil(totalDocuments / limit);
     return {
-      documents: findDocument,
+      data: findDocument,
       totalDocuments,
       totalPages,
     };
     // findDocument;
   }
+  */
 
   //utilizado
   //ver todos los documentos enviados con workflow
@@ -1616,12 +1612,14 @@ export class GetDocumentsService {
     */
   }
 
+  /*
   private async functionObtainAndDerivedDocument(
     documents: Documents[],
     userId: string,
+    limit: number,
+    skip: number,
   ) {
     let showDocuments = [];
-    console.log('documents', documents);
     for (const document of documents) {
       const filteredDocumentsUserSome = document.userReceivedDocument.some(
         (entry) => {
@@ -1639,15 +1637,56 @@ export class GetDocumentsService {
       //   showDocuments.push(document);
       // }
     }
-    showDocuments.sort((a, b) => {
-      const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
-      const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
-      return dateB - dateA;
-    });
+    showDocuments
+      .sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      })
+      .slice(skip, skip + limit);
     console.log('show Documents', showDocuments);
     return showDocuments;
   }
 
+  */
+
+  private async functionObtainAndDerivedDocument(
+    documents: Documents[],
+    userId: string,
+    limit: number,
+    page: number,
+  ): Promise<{ data: Documents[]; total: number; totalPages: number }> {
+    const filteredDocuments = documents.filter((document) => {
+      return document.userReceivedDocument.some(
+        (entry) => entry.idOfUser === userId,
+      );
+    });
+
+    const total = filteredDocuments.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+
+    const showDocuments = filteredDocuments
+      .sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      })
+      .slice(offset, offset + limit); // Aplica limit después de ordenar
+
+    console.log('show Documents', showDocuments);
+    return { data: showDocuments, total, totalPages };
+  }
+
+  /*
   private async functionObtainWithoutWorkflowDocument(
     documents: Documents[],
     userId: string,
@@ -1666,13 +1705,6 @@ export class GetDocumentsService {
           showDocuments.push(document);
         }
       }
-
-      // if (
-      //   !filteredDocumentsUserSome
-      //   // document.stateDocumetUser === 'DERIVADO'
-      // ) {
-      //   showDocuments.push(document);
-      // }
     }
     showDocuments.sort((a, b) => {
       const dateA = new Date(a.userReceivedDocument[0]?.dateRecived).getTime();
@@ -1683,6 +1715,45 @@ export class GetDocumentsService {
     return showDocuments;
   }
 
+  */
+
+  private async functionObtainWithoutWorkflowDocument(
+    documents: Documents[],
+    userId: string,
+    limit: number,
+    page: number,
+  ): Promise<{ data: Documents[]; total: number; totalPages: number }> {
+    const filteredDocuments = documents.filter((document) => {
+      return (
+        document.workflow === null &&
+        document.userReceivedDocument.some((entry) => entry.idOfUser === userId)
+      );
+    });
+
+    console.log('Filtered Documents:', filteredDocuments);
+
+    const total = filteredDocuments.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+
+    const showDocuments = filteredDocuments
+      .sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      })
+      .slice(offset, offset + limit);
+
+    console.log('Show Documents:', showDocuments);
+
+    return { data: showDocuments, total, totalPages };
+  }
+
+  /*
   private async functionObtainWithWorkflowDocument(
     documents: Documents[],
     userId: string,
@@ -1714,6 +1785,37 @@ export class GetDocumentsService {
       const dateB = new Date(b.userReceivedDocument[0]?.dateRecived).getTime();
       return dateB - dateA;
     });
+    console.log('show Documents', showDocuments);
+    return showDocuments;
+  }
+  */
+
+  private async functionObtainWithWorkflowDocument(
+    documents: Documents[],
+    userId: string,
+    limit: number,
+    skip: number,
+  ): Promise<Documents[]> {
+    const showDocuments = documents
+      .filter((document) => {
+        return (
+          document.workflow !== null &&
+          document.userReceivedDocument.some(
+            (entry) => entry.idOfUser === userId,
+          )
+        );
+      })
+      .sort((a, b) => {
+        const dateA = new Date(
+          a.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        const dateB = new Date(
+          b.userReceivedDocument[0]?.dateRecived,
+        ).getTime();
+        return dateB - dateA;
+      })
+      .slice(skip, skip + limit); // Aplica limit después de ordenar
+
     console.log('show Documents', showDocuments);
     return showDocuments;
   }

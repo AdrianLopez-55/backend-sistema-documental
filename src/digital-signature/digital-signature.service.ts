@@ -10,7 +10,6 @@ import {
   DocumentDocument,
   Documents,
 } from 'src/documents/schema/documents.schema';
-import { HttpService } from '@nestjs/axios';
 import { compare } from 'bcrypt';
 import { CredentialUserDto } from './dto/CredentialUser.dto';
 import { CredentialUser } from './schemas/credentialUser.schema';
@@ -18,6 +17,8 @@ import { PinUser } from './schemas/pinUser.schema';
 const bcrypt = require('bcrypt');
 import * as crypto from 'crypto';
 import { PaginationDto } from 'src/common/pagination.dto';
+import { HttpService } from '@nestjs/axios';
+import getConfig from '../config/configuration';
 
 @Injectable()
 export class DigitalSignatureService {
@@ -29,6 +30,7 @@ export class DigitalSignatureService {
     private readonly credentialUserModel: Model<CredentialUser>,
     @InjectModel(PinUser.name)
     private readonly pinUserModel: Model<PinUser>,
+    private readonly httpService: HttpService,
   ) {}
 
   async createKeys(
@@ -58,9 +60,9 @@ export class DigitalSignatureService {
 
     const pinInUse = await this.isPinUse(pin);
 
-    if (pinInUse) {
-      throw new HttpException(`El pin ${pin} ya está en uso`, 400);
-    }
+    // if (pinInUse) {
+    //   throw new HttpException(`El pin ${pin} ya está en uso`, 400);
+    // }
 
     if (await this.validatePin(pin)) {
       try {
@@ -212,7 +214,6 @@ export class DigitalSignatureService {
       total: total,
       totalPages: Math.ceil(total / limit),
     };
-    return documents;
   }
 
   async getUsersDigitalSignatures() {
@@ -250,9 +251,6 @@ export class DigitalSignatureService {
     createCredentialDto: CredentialUserDto,
   ) {
     const userPin = await this.pinUserModel.findOne({ userId: userId });
-    // if (userPin) {
-    //   throw new HttpException('Usted ya cuenta con pin válido', 400);
-    // }
     const { password, pin } = createCredentialDto;
     const checkPassword = await compare(password, passwordUser);
     if (!checkPassword) {
@@ -269,6 +267,36 @@ export class DigitalSignatureService {
         }
       }
     }
+  }
+
+  async getDigitalSignatureFromDocument(idDocument: string) {
+    const document = await this.validateDocumentFind(idDocument);
+    const userDigitalSignatureIds = document.digitalSignatureDocument.map(
+      (signature) => signature.userDigitalSignature,
+    );
+    const obtenerNombreUsuario = async (userId) => {
+      try {
+        const response = await this.httpService
+          .get(`${getConfig().api_personal}/api/personal/${userId}`)
+          .toPromise();
+        const { name, lastName, ci, unity } = response.data;
+        return { name, lastName, ci, unity };
+      } catch (error) {
+        console.error(
+          `Error al obtener el nombre para el usuario con ID ${userId}: ${error.message}`,
+        );
+        return null;
+      }
+    };
+
+    const nombresUsuariosPromesas =
+      userDigitalSignatureIds.map(obtenerNombreUsuario);
+
+    const nombresUsuarios = await Promise.all(nombresUsuariosPromesas);
+
+    return nombresUsuarios.map((datosUsuario) => {
+      return { ...datosUsuario };
+    });
   }
 
   async removeDigitalSignature(id: string, userId: string): Promise<Documents> {

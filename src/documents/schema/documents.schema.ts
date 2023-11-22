@@ -55,6 +55,7 @@ export class Documents {
         nameOfficeUserRecieved: String,
         dateRecived: Date,
         stateDocumentUser: String,
+        nameUser: String,
         observado: Boolean,
       },
     ],
@@ -65,6 +66,7 @@ export class Documents {
     nameOfficeUserRecieved: string;
     dateRecived: Date;
     stateDocumentUser: string;
+    nameUser: string;
     observado: boolean;
   }[];
 
@@ -124,6 +126,7 @@ export class Documents {
             ciUser: String,
             idOfUser: String,
             nameOfficeUserRecieved: String,
+            nameUser: String,
             dateRecived: Date,
             stateDocumentUser: String,
             observado: { type: Boolean, default: false },
@@ -152,6 +155,7 @@ export class Documents {
       ciUser: string;
       idOfUser: string;
       nameOfficeUserRecieved: string;
+      nameUser: string;
       dateRecived: Date;
       stateDocumentUser: string;
       observado: boolean;

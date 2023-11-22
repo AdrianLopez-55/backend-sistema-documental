@@ -12,25 +12,12 @@ import {
   DocumentationType,
   DocumentationTypeDocument,
 } from './schema/documentation-type.schema';
-import { ErrorManager } from './error.interceptor';
-import { Request } from 'express';
 import { DocumentationTypeFilter } from './dto/documentType-filter.dto';
 import { CustomErrorService } from 'src/error.service';
-import {
-  AlignmentType,
-  Document,
-  HeadingLevel,
-  Packer,
-  Paragraph,
-  TextRun,
-} from 'docx';
 import getConfig from '../config/configuration';
 import * as fs from 'fs';
 import * as path from 'path';
 import { HttpService } from '@nestjs/axios';
-import * as officegen from 'officegen';
-import * as pdfkit from 'pdfkit';
-import { PaginationDto } from 'src/common/pagination.dto';
 
 @Injectable()
 export class DocumentationTypeService {
@@ -48,7 +35,6 @@ export class DocumentationTypeService {
     createDocumentationTypeDto: CreateDocumentationTypeDto,
   ): Promise<DocumentationTypeDocument> {
     const { typeName, htmlContent, base64Docx } = createDocumentationTypeDto;
-    // const typeNameUppercase = typeName.toUpperCase();
     const existingdocumentatuoType = await this.documentationTypeModel
       .findOne({ typeName })
       .exec();
@@ -70,21 +56,21 @@ export class DocumentationTypeService {
           400,
         );
       }
-      // const fileBuffer = await HTMLtoDOCX(
-      //   htmlContent,
-      //   null,
-      //   {
-      //     table: { row: { cansSplit: true } },
-      //     footer: true,
-      //     pageNumber: true,
-      //   },
-      // );
       const datatas = (async () => {
-        const fileBuffer = await HTMLtoDOCX(htmlContent, {
-          // table: { row: { cantSplit: true } },
-          // footer: true,
-          // pageNumber: true,
-        });
+        const fileBuffer = await HTMLtoDOCX(
+          htmlContent,
+          null,
+          {
+            pageSize: {
+              width: 215.9,
+              height: 279.4,
+            },
+            table: { row: { cantSplit: true } },
+            footer: true,
+            pageNumber: true,
+          },
+          null,
+        );
         //guardar el archivo docx en template
         const templateDir = path.join(process.cwd(), 'template');
         const filePath = path.join(
@@ -95,9 +81,8 @@ export class DocumentationTypeService {
 
         //obtener mime docx
         const fileExtension = path.extname(filePath).substring(1);
-        const mimeTypeDocx = `@file/${fileExtension}`;
-        // const mimeTypeDocx =
-        //   '@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const mimeTypeDocx =
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
         //obtener la base64 de docx
         const arrayBufferView = new Uint8Array(fileBuffer);
@@ -119,7 +104,7 @@ export class DocumentationTypeService {
 
         const fileObj = {
           mime: mimeTypeDocx,
-          base64: docxBase64,
+          base64: base64,
         };
 
         const fileDocx = await this.httpService

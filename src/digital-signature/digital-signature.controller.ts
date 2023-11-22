@@ -134,6 +134,16 @@ export class DigitalSignatureController {
     );
   }
 
+  @Get('get-users-signed-document/:idDocument')
+  async getUsersSignedDocument(
+    @Req() req,
+    @Param('idDocument') idDocument: string,
+  ) {
+    return this.digitalSignatureService.getDigitalSignatureFromDocument(
+      idDocument,
+    );
+  }
+
   @ApiBearerAuth()
   @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
   // @UseInterceptors(LoggerInterceptor)

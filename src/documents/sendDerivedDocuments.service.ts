@@ -159,6 +159,8 @@ export class SendDerivedDocumentsService {
     const personalListData = personalList.data;
     const unitysPersonalAll = personalListData.map((user) => ({
       unity: user.unity,
+      name: user.name,
+      lastName: user.lastName,
       ci: user.ci,
       idOfUser: user._id,
     }));
@@ -176,6 +178,8 @@ export class SendDerivedDocumentsService {
           .toPromise(),
         idOfUser: idOfice.idOfUser,
         ci: idOfice.ci,
+        name: idOfice.name,
+        lastName: idOfice.lastName,
       })),
     );
     if (pasoActual < pasos.length) {
@@ -190,6 +194,8 @@ export class SendDerivedDocumentsService {
         idOficce: response.info.data[0]._id,
         idOfUser: response.idOfUser,
         ci: response.ci,
+        name: response.name,
+        lastName: response.lastName,
       }));
       const matchingUsers = reeeee.filter(
         (datata) => datata.idOficce === pasos[pasoActual].idOffice,
@@ -198,6 +204,7 @@ export class SendDerivedDocumentsService {
         ciUser: data.ci,
         idOfUser: data.idOfUser,
         nameOfficeUserRecieved: data.nameUnity,
+        nameUser: data.name,
         dateRecived: new Date(),
         observado: false,
         stateDocumentUser: 'RECIBIDO',
@@ -251,11 +258,7 @@ export class SendDerivedDocumentsService {
           .exec();
 
         findEstadoUbicacion.estado_ubi.push({
-          nameOffices: [
-            {
-              office: pasos[pasoActual].oficina,
-            },
-          ],
+          nameOffices: `${pasos[pasoActual].oficina}`,
           stateOffice: 'DERIVADO',
           numberPasoOffice: pasoActual,
           receivedUsers: findEstadoUbicacion.estado_ubi
@@ -265,11 +268,7 @@ export class SendDerivedDocumentsService {
         });
 
         findEstadoUbicacion.estado_ubi.push({
-          nameOffices: [
-            {
-              office: nameOffce,
-            },
-          ],
+          nameOffices: `${nameOffce}`,
           stateOffice: 'RECIBIDO',
           numberPasoOffice: pasoActual + 1,
           receivedUsers: receivedUsers,
@@ -362,6 +361,8 @@ export class SendDerivedDocumentsService {
         return {
           ci,
           idOfUser: user.data._id,
+          name: user.data.name,
+          lastName: user.data.lastName,
           idOfficeUser,
           unityUser,
         };
@@ -387,6 +388,7 @@ export class SendDerivedDocumentsService {
           ciUser: user.ci,
           idOfUser: user.idOfUser,
           nameOfficeUserRecieved: user.unityUser,
+          nameUser: user.name,
           dateRecived: new Date(),
           observado: false,
           stateDocumentUser: 'RECIBIDO',
@@ -422,6 +424,7 @@ export class SendDerivedDocumentsService {
         idOfUser: user.idOfUser,
         nameOfficeUserRecieved: user.unityUser,
         dateRecived: new Date(),
+        nameUser: user.name,
         observado: false,
         stateDocumentUser: 'RECIBIDO',
       }));
@@ -441,11 +444,7 @@ export class SendDerivedDocumentsService {
         .exec();
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: pasos[pasoActual - 1].oficina,
-          },
-        ],
+        nameOffices: `${pasos[pasoActual - 1].oficina}`,
         stateOffice: 'DERIVADO',
         numberPasoOffice: pasoActual,
         receivedUsers: findEstadoUbicacion.estado_ubi
@@ -455,17 +454,14 @@ export class SendDerivedDocumentsService {
       });
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: nameOffce,
-          },
-        ],
+        nameOffices: `${nameOffce}`,
         stateOffice: 'RECIBIDO',
         numberPasoOffice: pasoActual + 1,
         receivedUsers: unityUsers.map((user) => ({
           ciUser: user.ci,
           idOfUser: user.idOfUser,
           nameOfficeUserRecieved: user.unityUser,
+          nameUser: user.name,
           dateRecived: new Date(),
           observado: false,
           stateDocumentUser: 'RECIBIDO',
@@ -550,6 +546,7 @@ export class SendDerivedDocumentsService {
       return {
         ci,
         idOfUser: user.data._id,
+        name: user.data.name,
         idOfficeUser,
         unityUser,
       };
@@ -581,6 +578,7 @@ export class SendDerivedDocumentsService {
       nameOfficeUserRecieved: user.unityUser,
       dateRecived: new Date(),
       stateDocumentUser: 'RECIBIDO DIRECTO',
+      nameUser: user.name,
       observado: false,
     }));
 
@@ -605,11 +603,7 @@ export class SendDerivedDocumentsService {
       .exec();
 
     findEstadoUbicacion.estado_ubi.push({
-      nameOffices: [
-        {
-          office: userOficce,
-        },
-      ],
+      nameOffices: `${userOficce}`,
       stateOffice: 'ENVIADO',
       numberPasoOffice: null,
       receivedUsers: [
@@ -618,6 +612,7 @@ export class SendDerivedDocumentsService {
           idOfUser: userId,
           nameOfficeUserRecieved: null,
           dateRecived: null,
+          nameUser: loggedUser.data.name,
           stateDocumentUser: 'ENVIADO',
           observado: false,
         },
@@ -626,9 +621,7 @@ export class SendDerivedDocumentsService {
     });
 
     findEstadoUbicacion.estado_ubi.push({
-      nameOffices: unityUsers.map((user) => ({
-        office: user.unityUser,
-      })),
+      nameOffices: `${userOficce}`,
       stateOffice: 'RECIBIDO DIRECTO',
       numberPasoOffice: null,
       receivedUsers: unityUsers.map((user) => ({
@@ -636,6 +629,7 @@ export class SendDerivedDocumentsService {
         idOfUser: user.idOfUser,
         nameOfficeUserRecieved: user.unityUser,
         dateRecived: new Date(),
+        nameUser: user.name,
         stateDocumentUser: 'RECIBIDO DIRECTO',
         observado: false,
       })),
@@ -769,11 +763,7 @@ export class SendDerivedDocumentsService {
     });
 
     findEstadoUbicacion.estado_ubi.push({
-      nameOffices: [
-        {
-          office: userOffice,
-        },
-      ],
+      nameOffices: `${userOffice}`,
       stateOffice: 'ENVIADO DIRECTO',
       numberPasoOffice: null,
       receivedUsers: usersFromSendMultiUnity,
@@ -781,7 +771,7 @@ export class SendDerivedDocumentsService {
     });
 
     findEstadoUbicacion.estado_ubi.push({
-      nameOffices: unityNames.map((unityName) => ({ office: unityName })),
+      nameOffices: `${userOffice}`,
       stateOffice: 'RECIBIDO',
       numberPasoOffice: null,
       receivedUsers: usersFromSendMultiUnity,
@@ -888,6 +878,7 @@ export class SendDerivedDocumentsService {
         return {
           ci,
           idOfUser: user.data._id,
+          name: user.data.name,
           idOfficeUser,
           unityUser,
         };
@@ -913,6 +904,7 @@ export class SendDerivedDocumentsService {
           idOfUser: user.idOfUser,
           nameOfficeUserRecieved: user.unityUser,
           dateRecived: new Date(),
+          nameUser: user.name,
           stateDocumentUser: 'RECIBIDO',
         })),
         motivoBack: 'se envio documento a personal seleccionado',
@@ -924,6 +916,7 @@ export class SendDerivedDocumentsService {
         idOfUser: user.idOfUser,
         nameOfficeUserRecieved: user.unityUser,
         dateRecived: new Date(),
+        nameUser: user.name,
         stateDocumentUser: 'RECIBIDO',
         observado: false,
       }));
@@ -947,11 +940,7 @@ export class SendDerivedDocumentsService {
         .toPromise();
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: getInfoPersonal.data.unity,
-          },
-        ],
+        nameOffices: `${getInfoPersonal.data.unity}`,
         stateOffice: 'ENVIADO',
         numberPasoOffice: null,
         receivedUsers: receivedDocumentUsers,
@@ -959,11 +948,7 @@ export class SendDerivedDocumentsService {
       });
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: workflow.oficinaActual,
-          },
-        ],
+        nameOffices: `${workflow.oficinaActual}`,
         stateOffice: 'RECBIDO',
         numberPasoOffice: pasoActual + 1,
         receivedUsers: receivedDocumentUsers,
@@ -1061,6 +1046,7 @@ export class SendDerivedDocumentsService {
       unity: user.unity,
       ci: user.ci,
       idOfUser: user._id,
+      name: user.name,
     }));
 
     // Filtrar la lista de usuarios de la oficina actual para excluir al usuario logueado
@@ -1079,6 +1065,7 @@ export class SendDerivedDocumentsService {
           .toPromise(),
         idOfUser: idOfice.idOfUser,
         ci: idOfice.ci,
+        name: idOfice.name,
       })),
     );
 
@@ -1094,6 +1081,7 @@ export class SendDerivedDocumentsService {
         nameUnity: response.info.data[0].name,
         idOficce: response.info.data[0]._id,
         idOfUser: response.idOfUser,
+        name: response.name,
         ci: response.ci,
       }));
 
@@ -1109,6 +1097,7 @@ export class SendDerivedDocumentsService {
         idOfUser: data.idOfUser,
         nameOfficeUserRecieved: data.nameUnity,
         dateRecived: new Date(),
+        name: data.name,
         stateDocumentUser: 'RECIBIDO',
       }));
 
@@ -1117,6 +1106,7 @@ export class SendDerivedDocumentsService {
         idOfUser: data.idOfUser,
         nameOfficeUserRecieved: data.nameUnity,
         dateRecived: new Date(),
+        nameUser: data.name,
         stateDocumentUser: 'RECIBIDO',
         observado: false,
       }));
@@ -1158,11 +1148,7 @@ export class SendDerivedDocumentsService {
           .exec();
 
         findEstadoUbicacion.estado_ubi.push({
-          nameOffices: [
-            {
-              office: userOficce,
-            },
-          ],
+          nameOffices: `${userOficce}`,
           stateOffice: 'ENVIADO',
           numberPasoOffice: null,
           receivedUsers: userReceivedDocument,
@@ -1170,11 +1156,7 @@ export class SendDerivedDocumentsService {
         });
 
         findEstadoUbicacion.estado_ubi.push({
-          nameOffices: [
-            {
-              office: nameOffce,
-            },
-          ],
+          nameOffices: `${nameOffce}`,
           stateOffice: 'RECIBIDO',
           numberPasoOffice: pasoActual + 1,
           receivedUsers: userReceivedDocument,
@@ -1254,6 +1236,7 @@ export class SendDerivedDocumentsService {
             nameOfficeUserRecieved: '',
             dateRecived: new Date(),
             observado: true,
+            nameUser: infoOriginalUserSend.data.name,
             stateDocumentUser: 'OBSERVADO',
           },
         ],
@@ -1283,6 +1266,7 @@ export class SendDerivedDocumentsService {
           idOfUser: originalUserSend,
           nameOfficeUserRecieved: '',
           dateRecived: new Date(),
+          nameUser: infoOriginalUserSend.data.name,
           stateDocumentUser: 'OBSERVADO',
           observado: true,
         },
@@ -1300,11 +1284,7 @@ export class SendDerivedDocumentsService {
         .exec();
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: document.oficinaActual,
-          },
-        ],
+        nameOffices: `${document.oficinaActual}`,
         stateOffice: 'OBSERVADO Y DEVUELTO',
         numberPasoOffice: pasoActual + 1,
         receivedUsers: document.userReceivedDocument,
@@ -1312,11 +1292,7 @@ export class SendDerivedDocumentsService {
       });
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: infoOriginalUserSend.data.unity,
-          },
-        ],
+        nameOffices: `${infoOriginalUserSend.data.unity}`,
         stateOffice: 'OBSERVADO',
         numberPasoOffice: 0,
         receivedUsers: document.userReceivedDocument,
@@ -1348,6 +1324,7 @@ export class SendDerivedDocumentsService {
             idOfUser: originalUserSend,
             nameOfficeUserRecieved: '',
             dateRecived: new Date(),
+            nameUser: infoOriginalUserSend.data.name,
             observado: true,
             stateDocumentUser: 'OBSERVADO',
           },
@@ -1378,6 +1355,7 @@ export class SendDerivedDocumentsService {
           idOfUser: originalUserSend,
           nameOfficeUserRecieved: '',
           dateRecived: new Date(),
+          nameUser: infoOriginalUserSend.data.name,
           stateDocumentUser: 'OBSERVADO',
           observado: true,
         },
@@ -1395,11 +1373,7 @@ export class SendDerivedDocumentsService {
         .exec();
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: document.oficinaActual,
-          },
-        ],
+        nameOffices: `${document.oficinaActual}`,
         stateOffice: 'OBSERVADO Y DEVUELTO',
         numberPasoOffice: pasoActual + 1,
         receivedUsers: document.userReceivedDocument,
@@ -1407,11 +1381,7 @@ export class SendDerivedDocumentsService {
       });
 
       findEstadoUbicacion.estado_ubi.push({
-        nameOffices: [
-          {
-            office: infoOriginalUserSend.data.unity,
-          },
-        ],
+        nameOffices: `${infoOriginalUserSend.data.unity}`,
         stateOffice: 'OBSERVADO',
         numberPasoOffice: 0,
         receivedUsers: document.userReceivedDocument,
@@ -1506,11 +1476,7 @@ export class SendDerivedDocumentsService {
       .exec();
 
     findEstadoUbicacion.estado_ubi.push({
-      nameOffices: [
-        {
-          office: document.oficinaActual,
-        },
-      ],
+      nameOffices: `${document.oficinaActual}`,
       stateOffice: 'OBSERVADO Y DEVUELTO',
       numberPasoOffice: pasoActual + 1,
       receivedUsers: document.userReceivedDocument,
@@ -1518,11 +1484,7 @@ export class SendDerivedDocumentsService {
     });
 
     findEstadoUbicacion.estado_ubi.push({
-      nameOffices: [
-        {
-          office: nameOffce,
-        },
-      ],
+      nameOffices: `${nameOffce}`,
       stateOffice: 'OBSERVADO',
       numberPasoOffice: numberPaso,
       receivedUsers: document.userReceivedDocument,

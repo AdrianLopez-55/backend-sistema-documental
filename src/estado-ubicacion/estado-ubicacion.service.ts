@@ -38,9 +38,7 @@ export class EstadoUbicacionService {
         (!filter.idDocument || eu.idDocument === filter.idDocument) &&
         (!filter.office ||
           eu.estado_ubi.some((office) =>
-            office.nameOffices.some((nameOffice) =>
-              nameOffice.office.match(new RegExp(filter.office, 'i')),
-            ),
+            office.nameOffices.match(new RegExp(filter.office, 'i')),
           )) &&
         (!filter.stateOffice ||
           eu.estado_ubi.some((office) =>

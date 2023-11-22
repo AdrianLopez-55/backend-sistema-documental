@@ -336,6 +336,7 @@ export class DocumentsService {
             nameOfficeUserRecieved: 'RECTORADO',
             dateRecived: new Date(),
             stateDocumentUser: 'RECIBIDO',
+            nameUser: '',
             observado: false,
           },
         ],
@@ -352,6 +353,7 @@ export class DocumentsService {
                 ciUser: '72838934',
                 idOfUser: '652e8e8af04daade67239462',
                 nameOfficeUserRecieved: 'DIRECCION POSTGRADO',
+                nameUser: '',
                 dateRecived: new Date(),
                 stateDocumentUser: 'RECIBIDO',
                 observado: false,
@@ -392,19 +394,16 @@ export class DocumentsService {
                   idOfUser: '',
                   nameOfficeUserRecieved: '',
                   dateRecived: null,
+                  nameUser: '',
                   stateDocumentUser: 'EN ESPERA',
                   observado: false,
                 },
               ],
               activo: true,
-              nameOffices: [],
+              nameOffices: 'asd',
             },
             {
-              nameOffices: [
-                {
-                  office: 'RECTORADO',
-                },
-              ],
+              nameOffices: 'asdf',
               stateOffice: 'ENVIADO',
               numberPasoOffice: null,
               receivedUsers: [
@@ -413,6 +412,7 @@ export class DocumentsService {
                   idOfUser: '',
                   nameOfficeUserRecieved: '',
                   dateRecived: null,
+                  nameUser: '',
                   stateDocumentUser: 'RECIBIDO',
                   observado: false,
                 },
@@ -623,13 +623,14 @@ export class DocumentsService {
                   ciUser: '444888777',
                   idOfUser: '64e84144561052a834987264',
                   nameOfficeUserRecieved: '',
+                  nameUser: '',
                   dateRecived: null,
                   stateDocumentUser: 'EN ESPERA',
                   observado: false,
                 },
               ],
               activo: true,
-              nameOffices: [],
+              nameOffices: '',
             },
           ],
           createdAt: undefined,
@@ -1774,12 +1775,12 @@ export class DocumentsService {
     );
   }
 
-  async showRecievedDocument(idUser: string, paginationDto: PaginationDto) {
-    return await this.getDocumentsService.getRecievedDocument(
-      idUser,
-      paginationDto,
-    );
-  }
+  // async showRecievedDocument(idUser: string, paginationDto: PaginationDto) {
+  //   return await this.getDocumentsService.getRecievedDocument(
+  //     idUser,
+  //     paginationDto,
+  //   );
+  // }
 
   async showAllDocumentSend(userId: string): Promise<Documents[]> {
     return await this.getDocumentsService.getAllDocumentSent(userId);
