@@ -23,12 +23,18 @@ export class UserLoginController {
   ) {}
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   @Get('profile')
   @ApiOperation({ summary: 'see data of the logged in user' })
   async getUserLogged(@Request() req) {
     const userId = req.user;
     const userRol = req.userRol;
+    console.log('userid', userId);
     return this.userLoginService.getUserLogged(userId, userRol);
   }
 }

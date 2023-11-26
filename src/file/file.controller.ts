@@ -14,6 +14,7 @@ import { UpdateFileDto } from './dto/update-file.dto';
 import * as fs from 'fs';
 import { SendHtmlBase64Dto } from './dto/sendHtmlBase64.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { AddFileToDocumentDto } from './dto/addFileToDocumentDto.dto';
 
 @Controller('file')
 @ApiTags('file')
@@ -38,6 +39,11 @@ export class FileController {
   @Get('document-files/:idDocument')
   async documentFiles(@Param('idDocument') idDocument: string) {
     return await this.fileService.findIdDocumentIdFiles(idDocument);
+  }
+
+  @Get('base64-all-document/:idDocument')
+  async base64AllDocument(@Param('idDocument') idDocument: string) {
+    return await this.fileService.getAllBase64(idDocument);
   }
 
   @Get('base64-document-files/:idDocument/:idFile')
@@ -92,12 +98,12 @@ export class FileController {
     return pdfBase64;
   }
 
-  @Post('add-file-to-document/:idFile/:idDocument')
+  @Post('add-file-to-document/:idDocument')
   async addFileToDocument(
-    @Param('idFile') IdFile: string,
     @Param('idDocument') idDocument: string,
+    @Body() body: AddFileToDocumentDto,
   ) {
-    return await this.fileService.addFileToDocment(IdFile, idDocument);
+    return await this.fileService.addFileToDocumentExist(idDocument, body);
   }
 
   // @Post('addFile')

@@ -58,12 +58,6 @@ export class DigitalSignatureService {
       throw new UnauthorizedException('Contraseña inválida');
     }
 
-    const pinInUse = await this.isPinUse(pin);
-
-    // if (pinInUse) {
-    //   throw new HttpException(`El pin ${pin} ya está en uso`, 400);
-    // }
-
     if (await this.validatePin(pin)) {
       try {
         const hasPin = await this.createPINHash(pin);

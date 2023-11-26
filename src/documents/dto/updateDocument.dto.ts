@@ -22,4 +22,7 @@ export class UpdateDocumentDTO extends PartialType(CreateDocumentDTO) {
     example: ['data:@file/jpeg;base64,/9jq'],
   })
   file: string[];
+
+  @ApiProperty()
+  html: string;
 }

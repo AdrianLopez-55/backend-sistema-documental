@@ -56,10 +56,14 @@ export class GetDocumentsService {
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
+      // if (typeName) {
+      //   query['documentationType'] = {
+      //     $elemMatch: { typeName: typeName },
+      //   };
+      // }
       if (typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: typeName },
-        };
+        console.log('typeName', typeName);
+        query['documentationType.typeName'] = new RegExp(typeName, 'i');
       }
       if (stateDocumentUserSend) {
         query['stateDocumentUserSend'] = stateDocumentUserSend;
@@ -82,12 +86,12 @@ export class GetDocumentsService {
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
-      if (active) {
+      if (active === 'true') {
         // query['active'] = active;
         query = query.where('active', active);
       }
 
-      if (userDigitalSignature) {
+      if (userDigitalSignature === 'true') {
         query = query.where(
           'digitalSignatureDocument.userDigitalSignature',
           userId,
@@ -133,6 +137,11 @@ export class GetDocumentsService {
       if (withWorkflow === undefined) {
         let query = this.documentModel.find();
 
+        // query = query.elemMatch('estado_Ubicacion.estado_ubi', {
+        //   'receivedUsers.ciUser': userId,
+        //   stateOffice: { $ne: 'DERIVADO' }, // Excluir documentos con estado "DERIVADO"
+        // });
+
         if (numberDocument) {
           query = query.where(
             'numberDocument',
@@ -171,12 +180,12 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
 
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query = query.where(
             'digitalSignatureDocument.userDigitalSignature',
             userId,
@@ -203,14 +212,14 @@ export class GetDocumentsService {
           });
         }
 
-        const offset = (page - 1) * limit;
+        // const offset = (page - 1) * limit;
         const documents = await this.documentModel.find();
         const {
           data: findDocument,
           total,
           totalPages,
         } = await this.functionObtainAndDerivedDocument(
-          documents,
+          await query,
           userId,
           limit,
           page,
@@ -235,6 +244,29 @@ export class GetDocumentsService {
           'userReceivedDocument.idOfUser': userId,
           workflow: { $ne: null },
         });
+
+        // query = query.elemMatch('estado_Ubicacion.estado_ubi', {
+        //   'receivedUsers.ciUser': userId,
+        //   stateOffice: { $ne: 'DERIVADO' }, // Excluir documentos con estado "DERIVADO"
+        // });
+        // let query = {
+        //   $or: [
+        //     this.documentModel
+        //       .where('userId', userId)
+        //       .where('stateDocumentUserSend', 'INICIADO')
+        //       // ... (otras condiciones del primer filtro)
+        //       .getQuery(),
+        //     this.documentModel
+        //       .where('estado_Ubicacion.estado_ubi')
+        //       .elemMatch({
+        //         'receivedUsers.ciUser': userId,
+        //         'stateOffice': { $ne: 'DERIVADO' },
+        //       })
+        //       // ... (otras condiciones del segundo filtro)
+        //       .getQuery(),
+        //   ],
+        // };
+
         if (numberDocument) {
           query = query.where(
             'numberDocument',
@@ -273,11 +305,11 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query['digitalSignatureDocument.userDigitalSignature'] =
             userDigitalSignature;
         }
@@ -387,12 +419,12 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
 
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query = query.where(
             'digitalSignatureDocument.userDigitalSignature',
             userId,
@@ -510,12 +542,12 @@ export class GetDocumentsService {
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
-      if (active) {
+      if (active === 'true') {
         // query['active'] = active;
         query = query.where('active', active);
       }
 
-      if (userDigitalSignature) {
+      if (userDigitalSignature === 'true') {
         query = query.where(
           'digitalSignatureDocument.userDigitalSignature',
           userId,
@@ -623,12 +655,12 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
 
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query = query.where(
             'digitalSignatureDocument.userDigitalSignature',
             userId,
@@ -720,12 +752,12 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
 
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query = query.where(
             'digitalSignatureDocument.userDigitalSignature',
             userId,
@@ -812,12 +844,12 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
 
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query = query.where(
             'digitalSignatureDocument.userDigitalSignature',
             userId,
@@ -900,12 +932,12 @@ export class GetDocumentsService {
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
-      if (active) {
+      if (active === 'true') {
         // query['active'] = active;
         query = query.where('active', active);
       }
 
-      if (userDigitalSignature) {
+      if (userDigitalSignature === 'true') {
         query = query.where(
           'digitalSignatureDocument.userDigitalSignature',
           userId,
@@ -987,12 +1019,12 @@ export class GetDocumentsService {
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
-      if (active) {
+      if (active === 'true') {
         // query['active'] = active;
         query = query.where('active', active);
       }
 
-      if (userDigitalSignature) {
+      if (userDigitalSignature === 'true') {
         query = query.where(
           'digitalSignatureDocument.userDigitalSignature',
           userId,
@@ -1055,7 +1087,7 @@ export class GetDocumentsService {
         }
         if (typeName) {
           query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
+            $elemMatch: { typeName: typeName },
           };
         }
         if (stateDocumentUserSend) {
@@ -1079,12 +1111,12 @@ export class GetDocumentsService {
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
-        if (active) {
+        if (active === 'true') {
           // query['active'] = active;
           query = query.where('active', active);
         }
 
-        if (userDigitalSignature) {
+        if (userDigitalSignature === 'true') {
           query = query.where(
             'digitalSignatureDocument.userDigitalSignature',
             userId,
@@ -1170,12 +1202,106 @@ export class GetDocumentsService {
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
-      if (active) {
+      if (active === 'true') {
         // query['active'] = active;
         query = query.where('active', active);
       }
 
-      if (userDigitalSignature) {
+      if (userDigitalSignature === 'true') {
+        query = query.where(
+          'digitalSignatureDocument.userDigitalSignature',
+          userId,
+        );
+      }
+
+      if (dateRange.startDate && dateRange.endDate) {
+        query = query.where('createdAt', {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        });
+      }
+
+      //--filtrar documentos recividos
+      if (
+        dateRangeRecived.startDateRecived &&
+        dateRangeRecived.endDateRecived
+      ) {
+        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        query = query.elemMatch('userReceivedDocument', {
+          dateRecived: {
+            $gte: dateRangeRecived.startDateRecived,
+            $lte: dateRangeRecived.endDateRecived,
+          },
+        });
+      }
+
+      const offset = (page - 1) * limit;
+
+      const filteredDocuments = await this.documentModel
+        .find(query)
+        .limit(limit)
+        .skip(offset)
+        .sort({ createdAt: -1 });
+
+      const total = await this.documentModel.countDocuments(query).exec();
+
+      return {
+        data: filteredDocuments,
+        total: total,
+        totalPages: Math.ceil(total / limit),
+      };
+    } else if (view === 'DERIVADOS') {
+      let query = this.documentModel.find({
+        'estado_Ubicacion.estado_ubi': {
+          $elemMatch: {
+            'receivedUsers.idOfUser': userId,
+            'receivedUsers.stateDocumentUser':
+              'DERIVADO' /* stateOffice: { $ne: 'DERIVADO' },*/,
+          },
+        },
+      });
+
+      if (numberDocument) {
+        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
+      }
+      if (userId) {
+        query = query.where('userId', new RegExp(userId, 'i'));
+      }
+      if (title) {
+        query = query.where('title', new RegExp(title, 'i'));
+      }
+      if (typeName) {
+        query['documentationType'] = {
+          $elemMatch: { documentationType: typeName },
+        };
+      }
+      if (stateDocumentUserSend) {
+        query['stateDocumentUserSend'] = stateDocumentUserSend;
+      }
+      if (nombre) {
+        query['workflow'] = {
+          $elemMatch: { nombre: nombre },
+        };
+      }
+      if (descriptionWorkflow) {
+        query['workflow'] = {
+          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
+        };
+      }
+      if (oficinaActual) {
+        query['workflow'] = {
+          $elemMatch: { oficinaActual: oficinaActual },
+        };
+      }
+      if (description) {
+        query = query.where('userId', new RegExp(description, 'i'));
+      }
+      if (active === 'true') {
+        // query['active'] = active;
+        query = query.where('active', active);
+      }
+
+      if (userDigitalSignature === 'true') {
         query = query.where(
           'digitalSignatureDocument.userDigitalSignature',
           userId,

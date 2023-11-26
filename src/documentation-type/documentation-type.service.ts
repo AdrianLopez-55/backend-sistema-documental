@@ -18,6 +18,10 @@ import getConfig from '../config/configuration';
 import * as fs from 'fs';
 import * as path from 'path';
 import { HttpService } from '@nestjs/axios';
+import {
+  DocumentDocument,
+  Documents,
+} from 'src/documents/schema/documents.schema';
 
 @Injectable()
 export class DocumentationTypeService {
@@ -29,6 +33,8 @@ export class DocumentationTypeService {
     private readonly documentationTypeModel: Model<DocumentationTypeDocument>,
     private readonly customErrorService: CustomErrorService,
     private readonly httpService: HttpService,
+    @InjectModel(Documents.name)
+    private readonly documentModel: Model<DocumentDocument>,
   ) {}
 
   async create(
@@ -225,7 +231,7 @@ export class DocumentationTypeService {
 
   async findOne(id: string): Promise<DocumentationType> {
     const documentatioType = await this.documentationTypeModel
-      .findOne({ _id: id })
+      .findById(id)
       .exec();
 
     if (!documentatioType) {
@@ -358,9 +364,19 @@ export class DocumentationTypeService {
   async inactiverTypeDocument(id: string, activeDocumentType: boolean) {
     const typeDocument: DocumentationTypeDocument =
       await this.documentationTypeModel.findById(id);
-    typeDocument.activeDocumentType = false;
-    await typeDocument.save();
-    return typeDocument;
+    const allDocuments = await this.documentModel
+      .find({
+        active: true,
+        'documentationType.typeName': typeDocument.typeName,
+      })
+      .exec();
+    if (allDocuments) {
+      return 'tipo de documento usado';
+    } else {
+      typeDocument.activeDocumentType = false;
+      await typeDocument.save();
+      return typeDocument;
+    }
   }
 
   async activerTypeDocument(id: string, activeDocumentType: boolean) {

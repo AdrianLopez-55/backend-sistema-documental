@@ -16,6 +16,7 @@ import * as mimeTypes from 'mime-types';
 import getConfig from '../config/configuration';
 import { TemplateFilter } from './dto/template-filter';
 import { SendDocxBase64Dto } from './dto/sendDocxBase64.dto';
+import * as docxConverter from 'docx-pdf';
 // import HTMLtoDOCX from 'html-to-docx';
 
 @Injectable()
@@ -28,6 +29,11 @@ export class TemplateService {
     private readonly httpService: HttpService,
   ) {}
 
+  async imageToBase64(filePath) {
+    const image = fs.readFileSync(filePath);
+    return image.toString('base64');
+  }
+
   async create(createTemplateDto: CreateTemplateDto) {
     const findName = await this.templateModel
       .findOne({ nameTemplate: createTemplateDto.nameTemplate })
@@ -35,7 +41,9 @@ export class TemplateService {
     if (findName) {
       throw new HttpException('nombre de template ya en uso', 400);
     }
+
     // DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
+    //uso de la libreria html-to-docx
     const HTMLtoDOCX = require('html-to-docx');
     const { nameTemplate, descriptionTemplate, htmlContent, base64Docx } =
       createTemplateDto;
@@ -47,16 +55,73 @@ export class TemplateService {
           400,
         );
       }
+      const mammoth = require('mammoth');
+
+      const base64Img2 = await this.imageToBase64(
+        path.resolve('./logo_black.jpg'),
+      );
+
+      const documentOptions = {
+        pageSize: {
+          width: 12240,
+          height: 15840,
+        },
+        margins: {
+          top: 1440,
+          right: 1800,
+          bottom: 1440,
+          left: 1800,
+          header: 720,
+          footer: 720,
+          gutter: 0,
+        },
+        title: `documento`,
+        header: true,
+        footer: true,
+        font: 'Times New Roman',
+        fontSize: 24,
+        pageNumber: false,
+      };
+      function getBolivianTime() {
+        const now = new Date();
+        const offset = -4;
+        const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+        const bolivianTime = new Date(utc + 3600000 * offset);
+
+        const year = bolivianTime.getFullYear();
+        const month = (bolivianTime.getMonth() + 1).toString().padStart(2, '0');
+        const day = bolivianTime.getDate().toString().padStart(2, '0');
+        console.log(year, month, day);
+        const hours = bolivianTime.getHours();
+        const formattedHours = hours % 12 === 0 ? 12 : hours % 12;
+        const amOrPm = hours >= 12 ? 'PM' : 'AM';
+
+        const minutes = bolivianTime.getMinutes();
+        const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+
+        const seconds = bolivianTime.getSeconds();
+        const formattedSeconds = seconds < 10 ? `0${seconds}` : seconds;
+
+        return `${year}/${month}/${day} - ${formattedHours}:${formattedMinutes}:${formattedSeconds} ${amOrPm}`;
+      }
+      const bolivianTime = getBolivianTime();
+      const headerHTMLString = `
+      <div style="font-size: 10px; display: flex; align-items: center; justify-content: space-between; height: 20px; margin-top: 10px; width: 80%;">
+    <span style="margin-left: 50px;">FUNDACION DE SOFTWARE LIBRE</span>
+</div>`;
+      const footerHTMLString = `
+      <div style="font-size: 10px; display: flex; align-items: center; justify-content: space-between; height: 20px; margin-top: 10px;">
+      <span style="margin-left: 50px;">${bolivianTime}</span>
+      </span>
+      <span style="flex: 1; text-align: right; margin-left: 350px;">Page <span class="pageNumber">1</span> of <span class="totalPages">1</span></span>
+      </div>`;
+
       //convertir html a docx:
       const fileBuffer = await HTMLtoDOCX(
         htmlContent,
-        null,
-        {
-          table: { row: { cantSplit: true } },
-          footer: true,
-          pageNumber: true,
-        },
-        true,
+        headerHTMLString,
+        documentOptions,
+        footerHTMLString,
       );
 
       //guardar el archivo docx en template
@@ -65,15 +130,47 @@ export class TemplateService {
         templateDir,
         `${nameTemplate.toUpperCase()}.docx`,
       );
-      fs.writeFileSync(filePath, fileBuffer);
-
-      //obtener mime del docx
-      // const mimeTypeDocx = mimeTypes.lookup('.docx');
-      const fileExtension = path.extname(filePath).substring(1);
-      const mimeTypeDocx = `application/${fileExtension}`;
+      fs.writeFile(filePath, fileBuffer, (error) => {
+        if (error) {
+          console.log(`Docx file creation failed`);
+          return;
+        }
+        console.log(`Docx file created succefully`);
+      });
+      const mimeTypeDocx = `application/vnd.openxmlformats-officedocument.wordprocessingml.document`;
 
       //obtener la base64 de docx
       const docxBase64 = fileBuffer.toString('base64');
+
+      const inputPath = path.join(
+        process.cwd(),
+        'template',
+        `${nameTemplate}.docx`,
+      );
+
+      //convertir a pdf el html
+      const responsehtmlPdf = await this.httpService
+        .post(`${getConfig().api_convet_html_pdf}/convert`, {
+          textPlain: htmlContent,
+        })
+        .toPromise();
+      const idFile = responsehtmlPdf.data.idFile;
+      console.log('esto es id del file pdf convertido', idFile);
+      // const outPutDocumentTemplate = path.join(process.cwd(), 'template');
+      // const outPUthFileName = `${nameTemplate}.pdf`;
+      // const outputhPathTemplate = path.join(
+      //   outPutDocumentTemplate,
+      //   outPUthFileName,
+      // );
+      // await this.convertDocxToPdf(inputPath, outputhPathTemplate);
+      // const rutaPdfGenerated = path.join(
+      //   process.cwd(),
+      //   'template',
+      //   `${nameTemplate}.pdf`,
+      // );
+      // const resultFile = fs.readFileSync(rutaPdfGenerated);
+      // const base64String = resultFile.toString('base64');
+      // console.log('esto es base64 del pdf', base64String);
 
       const fileObj = {
         mime: mimeTypeDocx,
@@ -414,4 +511,18 @@ export class TemplateService {
   }
 
   */
+
+  private async convertDocxToPdf(inputPath: string, outputPath: string) {
+    return new Promise<string>((resolve, reject) => {
+      docxConverter(inputPath, outputPath, (err: any, result: string) => {
+        if (err) {
+          console.error(err);
+          reject(err);
+        } else {
+          console.log('Result: ' + result);
+          resolve(result);
+        }
+      });
+    });
+  }
 }

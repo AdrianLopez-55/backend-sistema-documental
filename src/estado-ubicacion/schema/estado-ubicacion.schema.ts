@@ -19,7 +19,7 @@ export class EstadoUbiacion {
             ciUser: String,
             idOfUser: String,
             nameOfficeUserRecieved: String,
-            nameUser: String,
+            // nameUser: String,
             dateRecived: Date,
             stateDocumentUser: String,
           },
@@ -37,7 +37,7 @@ export class EstadoUbiacion {
       idOfUser: string;
       nameOfficeUserRecieved: string;
       dateRecived: Date;
-      nameUser: string;
+      // nameUser: string;
       stateDocumentUser: string;
       observado: boolean;
     }[];

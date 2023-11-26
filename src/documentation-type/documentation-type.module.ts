@@ -15,6 +15,10 @@ import {
 } from 'src/permissions/schemas/permission.schema';
 import { Bitacora, BitacoraSchema } from 'src/bitacora/schema/bitacora.schema';
 import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
+import {
+  Documents,
+  DocumentsSchema,
+} from 'src/documents/schema/documents.schema';
 
 @Module({
   imports: [
@@ -23,6 +27,7 @@ import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
       { name: Rol.name, schema: RolSchema },
       { name: Permission.name, schema: PermissionSchema },
       { name: Bitacora.name, schema: BitacoraSchema },
+      { name: Documents.name, schema: DocumentsSchema },
     ]),
     HttpModule,
   ],

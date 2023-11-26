@@ -42,7 +42,6 @@ export class WorkflowService {
       throw new HttpException(`El nombre ${existingWorkflow} ya existe.`, 400);
     }
 
-    //creacion del step
     let prevPaso = 0;
     for (const paso of pasos) {
       const oficina = paso.oficina;
@@ -70,10 +69,7 @@ export class WorkflowService {
         400,
       );
     }
-
     const newStep = new this.stepModel({
-      // step: step.step,
-      // descriptionStep: step.descriptionStep,
       pasos: pasos,
     });
     await newStep.save();
@@ -83,8 +79,6 @@ export class WorkflowService {
     const nuevoWorkflow = new this.workflowModel({
       nombre: nombre,
       descriptionWorkflow: descriptionWorkflow,
-      // step: newStep.step,
-      // descriptionStep: newStep.descriptionStep,
       pasos: newStep.pasos,
 
       idStep: newStep._id,

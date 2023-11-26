@@ -27,4 +27,7 @@ export class CreateDocumentDTO {
     example: ['data:@file/jpeg;base64,/9jq'],
   })
   file: string[];
+
+  @ApiProperty()
+  html: string;
 }

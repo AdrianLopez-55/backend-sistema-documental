@@ -163,9 +163,9 @@ export class FilterDocumentsAll {
     required: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @IsString()
   @MinLength(8)
-  active: boolean;
+  active: string;
 
   @ApiProperty({
     example: true,
@@ -173,8 +173,8 @@ export class FilterDocumentsAll {
     required: false,
   })
   @IsOptional()
-  @IsBoolean()
-  userDigitalSignature: Boolean;
+  @IsString()
+  userDigitalSignature: string;
 
   @ApiProperty({
     example: '2023',

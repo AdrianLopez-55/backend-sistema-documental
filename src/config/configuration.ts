@@ -15,4 +15,5 @@ export default () => ({
   api_template: process.env.API_TEMPLATE,
   api_document: process.env.API_DOCUMENT,
   api_rol_id: process.env.API_ROL_ID,
+  api_convet_html_pdf: process.env.API_CONVERT_HTML_PDF,
 });

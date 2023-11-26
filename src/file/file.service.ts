@@ -14,6 +14,7 @@ import {
   DocumentDocument,
   Documents,
 } from 'src/documents/schema/documents.schema';
+import { AddFileToDocumentDto } from './dto/addFileToDocumentDto.dto';
 
 @Injectable()
 export class FileService {
@@ -291,19 +292,137 @@ export class FileService {
     return base64s;
   }
 
-  async addFileToDocment(id: string, idDocument: string) {
-    const findFile = await this.fileModel.findById(id).exec();
-    const document = await this.documentsModel.findById(idDocument).exec();
-    if (!idDocument) {
-      throw new HttpException('el documento no pudo ser encontrado', 400);
+  // async addFileToDocment(id: string, idDocument: string) {
+  //   const findFile = await this.fileModel.findById(id).exec();
+  //   const document = await this.documentsModel.findById(idDocument).exec();
+  //   if (!idDocument) {
+  //     throw new HttpException('el documento no pudo ser encontrado', 400);
+  //   }
+  //   if (!document.fileRegister) {
+  //     document.fileRegister = findFile.fileRegister;
+  //     await document.save();
+  //     findFile.idDocument = document._id;
+  //     await findFile.save();
+  //     return findFile;
+  //   }
+  // }
+
+  async addFileToDocumentExist(
+    idDocument: string,
+    addFileToDocumentDto: AddFileToDocumentDto,
+  ) {
+    const findDocument = await this.fileModel.findOne({ idDocument }).exec();
+    const findDocumentOffcie = await this.documentsModel
+      .findById(idDocument)
+      .exec();
+    const fileDataArray = await this.extractFileData(addFileToDocumentDto.file);
+    let fileRegisterData = [];
+    // fileRegisterData.push(findDocument.fileRegister);
+    for (const fileData of fileDataArray) {
+      const { mime, base64 } = fileData;
+      console.log('esto es mime', mime);
+      console.log('esto es base64', base64);
+      if (
+        mime.startsWith(
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+      ) {
+        const binaryData = Buffer.from(base64, 'base64');
+
+        //definir ruta y nombre del archivo temporal
+        const path = require('path');
+        const tempFolder = path.join(process.cwd(), 'template');
+        const fileName = `_file.docx`;
+        const filePathTemplateDoc = path.join(tempFolder, fileName);
+        fs.writeFileSync(filePathTemplateDoc, binaryData);
+        //borrar el template descargado
+        const timeToLiveInMillisencods = 1 * 60 * 1000;
+        setTimeout(() => {
+          fs.unlink(filePathTemplateDoc, (err) => {
+            if (err) {
+              console.error('error al eliminar file', err);
+            } else {
+              console.log('archivo eliminado', filePathTemplateDoc);
+            }
+          });
+        }, timeToLiveInMillisencods);
+        //convertir a pdf
+        const inputPath = path.join(process.cwd(), 'template', `_file.docx`);
+        const outPutDocumentTemplate = path.join(process.cwd(), 'template');
+        const outPuthFileName = `_file.pdf`;
+        const outPutPathTemplate = path.join(
+          outPutDocumentTemplate,
+          outPuthFileName,
+        );
+        await this.convertDocxToPdf(inputPath, outPutPathTemplate);
+        const rutaPdfGenerated = path.join(
+          process.cwd(),
+          'template',
+          `_file.pdf`,
+        );
+        const resultFile = fs.readFileSync(rutaPdfGenerated);
+        const base64String = resultFile.toString('base64');
+        const fileObj = {
+          mime: 'application/pdf',
+          base64: base64String,
+        };
+        const response = await this.uploadFile(fileObj);
+        const fileRegister = this.createFileRegister(response.data.file);
+        // fileRegisterData.push(fileRegister);
+        findDocument.fileRegister.push(fileRegister);
+      } else {
+        console.log(mime);
+        const fileObj = {
+          mime: mime,
+          base64: base64,
+        };
+        const response = await this.uploadFile(fileObj);
+        const fileRegister = this.createFileRegister(response.data.file);
+        // fileRegisterData.push(fileRegister);
+        findDocument.fileRegister.push(fileRegister);
+        console.log(findDocument);
+      }
+      const fileObj = {
+        mime: mime,
+        base64: base64,
+      };
+      // const response = await this.uploadFile(fileObj);
+      // const fileRegister = this.createFileRegister(response.data.file);
+      // findDocument.fileRegister.push(fileRegister);
     }
-    if (!document.fileRegister) {
-      document.fileRegister = findFile.fileRegister;
-      await document.save();
-      findFile.idDocument = document._id;
-      await findFile.save();
-      return findFile;
+    await findDocument.save();
+    findDocumentOffcie.fileRegister = findDocument.fileRegister;
+    await findDocumentOffcie.save();
+    console.log('new fileregister', findDocument);
+    // console.log('fileregisterdata de documento push', fileRegisterData);
+    // findDocument.fileRegister = fileRegisterData;
+    // await findDocument.save();
+    return findDocument;
+  }
+
+  async getAllBase64(idDocument: string) {
+    const fileDocument = await this.fileModel.findOne({ idDocument }).exec();
+    const base64Array: string[] = [];
+    for (const fileEntry of fileDocument.fileRegister) {
+      const base64 = await this.findBase64OfDocument(
+        idDocument,
+        fileEntry.idFile,
+      );
+      if (base64) {
+        base64Array.push(base64);
+      }
     }
+    return base64Array;
+  }
+
+  private extractFileData(file: string[]): { mime: string; base64: string }[] {
+    const fileDataArray: { mime: string; base64: string }[] = [];
+    for (const files of file) {
+      const mimeType = files.split(';')[0].split(':')[1];
+      const base64 = files.split(',')[1];
+      fileDataArray.push({ mime: mimeType, base64 });
+    }
+    return fileDataArray;
   }
 
   async remove(id: string) {

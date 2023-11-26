@@ -1,3 +1,130 @@
+/*
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Permission } from './constants/Permission';
+import { HttpService } from '@nestjs/axios';
+import getConfig from '../config/configuration';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector, private httpService: HttpService) {}
+
+  async canActivate(context: ExecutionContext) {
+    const requiredPermission = this.reflector.get<Permission>(
+      'permissions',
+      context.getHandler(),
+    );
+
+    if (!requiredPermission) {
+      return true; // Si no se proporciona un permiso requerido, se permite el acceso.
+    }
+
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractTokenFromHeader(request);
+
+    if (!token) {
+      throw new UnauthorizedException('No autorizado, no existe token');
+    }
+
+    try {
+      const decodedToken = await this.httpService
+        .post(`${getConfig().api_central}/auth/decoded`, { token })
+        .toPromise();
+
+      console.log('decodedToken', decodedToken.data);
+
+      if (decodedToken.data.roles.length === 0) {
+        throw new UnauthorizedException('El usuario no tiene roles asignados.');
+      }
+
+      //       //----usuario ------
+      let userDataId = decodedToken.data.idUser;
+      let userDataRol = decodedToken.data.roles;
+      let userPassword = decodedToken.data.password;
+      // let userApp = decodedToken.data
+      let tokenDat = token;
+
+      request['user'] = userDataId;
+      request['userRol'] = userDataRol;
+      request['password'] = userPassword;
+      request['token'] = tokenDat;
+
+      const rolesWithDetails = await Promise.all(
+        decodedToken.data.roles.map((roleId) =>
+          this.httpService
+            .get(`${getConfig().api_central}/rol/${roleId}`)
+            .toPromise(),
+        ),
+      );
+
+      const userPermission = rolesWithDetails
+        .map((response) => response.data.permissionName)
+        .flat();
+
+      //AL OBTENER LOS PERMISOS DEL USUARIO SE OBTIENE DIRECTO LOS NOMBRES:
+
+      // {
+      //   _id: '654a4597bc5330d627920fef',
+      //   permissionName: 'CENTRAL_ESTABLECER_CONTRASEÑA_USUARIO',
+      //   __v: 0
+      // },
+
+      //POR LO TANTO YA NO HACE FALTA REALIZAR EL SIGUIENTE CODIGO
+      // SOLO USAR SI SE USA CENTRAL DE LOCALHOST
+      //--------------- SOLO USAR CON CENTRAL LOCALHOST -------------\\
+      // const userPermissionWithName = await Promise.all(
+      //   userPermission.map((permissionId) =>
+      //     this.httpService
+      //       .get(`${getConfig().api_central}/permission/${permissionId}`)
+      //       .toPromise(),
+      //   ),
+      // );
+
+      // const permissionNames = userPermission.map(
+      //   (item) => item.data.permissionName,
+      // );
+
+      //------------------------------------------------------------------\\
+
+      //----------- SOLO USAR SI SE USA CENTRAL EXTERNO ---------------------\\
+      const permissionNames = userPermission.map((item) => item.permissionName);
+      //------------------------------------------------------------------\\
+
+      if (checkPermissions(requiredPermission, permissionNames)) {
+        return true; // El usuario tiene el permiso requerido, permitir acceso.
+      } else {
+        throw new UnauthorizedException(
+          'No tiene permisos para acceder al recurso.',
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      throw new UnauthorizedException(
+        'No se pudo verificar los permisos del usuario.',
+      );
+    }
+    function checkPermissions(requiredPermissions, permissionNames) {
+      return requiredPermissions.some((requiredPermission) =>
+        permissionNames.includes(requiredPermission),
+      );
+    }
+  }
+
+  private extractTokenFromHeader(
+    request: Request & { headers: { authorization?: string } },
+  ): string | undefined {
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
+  }
+}
+
+*/
+
 import {
   Injectable,
   CanActivate,
@@ -32,8 +159,6 @@ export class RolesGuard implements CanActivate {
       'permissions',
       [context.getHandler(), context.getClass()],
     );
-    // console.log('estos son requiredPermission, permisos requeridos');
-    // console.log(requiredPermission);
 
     if (!requiredPermission) {
       return true;
@@ -67,7 +192,6 @@ export class RolesGuard implements CanActivate {
       request['token'] = tokenDat;
 
       //-------------roles ----
-
       if (decodedToken.data.roles.length === 0) {
         throw new HttpException('no tiene roles', 401);
       }
@@ -83,8 +207,6 @@ export class RolesGuard implements CanActivate {
       const roleDetails = rolesWithDetails.map((response) => response.data);
 
       const roleNames = roleDetails.map((role) => role.rolName);
-      // console.log('estos son nombre de los roles del usuario logeado');
-      // console.log(roleNames);
       if (!roleNames) {
         throw new HttpException('no tiene los permisos necesarios', 403);
       }
@@ -94,13 +216,10 @@ export class RolesGuard implements CanActivate {
         const findRole = await this.rolModel
           .findOne({ rolName: rolName })
           .exec();
-        // console.log('es el findRole encontrado en mi cru de roles');
-        // console.log(findRole);
 
         if (findRole) {
           const rolePermissions = findRole.permissionName;
-          // console.log('estos son los permisos (ids) dentro del rol de mi crud');
-          // console.log(rolePermissions);
+
           if (rolePermissions.length === 0) {
             hasRequiredPermissions = false;
           }
@@ -108,10 +227,7 @@ export class RolesGuard implements CanActivate {
             const findPermission = await this.permissionModel
               .findById(rolePermission)
               .exec();
-            // console.log(
-            //   'estos son los datos que se encontro de los permisos dentro de mi crud de permisos',
-            // );
-            // console.log(findPermission);
+
             if (findPermission) {
               const hasAllPermissions = requiredPermission.every((permission) =>
                 findPermission.permissionName.includes(permission),
@@ -119,10 +235,7 @@ export class RolesGuard implements CanActivate {
               const esIgual = requiredPermission.filter(
                 (permission) => permission == findPermission.permissionName,
               );
-              // console.log('para ver si hay valor de permiso igual');
-              // console.log(esIgual);
-              // console.log('hasAllPermissions');
-              // console.log(hasAllPermissions);
+
               if (esIgual.length > 0) {
                 hasRequiredPermissions = true;
                 return true;
