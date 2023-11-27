@@ -18,7 +18,6 @@ export class GetDocumentsService {
     private httpService: HttpService,
   ) {}
 
-  //---------------------------------------------------------
   async getDocuments(
     userId: string,
     view: string,
@@ -49,45 +48,41 @@ export class GetDocumentsService {
       if (numberDocument) {
         query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
       }
-
-      if (userId) {
-        query = query.where('userId', new RegExp(userId, 'i'));
-      }
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
-      // if (typeName) {
-      //   query['documentationType'] = {
-      //     $elemMatch: { typeName: typeName },
-      //   };
-      // }
       if (typeName) {
-        console.log('typeName', typeName);
-        query['documentationType.typeName'] = new RegExp(typeName, 'i');
+        query = query.where(
+          'documentationType.typeName',
+          new RegExp(typeName, 'i'),
+        );
       }
       if (stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = stateDocumentUserSend;
+        query = query.where(
+          'stateDocumentUserSend',
+          new RegExp(stateDocumentUserSend, 'i'),
+        );
       }
       if (nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: nombre },
-        };
+        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
       }
+
       if (descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-        };
+        query = query.where(
+          'workflow.descriptionWorkflow',
+          new RegExp(descriptionWorkflow, 'i'),
+        );
       }
       if (oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: oficinaActual },
-        };
+        query = query.where(
+          'workflow.oficinaActual',
+          new RegExp(oficinaActual, 'i'),
+        );
       }
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
       if (active === 'true') {
-        // query['active'] = active;
         query = query.where('active', active);
       }
 
@@ -135,12 +130,9 @@ export class GetDocumentsService {
       };
     } else if (view === 'RECIBIDOS') {
       if (withWorkflow === undefined) {
-        let query = this.documentModel.find();
-
-        // query = query.elemMatch('estado_Ubicacion.estado_ubi', {
-        //   'receivedUsers.ciUser': userId,
-        //   stateOffice: { $ne: 'DERIVADO' }, // Excluir documentos con estado "DERIVADO"
-        // });
+        let query = this.documentModel.find({
+          'userReceivedDocument.idOfUser': userId,
+        });
 
         if (numberDocument) {
           query = query.where(
@@ -148,41 +140,46 @@ export class GetDocumentsService {
             new RegExp(numberDocument, 'i'),
           );
         }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
         if (title) {
           query = query.where('title', new RegExp(title, 'i'));
         }
         if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
-          };
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
         }
         if (stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = stateDocumentUserSend;
+          query = query.where(
+            'stateDocumentUserSend',
+            new RegExp(stateDocumentUserSend, 'i'),
+          );
         }
         if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
+          query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
         }
+
         if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
+          query = query.where(
+            'workflow.descriptionWorkflow',
+            new RegExp(descriptionWorkflow, 'i'),
+          );
         }
+
         if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
+          query = query.where(
+            'workflow.oficinaActual',
+            new RegExp(oficinaActual, 'i'),
+          );
         }
         if (description) {
-          query = query.where('userId', new RegExp(description, 'i'));
+          query = query.where('description', new RegExp(description, 'i'));
         }
         if (active === 'true') {
-          // query['active'] = active;
           query = query.where('active', active);
+        }
+        if (year) {
+          query = query.where('year', new RegExp(year, 'i'));
         }
 
         if (userDigitalSignature === 'true') {
@@ -212,216 +209,137 @@ export class GetDocumentsService {
           });
         }
 
-        // const offset = (page - 1) * limit;
-        const documents = await this.documentModel.find();
-        const {
-          data: findDocument,
-          total,
-          totalPages,
-        } = await this.functionObtainAndDerivedDocument(
-          await query,
-          userId,
-          limit,
-          page,
-        );
-        // console.log('documents all', documents);
-        console.log(findDocument);
-        // const findDocument = await this.functionObtainAndDerivedDocument(
-        //   documents,
-        //   userId,
-        //   limit,
-        //   offset,
-        // );
-        // const total = findDocument.length;
-        return {
-          data: findDocument,
-          total,
-          totalPages,
-        };
-      }
-      if (withWorkflow === 'true') {
-        let query = this.documentModel.find({
-          'userReceivedDocument.idOfUser': userId,
-          workflow: { $ne: null },
-        });
-
-        // query = query.elemMatch('estado_Ubicacion.estado_ubi', {
-        //   'receivedUsers.ciUser': userId,
-        //   stateOffice: { $ne: 'DERIVADO' }, // Excluir documentos con estado "DERIVADO"
-        // });
-        // let query = {
-        //   $or: [
-        //     this.documentModel
-        //       .where('userId', userId)
-        //       .where('stateDocumentUserSend', 'INICIADO')
-        //       // ... (otras condiciones del primer filtro)
-        //       .getQuery(),
-        //     this.documentModel
-        //       .where('estado_Ubicacion.estado_ubi')
-        //       .elemMatch({
-        //         'receivedUsers.ciUser': userId,
-        //         'stateOffice': { $ne: 'DERIVADO' },
-        //       })
-        //       // ... (otras condiciones del segundo filtro)
-        //       .getQuery(),
-        //   ],
-        // };
-
-        if (numberDocument) {
-          query = query.where(
-            'numberDocument',
-            new RegExp(numberDocument, 'i'),
-          );
-        }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
-        if (title) {
-          query = query.where('title', new RegExp(title, 'i'));
-        }
-        if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
-          };
-        }
-        if (stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = stateDocumentUserSend;
-        }
-        if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
-        }
-        if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
-        }
-        if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
-        }
-        if (description) {
-          query = query.where('userId', new RegExp(description, 'i'));
-        }
-        if (active === 'true') {
-          // query['active'] = active;
-          query = query.where('active', active);
-        }
-        if (userDigitalSignature === 'true') {
-          query['digitalSignatureDocument.userDigitalSignature'] =
-            userDigitalSignature;
-        }
-
-        if (dateRange.startDate && dateRange.endDate) {
-          query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
-          });
-        }
-
-        //--filtrar documentos recividos
-        if (
-          dateRangeRecived.startDateRecived &&
-          dateRangeRecived.endDateRecived
-        ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
-          query = query.elemMatch('userReceivedDocument', {
-            dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
-            },
-          });
-        }
-
         const offset = (page - 1) * limit;
-
-        // const filteredDocuments = await this.documentModel
-        //   .find(query)
-        //   .limit(limit)
-        //   .skip(offset)
-        //   .sort({ createdAt: -1 });
-
-        // filteredDocuments.sort((a, b) => {
-        //   return (
-        //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        //   );
-        // });
-
-        const documents = await this.documentModel.find({
-          'userReceivedDocument.idOfUser': userId,
-          workflow: { $ne: null },
-        });
-        // .limit(limit)
-        // .skip(offset);
-        // console.log('documents', documents);
-        // const filteredDocuments = await query
-        //   .limit(limit)
-        //   .skip(offset)
-        //   .sort({ createdAt: -1 })
-        //   .lean()
-        //   .exec();
-        // console.log('filteredDocuments', filteredDocuments);
-        const findDocument = await this.functionObtainWithWorkflowDocument(
-          documents,
-          userId,
-          limit,
-          offset,
-        );
-        const total = findDocument.length;
+        const documents = await this.documentModel
+          .find(query)
+          .limit(limit)
+          .skip(offset)
+          .sort({ createdAt: -1 });
+        const total = await this.documentModel.countDocuments(query).exec();
         return {
-          data: findDocument,
+          data: documents,
           total: total,
           totalPages: Math.ceil(total / limit),
         };
       }
-      if (withWorkflow === 'false') {
+      if (withWorkflow && withWorkflow === 'true') {
         let query = this.documentModel.find({
           'userReceivedDocument.idOfUser': userId,
-          workflow: null,
+          workflow: { $ne: null },
         });
+
         if (numberDocument) {
           query = query.where(
             'numberDocument',
             new RegExp(numberDocument, 'i'),
           );
         }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
         if (title) {
           query = query.where('title', new RegExp(title, 'i'));
         }
         if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
-          };
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
         }
         if (stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = stateDocumentUserSend;
+          query = query.where(
+            'stateDocumentUserSend',
+            new RegExp(stateDocumentUserSend, 'i'),
+          );
         }
         if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
+          query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
         }
         if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
+          query = query.where(
+            'workflow.descriptionWorkflow',
+            new RegExp(descriptionWorkflow, 'i'),
+          );
         }
         if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
+          query = query.where(
+            'workflow.oficinaActual',
+            new RegExp(oficinaActual, 'i'),
+          );
         }
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
         if (active === 'true') {
-          // query['active'] = active;
           query = query.where('active', active);
+        }
+        if (userDigitalSignature === 'true') {
+          query = query.where(
+            'digitalSignatureDocument.userDigitalSignature',
+            userId,
+          );
+        }
+
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.where('createdAt', {
+            $gte: dateRange.startDate,
+            $lte: dateRange.endDate,
+          });
+        }
+
+        //--filtrar documentos recividos
+        if (
+          dateRangeRecived.startDateRecived &&
+          dateRangeRecived.endDateRecived
+        ) {
+          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          query = query.elemMatch('userReceivedDocument', {
+            dateRecived: {
+              $gte: dateRangeRecived.startDateRecived,
+              $lte: dateRangeRecived.endDateRecived,
+            },
+          });
+        }
+
+        const offset = (page - 1) * limit;
+        const documents = await this.documentModel
+          .find(query)
+          .limit(limit)
+          .skip(offset)
+          .sort({ createdAt: -1 });
+        const total = await this.documentModel.countDocuments(query).exec();
+        return {
+          data: documents,
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        };
+      }
+      if (withWorkflow && withWorkflow === 'false') {
+        let query = this.documentModel.find({
+          'userReceivedDocument.idOfUser': userId,
+          workflow: null,
+        });
+
+        if (numberDocument) {
+          query = query.where(
+            'numberDocument',
+            new RegExp(numberDocument, 'i'),
+          );
+        }
+        if (title) {
+          query = query.where('title', new RegExp(title, 'i'));
+        }
+        if (typeName) {
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
+        }
+        if (stateDocumentUserSend) {
+          query = query.where(
+            'stateDocumentUserSend',
+            new RegExp(stateDocumentUserSend, 'i'),
+          );
+        }
+        if (description) {
+          query = query.where('userId', new RegExp(description, 'i'));
         }
 
         if (userDigitalSignature === 'true') {
@@ -451,99 +369,62 @@ export class GetDocumentsService {
             $lte: dateRange.endDate,
           });
         }
-
         const offset = (page - 1) * limit;
-
-        // const filteredDocuments = await this.documentModel
-        //   .find(query)
-        //   .limit(limit)
-        //   .skip(offset)
-        //   .sort({ createdAt: -1 });
-
-        const documents = await this.documentModel.find();
-        // .limit(limit)
-        // .skip(offset);
-        // console.log('documents', documents);
-        // const filteredDocuments = await query
-        //   .limit(limit)
-        //   .skip(offset)
-        //   .sort({ createdAt: -1 })
-        //   .lean()
-        //   .exec();
-        // console.log('filteredDocuments', filteredDocuments);
-        const {
-          data: findDocument,
-          total,
-          totalPages,
-        } = await this.functionObtainWithoutWorkflowDocument(
-          documents,
-          userId,
-          limit,
-          page,
-        );
-        // const total = findDocument.length;
+        const documents = await this.documentModel
+          .find(query)
+          .limit(limit)
+          .skip(offset)
+          .sort({ createdAt: -1 });
+        const total = await this.documentModel.countDocuments(query).exec();
         return {
-          data: findDocument,
-          total,
-          totalPages,
+          data: documents,
+          total: total,
+          totalPages: Math.ceil(total / limit),
         };
-
-        // filteredDocuments.sort((a, b) => {
-        //   return (
-        //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        //   );
-        // });
-
-        // const total = await this.documentModel.countDocuments(query).exec();
-
-        // return {
-        //   data: filteredDocuments,
-        //   total: total,
-        //   totalPages: Math.ceil(total / limit),
-        // };
       }
     } else if (view === 'REVISADOS') {
       let query = this.documentModel.find({
-        'userReceivedDocument.stateDocumentUser': 'REVISADO',
-        userId: userId,
+        userReceivedDocument: {
+          $elemMatch: {
+            idOfUser: userId,
+            stateDocumentUser: 'REVISADO',
+          },
+        },
       });
       if (numberDocument) {
         query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
-      }
-      if (userId) {
-        query = query.where('userId', new RegExp(userId, 'i'));
       }
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
       if (typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: typeName },
-        };
+        query = query.where(
+          'documentationType.typeName',
+          new RegExp(typeName, 'i'),
+        );
       }
       if (stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = stateDocumentUserSend;
+        query = query.where(
+          'stateDocumentUserSend',
+          new RegExp(stateDocumentUserSend, 'i'),
+        );
       }
       if (nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: nombre },
-        };
+        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
       }
       if (descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-        };
+        query = query.where(
+          'workflow.descriptionWorkflow',
+          RegExp(descriptionWorkflow, 'i'),
+        );
       }
       if (oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: oficinaActual },
-        };
+        query = query.where('workflow.oficinaActual');
       }
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
       if (active === 'true') {
-        // query['active'] = active;
         query = query.where('active', active);
       }
 
@@ -590,21 +471,9 @@ export class GetDocumentsService {
         total: total,
         totalPages: Math.ceil(total / limit),
       };
-
-      // const results = await Promise.all([this.getDocumentReviewed(userId)]);
-      // const validResults = results.filter((result) => result.length > 0);
-      // showDocument = [].concat(...validResults);
     } else if (view === 'ENVIADOS') {
       if (withWorkflow === undefined) {
-        //enviado sin workflow
-        // let query = this.documentModel.find({
-        //   userId: userId,
-        //   stateDocumentUserSend: 'ENVIADO DIRECTO',
-        //   stateDocumentUsreSend: 'INICIADO',
-        // });
-
         let query = this.documentModel.find({
-          userId: userId,
           $or: [
             {
               stateDocumentUserSend: 'INICIADO',
@@ -613,6 +482,18 @@ export class GetDocumentsService {
             {
               stateDocumentUserSend: 'ENVIADO DIRECTO',
               workflow: null,
+            },
+            {
+              bitacoraWorkflow: {
+                $elemMatch: {
+                  receivedUsers: {
+                    $elemMatch: {
+                      idOfUser: `${userId}`,
+                      stateDocumentUser: 'DERIVADO',
+                    },
+                  },
+                },
+              },
             },
           ],
         });
@@ -623,34 +504,35 @@ export class GetDocumentsService {
             new RegExp(numberDocument, 'i'),
           );
         }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
         if (title) {
           query = query.where('title', new RegExp(title, 'i'));
         }
         if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
-          };
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
         }
         if (stateDocumentUserSend) {
-          query['stateDocumentUserSend'] = stateDocumentUserSend;
+          query = query.where(
+            'stateDocumentUserSend',
+            new RegExp(stateDocumentUserSend, 'i'),
+          );
         }
         if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
+          query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
         }
         if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
+          query = query.where(
+            'workflow.descriptionWorkflow',
+            new RegExp(descriptionWorkflow, 'i'),
+          );
         }
         if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
+          query = query.where(
+            'workflow.oficinaActual',
+            new RegExp(oficinaActual, 'i'),
+          );
         }
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
@@ -695,12 +577,6 @@ export class GetDocumentsService {
           .skip(offset)
           .sort({ createdAt: -1 });
 
-        // filteredDocuments.sort((a, b) => {
-        //   return (
-        //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        //   );
-        // });
-
         const total = await this.documentModel.countDocuments(query).exec();
 
         return {
@@ -712,7 +588,24 @@ export class GetDocumentsService {
       if (withWorkflow && withWorkflow === 'true') {
         let query = this.documentModel.find({
           userId: userId,
-          stateDocumentUserSend: 'INICIADO',
+          $or: [
+            {
+              stateDocumentUserSend: 'INICIADO',
+              workflow: { $ne: null },
+            },
+            {
+              bitacoraWorkflow: {
+                $elemMatch: {
+                  receivedUsers: {
+                    $elemMatch: {
+                      idOfUser: `${userId}`,
+                      stateDocumentUser: 'DERIVADO',
+                    },
+                  },
+                },
+              },
+            },
+          ],
         });
         if (numberDocument) {
           query = query.where(
@@ -720,40 +613,37 @@ export class GetDocumentsService {
             new RegExp(numberDocument, 'i'),
           );
         }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
         if (title) {
           query = query.where('title', new RegExp(title, 'i'));
         }
         if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
-          };
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
         }
         if (stateDocumentUserSend) {
           query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
         if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
+          query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
         }
         if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
+          query = query.where(
+            'workflow.descriptionWorkflow',
+            new RegExp(descriptionWorkflow, 'i'),
+          );
         }
         if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
+          query = query.where(
+            'workflow.oficinaActual',
+            new RegExp(oficinaActual, 'i'),
+          );
         }
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
         if (active === 'true') {
-          // query['active'] = active;
           query = query.where('active', active);
         }
 
@@ -812,40 +702,37 @@ export class GetDocumentsService {
             new RegExp(numberDocument, 'i'),
           );
         }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
         if (title) {
           query = query.where('title', new RegExp(title, 'i'));
         }
         if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { documentationType: typeName },
-          };
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
         }
         if (stateDocumentUserSend) {
           query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
         if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
+          query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
         }
         if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
+          query = query.where(
+            'workflow.descriptionWorkflow',
+            new RegExp(descriptionWorkflow, 'i'),
+          );
         }
         if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
+          query = query.where(
+            'workflow.oficinaActual',
+            new RegExp(oficinaActual, 'i'),
+          );
         }
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
         }
         if (active === 'true') {
-          // query['active'] = active;
           query = query.where('active', active);
         }
 
@@ -900,34 +787,32 @@ export class GetDocumentsService {
       if (numberDocument) {
         query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
       }
-      if (userId) {
-        query = query.where('userId', new RegExp(userId, 'i'));
-      }
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
       if (typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: typeName },
-        };
+        query = query.where(
+          'documentationType.typeName',
+          new RegExp(typeName, 'i'),
+        );
       }
       if (stateDocumentUserSend) {
         query['stateDocumentUserSend'] = stateDocumentUserSend;
       }
       if (nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: nombre },
-        };
+        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
       }
       if (descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-        };
+        query = query.where(
+          'workflow.descriptionWorkflow',
+          new RegExp(descriptionWorkflow, 'i'),
+        );
       }
       if (oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: oficinaActual },
-        };
+        query = query.where(
+          'workflow.oficinaActual',
+          new RegExp(oficinaActual, 'i'),
+        );
       }
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
@@ -982,39 +867,42 @@ export class GetDocumentsService {
       };
     } else if (view === 'OBSERVADO') {
       let query = this.documentModel.find({
-        'userReceivedDocument.stateDocumentUser': 'OBSERVADO',
+        userReceivedDocument: {
+          $elemMatch: {
+            idOfUser: userId,
+            observado: true,
+          },
+        },
       });
       if (numberDocument) {
         query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
-      }
-      if (userId) {
-        query = query.where('userId', new RegExp(userId, 'i'));
       }
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
       if (typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: typeName },
-        };
+        query = query.where(
+          'documentationType.typeName',
+          new RegExp(typeName, 'i'),
+        );
       }
       if (stateDocumentUserSend) {
         query['stateDocumentUserSend'] = stateDocumentUserSend;
       }
       if (nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: nombre },
-        };
+        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
       }
       if (descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-        };
+        query = query.where(
+          'workflow.descriptionWorkflow',
+          new RegExp(descriptionWorkflow, 'i'),
+        );
       }
       if (oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: oficinaActual },
-        };
+        query = query.where(
+          'workflow.oficinaActual',
+          new RegExp(oficinaActual, 'i'),
+        );
       }
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
@@ -1079,34 +967,32 @@ export class GetDocumentsService {
             new RegExp(numberDocument, 'i'),
           );
         }
-        if (userId) {
-          query = query.where('userId', new RegExp(userId, 'i'));
-        }
         if (title) {
           query = query.where('title', new RegExp(title, 'i'));
         }
         if (typeName) {
-          query['documentationType'] = {
-            $elemMatch: { typeName: typeName },
-          };
+          query = query.where(
+            'documentationType.typeName',
+            new RegExp(typeName, 'i'),
+          );
         }
         if (stateDocumentUserSend) {
           query['stateDocumentUserSend'] = stateDocumentUserSend;
         }
         if (nombre) {
-          query['workflow'] = {
-            $elemMatch: { nombre: nombre },
-          };
+          query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
         }
         if (descriptionWorkflow) {
-          query['workflow'] = {
-            $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-          };
+          query = query.where(
+            'workflow.descriptionWorkflow',
+            new RegExp(descriptionWorkflow, 'i'),
+          );
         }
         if (oficinaActual) {
-          query['workflow'] = {
-            $elemMatch: { oficinaActual: oficinaActual },
-          };
+          query = query.where(
+            'workflow.oficinaActual',
+            new RegExp(oficinaActual, 'i'),
+          );
         }
         if (description) {
           query = query.where('userId', new RegExp(description, 'i'));
@@ -1170,34 +1056,32 @@ export class GetDocumentsService {
       if (numberDocument) {
         query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
       }
-      if (userId) {
-        query = query.where('userId', new RegExp(userId, 'i'));
-      }
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
       if (typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: typeName },
-        };
+        query = query.where(
+          'documentationType.typeName',
+          new RegExp(typeName, 'i'),
+        );
       }
       if (stateDocumentUserSend) {
         query['stateDocumentUserSend'] = stateDocumentUserSend;
       }
       if (nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: nombre },
-        };
+        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
       }
       if (descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-        };
+        query = query.where(
+          'workflow.descriptionWorkflow',
+          new RegExp(descriptionWorkflow, 'i'),
+        );
       }
       if (oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: oficinaActual },
-        };
+        query = query.where(
+          'workflow.oficinaActual',
+          new RegExp(oficinaActual, 'i'),
+        );
       }
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
@@ -1255,8 +1139,7 @@ export class GetDocumentsService {
         'estado_Ubicacion.estado_ubi': {
           $elemMatch: {
             'receivedUsers.idOfUser': userId,
-            'receivedUsers.stateDocumentUser':
-              'DERIVADO' /* stateOffice: { $ne: 'DERIVADO' },*/,
+            'receivedUsers.stateDocumentUser': 'DERIVADO',
           },
         },
       });
@@ -1264,40 +1147,42 @@ export class GetDocumentsService {
       if (numberDocument) {
         query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
       }
-      if (userId) {
-        query = query.where('userId', new RegExp(userId, 'i'));
-      }
+      // if (userId) {
+      //   query = query.where('userId', new RegExp(userId, 'i'));
+      // }
       if (title) {
         query = query.where('title', new RegExp(title, 'i'));
       }
       if (typeName) {
-        query['documentationType'] = {
-          $elemMatch: { documentationType: typeName },
-        };
+        query = query.where(
+          'documentationType.typeName',
+          new RegExp(typeName, 'i'),
+        );
       }
       if (stateDocumentUserSend) {
         query['stateDocumentUserSend'] = stateDocumentUserSend;
       }
+
       if (nombre) {
-        query['workflow'] = {
-          $elemMatch: { nombre: nombre },
-        };
+        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
       }
       if (descriptionWorkflow) {
-        query['workflow'] = {
-          $elemMatch: { descriptionWorkflow: descriptionWorkflow },
-        };
+        query = query.where(
+          'workflow.descriptionWorkflow',
+          new RegExp(descriptionWorkflow, 'i'),
+        );
       }
       if (oficinaActual) {
-        query['workflow'] = {
-          $elemMatch: { oficinaActual: oficinaActual },
-        };
+        query = query.where(
+          'workflow.oficinaActual',
+          new RegExp(oficinaActual, 'i'),
+        );
       }
+
       if (description) {
         query = query.where('userId', new RegExp(description, 'i'));
       }
       if (active === 'true') {
-        // query['active'] = active;
         query = query.where('active', active);
       }
 
@@ -1788,7 +1673,7 @@ export class GetDocumentsService {
   ): Promise<{ data: Documents[]; total: number; totalPages: number }> {
     const filteredDocuments = documents.filter((document) => {
       return document.userReceivedDocument.some(
-        (entry) => entry.idOfUser === userId,
+        (entry) => entry.idOfUser == userId,
       );
     });
 
@@ -1806,7 +1691,7 @@ export class GetDocumentsService {
         ).getTime();
         return dateB - dateA;
       })
-      .slice(offset, offset + limit); // Aplica limit después de ordenar
+      .slice(offset, offset + limit); // Aplica limit después de ordenar)
 
     console.log('show Documents', showDocuments);
     return { data: showDocuments, total, totalPages };

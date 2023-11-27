@@ -47,6 +47,7 @@ import {
 } from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
 import { File, FileDocument } from 'src/file/schema/file.schema';
 import { FilterDocumentsAll } from './dto/filterDocumentsAll';
+import { PreviewFileDto } from './dto/previewFile.dto';
 
 @Injectable()
 export class DocumentsService {
@@ -289,7 +290,7 @@ export class DocumentsService {
         description: `description-${i + 1}`,
         documentationType: {
           typeName: 'LICENCIA',
-          idTemplateDocType: `description-${i + 1}`,
+          // idTemplateDocType: `description-${i + 1}`,
           activeDocumentType: true,
           createdAt: undefined,
           updateAt: undefined,
@@ -333,6 +334,8 @@ export class DocumentsService {
           {
             ciUser: '444888777',
             idOfUser: '64e84144561052a834987264',
+            name: 'example',
+            lastName: 'example2',
             nameOfficeUserRecieved: 'RECTORADO',
             dateRecived: new Date(),
             stateDocumentUser: 'RECIBIDO',
@@ -352,6 +355,8 @@ export class DocumentsService {
               {
                 ciUser: '72838934',
                 idOfUser: '652e8e8af04daade67239462',
+                name: 'asdfaf',
+                lastName: 'afaf',
                 nameOfficeUserRecieved: 'DIRECCION POSTGRADO',
                 // nameUser: '',
                 dateRecived: new Date(),
@@ -392,6 +397,8 @@ export class DocumentsService {
                 {
                   ciUser: '8845784',
                   idOfUser: '',
+                  name: 'example',
+                  lastName: 'examplet',
                   nameOfficeUserRecieved: '',
                   dateRecived: null,
                   // nameUser: '',
@@ -410,6 +417,8 @@ export class DocumentsService {
                 {
                   ciUser: '',
                   idOfUser: '',
+                  name: 'exame',
+                  lastName: 'easd',
                   nameOfficeUserRecieved: '',
                   dateRecived: null,
                   // nameUser: '',
@@ -596,7 +605,7 @@ export class DocumentsService {
         description: `description-${i + 1}`,
         documentationType: {
           typeName: 'LICENCIA',
-          idTemplateDocType: `description-${i + 1}`,
+          // idTemplateDocType: `description-${i + 1}`,
           activeDocumentType: true,
           createdAt: undefined,
           updateAt: undefined,
@@ -622,6 +631,8 @@ export class DocumentsService {
                 {
                   ciUser: '444888777',
                   idOfUser: '64e84144561052a834987264',
+                  name: 'esef',
+                  lastName: 'asdfaf',
                   nameOfficeUserRecieved: '',
                   // nameUser: '',
                   dateRecived: null,
@@ -814,6 +825,21 @@ export class DocumentsService {
     }
   }
 
+  async preview(createDocumentDTO: PreviewFileDto) {
+    const { html } = createDocumentDTO;
+    const responsehtmlPdf = await this.httpService
+      .post(`${getConfig().api_convet_html_pdf}/convert`, {
+        textPlain: html,
+      })
+      .toPromise();
+    const idFile = responsehtmlPdf.data.idFile;
+
+    const responseBase64 = await this.httpService
+      .get(`${this.apiFilesTemplate}/file/${idFile}`)
+      .toPromise();
+    return responseBase64.data.file.base64;
+  }
+
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
       const { file, documentTypeName, html } = createDocumentDTO;
@@ -928,8 +954,10 @@ export class DocumentsService {
                 {
                   ciUser: loggedUser.data.ci,
                   idOfUser: userId,
-                  nameOfficeUserRecieved: '',
-                  dateRecived: '',
+                  name: loggedUser.data.name,
+                  lastName: loggedUser.data.lastName,
+                  nameOfficeUserRecieved: loggedUser.data.unity,
+                  dateRecived: Date.now(),
                   stateDocumentUser: 'EN ESPERA',
                   observado: false,
                 },
@@ -1021,6 +1049,7 @@ export class DocumentsService {
     }
   }
 
+  /*
   async showBase64TemplateDoc(id: string) {
     const document = await this.checkDocument(id);
     const idTemplateFromDoc = document.documentationType.idTemplateDocType;
@@ -1148,6 +1177,8 @@ export class DocumentsService {
     let showDocument = { idDocument, idTemplate, base64Template };
     return showDocument;
   }
+
+  */
 
   async update(id: string, updateDocumentDTO: UpdateDocumentDTO) {
     const documentationType =
@@ -1307,7 +1338,6 @@ export class DocumentsService {
       );
     }
 
-    // Verificar si el usuario ya revisó el documento
     const userAlreadyReviewed = bitacoraEntry.receivedUsers.some((user) => {
       return user.idOfUser === userId && user.stateDocumentUser === 'REVISADO';
     });
@@ -1341,7 +1371,6 @@ export class DocumentsService {
 
       userMarkReviewed.stateDocumentUser = 'REVISADO';
       document.bitacoraWorkflow = updateBitacoraWorkflow;
-      // document.stateDocumetUser = 'REVISADO';
 
       await document.save();
       return document;
@@ -1620,24 +1649,6 @@ export class DocumentsService {
       .sort({ numberDocument: 1 })
       .setOptions({ sanitizeFilter: true })
       .exec();
-    // for (const document of documents) {
-    //   if (document.userId) {
-    //     try {
-    //       const res = await this.httpService
-    //         .get(`${this.apiPersonalGet}/${document.userId}`)
-    //         .toPromise();
-    //       document.userInfo = {
-    //         name: res.data.name,
-    //         lastName: res.data.lastName,
-    //         ci: res.data.ci,
-    //         email: res.data.email,
-    //         unity: res.data.unity,
-    //       };
-    //     } catch (error) {
-    //       document.userId = 'no se encontraron datos del usuario';
-    //     }
-    //   }
-    // }
     return documents;
   }
 
@@ -1710,24 +1721,6 @@ export class DocumentsService {
       .find({ active: true })
       .limit(limit)
       .skip(offset);
-    // for (const document of documents) {
-    //   if (document.userId) {
-    //     try {
-    //       const res = await this.httpService
-    //         .get(`${this.apiPersonalGet}/${document.userId}`)
-    //         .toPromise();
-    //       document.userInfo = {
-    //         name: res.data.name,
-    //         lastName: res.data.lastName,
-    //         ci: res.data.ci,
-    //         email: res.data.email,
-    //         unity: res.data.unity,
-    //       };
-    //     } catch (error) {
-    //       document.userId = 'no se encontraron datos del usuario';
-    //     }
-    //   }
-    // }
     const total = await this.documentModel.countDocuments().exec();
 
     return {

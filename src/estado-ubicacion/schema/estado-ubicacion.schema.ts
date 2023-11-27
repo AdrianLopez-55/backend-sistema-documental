@@ -18,6 +18,8 @@ export class EstadoUbiacion {
           {
             ciUser: String,
             idOfUser: String,
+            name: String,
+            lastName: String,
             nameOfficeUserRecieved: String,
             // nameUser: String,
             dateRecived: Date,
@@ -35,6 +37,8 @@ export class EstadoUbiacion {
     receivedUsers: {
       ciUser: string;
       idOfUser: string;
+      name: string;
+      lastName: string;
       nameOfficeUserRecieved: string;
       dateRecived: Date;
       // nameUser: string;

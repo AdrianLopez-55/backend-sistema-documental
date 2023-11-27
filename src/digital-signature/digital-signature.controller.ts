@@ -34,7 +34,12 @@ export class DigitalSignatureController {
   ) {}
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   // @UseInterceptors(LoggerInterceptor)
   @Post('generate-credential')
   @ApiOperation({ summary: 'Create credentials from a user' })
@@ -50,7 +55,12 @@ export class DigitalSignatureController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   // @UseInterceptors(LoggerInterceptor)
   @Post(':documentId/signature-document')
   @ApiOperation({ summary: 'Signature document by ID document' })
@@ -70,7 +80,12 @@ export class DigitalSignatureController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   @Get()
   @ApiOperation({ summary: 'Show users with digital signature' })
   getUsersWithDigitalSignature() {
@@ -78,7 +93,12 @@ export class DigitalSignatureController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   @Get('get-keys-user')
   @ApiOperation({ summary: 'Show all user credentials' })
   async getKeysUser(@Req() req) {
@@ -87,7 +107,12 @@ export class DigitalSignatureController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   @Get('get-documents-with-digital-signature-user')
   @ApiOperation({ summary: 'Show your documents with digital signature' })
   async getDocumentsWithDigitalSignatureUser(@Req() req) {
@@ -98,7 +123,12 @@ export class DigitalSignatureController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
   @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
   @Get('get-documents-signatured-paginate')
@@ -119,7 +149,12 @@ export class DigitalSignatureController {
   // }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   @Post('recover-pin')
   @ApiOperation({
     summary: 'This endpoint use to recover pin from a user logged',
@@ -145,7 +180,12 @@ export class DigitalSignatureController {
   }
 
   @ApiBearerAuth()
-  @Permissions(Permission.USER, Permission.ADMIN, Permission.SUPERADMIN)
+  @Permissions(
+    Permission.USER,
+    Permission.ADMIN,
+    Permission.SUPERADMIN,
+    Permission.CREAR_DOCUMENTO,
+  )
   // @UseInterceptors(LoggerInterceptor)
   @Delete('delete-digital-signature/:id')
   @ApiOperation({ summary: 'show if you have a digital signature' })

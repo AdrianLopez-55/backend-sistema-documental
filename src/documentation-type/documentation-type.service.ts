@@ -40,7 +40,7 @@ export class DocumentationTypeService {
   async create(
     createDocumentationTypeDto: CreateDocumentationTypeDto,
   ): Promise<DocumentationTypeDocument> {
-    const { typeName, htmlContent, base64Docx } = createDocumentationTypeDto;
+    const { typeName } = createDocumentationTypeDto;
     const existingdocumentatuoType = await this.documentationTypeModel
       .findOne({ typeName })
       .exec();
@@ -52,123 +52,130 @@ export class DocumentationTypeService {
         'El nombre de tipo de documentacion ya existe.',
       );
     }
+    if (typeName === '' || typeName === undefined) {
+      throw new HttpException(`Debe ingresar nombre de tipo de documento`, 400);
+    }
+    const newDocumentationType = new this.documentationTypeModel({
+      typeName: typeName,
+    });
+    return await newDocumentationType.save();
 
     //----DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
-    const HTMLtoDOCX = require('html-to-docx');
-    if (htmlContent) {
-      if (base64Docx) {
-        throw new HttpException(
-          'solo se puede enviar o html o .docx, no ambos',
-          400,
-        );
-      }
-      const datatas = (async () => {
-        const fileBuffer = await HTMLtoDOCX(
-          htmlContent,
-          null,
-          {
-            pageSize: {
-              width: 215.9,
-              height: 279.4,
-            },
-            table: { row: { cantSplit: true } },
-            footer: true,
-            pageNumber: true,
-          },
-          null,
-        );
-        //guardar el archivo docx en template
-        const templateDir = path.join(process.cwd(), 'template');
-        const filePath = path.join(
-          templateDir,
-          `${typeName.toUpperCase()}.docx`,
-        );
-        fs.writeFileSync(filePath, fileBuffer);
+    // const HTMLtoDOCX = require('html-to-docx');
+    // if (htmlContent) {
+    //   if (base64Docx) {
+    //     throw new HttpException(
+    //       'solo se puede enviar o html o .docx, no ambos',
+    //       400,
+    //     );
+    //   }
+    //   const datatas = (async () => {
+    //     const fileBuffer = await HTMLtoDOCX(
+    //       htmlContent,
+    //       null,
+    //       {
+    //         pageSize: {
+    //           width: 215.9,
+    //           height: 279.4,
+    //         },
+    //         table: { row: { cantSplit: true } },
+    //         footer: true,
+    //         pageNumber: true,
+    //       },
+    //       null,
+    //     );
+    //     //guardar el archivo docx en template
+    //     const templateDir = path.join(process.cwd(), 'template');
+    //     const filePath = path.join(
+    //       templateDir,
+    //       `${typeName.toUpperCase()}.docx`,
+    //     );
+    //     fs.writeFileSync(filePath, fileBuffer);
 
-        //obtener mime docx
-        const fileExtension = path.extname(filePath).substring(1);
-        const mimeTypeDocx =
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    //     //obtener mime docx
+    //     const fileExtension = path.extname(filePath).substring(1);
+    //     const mimeTypeDocx =
+    //       'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-        //obtener la base64 de docx
-        const arrayBufferView = new Uint8Array(fileBuffer);
-        const base64 = Buffer.from(arrayBufferView).toString('base64');
-        const docxBase64 = fileBuffer.toString('base64');
+    //     //obtener la base64 de docx
+    //     const arrayBufferView = new Uint8Array(fileBuffer);
+    //     const base64 = Buffer.from(arrayBufferView).toString('base64');
+    //     const docxBase64 = fileBuffer.toString('base64');
 
-        fs.readFile(filePath, (err, data) => {
-          if (err) {
-            console.error('Error al leer el archivo:', err);
-            return;
-          }
+    //     fs.readFile(filePath, (err, data) => {
+    //       if (err) {
+    //         console.error('Error al leer el archivo:', err);
+    //         return;
+    //       }
 
-          // Convierte los datos a base64
-          const base64Data = data.toString('base64');
+    //       // Convierte los datos a base64
+    //       const base64Data = data.toString('base64');
 
-          // Ahora base64Data contiene el contenido del archivo .docx en base64
-          console.log('Contenido del archivo en base64:', base64Data);
-        });
+    //       // Ahora base64Data contiene el contenido del archivo .docx en base64
+    //       console.log('Contenido del archivo en base64:', base64Data);
+    //     });
 
-        const fileObj = {
-          mime: mimeTypeDocx,
-          base64: base64,
-        };
+    //     const fileObj = {
+    //       mime: mimeTypeDocx,
+    //       base64: base64,
+    //     };
 
-        const fileDocx = await this.httpService
-          .post(`${this.apiFilesTemplate}/files/upload-template`, {
-            templateName: typeName,
-            file: fileObj,
-          })
-          .toPromise();
-        const timeToLiveFile = 1 * 60 * 1000;
-        setTimeout(() => {
-          fs.unlink(filePath, (err) => {
-            if (err) {
-              console.error('error al eliminar el archivo temporal', err);
-            } else {
-              console.log('archivo temporal eliminado', filePath);
-            }
-          });
-        }, timeToLiveFile);
+    //     const fileDocx = await this.httpService
+    //       .post(`${this.apiFilesTemplate}/files/upload-template`, {
+    //         templateName: typeName,
+    //         file: fileObj,
+    //       })
+    //       .toPromise();
+    //     const timeToLiveFile = 1 * 60 * 1000;
+    //     setTimeout(() => {
+    //       fs.unlink(filePath, (err) => {
+    //         if (err) {
+    //           console.error('error al eliminar el archivo temporal', err);
+    //         } else {
+    //           console.log('archivo temporal eliminado', filePath);
+    //         }
+    //       });
+    //     }, timeToLiveFile);
 
-        //crear el tipo de documento con su template
-        const newTypeDocument = new this.documentationTypeModel({
-          typeName,
-          idTemplateDocType: fileDocx.data.file._id,
-        });
-        return await newTypeDocument.save();
-      })();
-      return datatas;
-    } else {
-      const prefixToCheck: string =
-        'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      if (base64Docx.startsWith(prefixToCheck)) {
-        if (htmlContent) {
-          throw new HttpException(
-            'solo se puede subir o html o base64, no ambos al mismo tiempo',
-            400,
-          );
-        }
-      }
-      const mimeType = base64Docx.split(';')[0].split(':')[1];
-      const base64Data = base64Docx.split(',')[1];
+    //     //crear el tipo de documento con su template
+    //     const newTypeDocument = new this.documentationTypeModel({
+    //       typeName,
+    //       idTemplateDocType: fileDocx.data.file._id,
+    //     });
+    //     return await newTypeDocument.save();
+    //   })();
+    //   return datatas;
+    // } else {
+    //   const prefixToCheck: string =
+    //     'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    //   if (base64Docx.startsWith(prefixToCheck)) {
+    //     if (htmlContent) {
+    //       throw new HttpException(
+    //         'solo se puede subir o html o base64, no ambos al mismo tiempo',
+    //         400,
+    //       );
+    //     }
+    //   }
+    //   const mimeType = base64Docx.split(';')[0].split(':')[1];
+    //   const base64Data = base64Docx.split(',')[1];
 
-      const fileObj = {
-        mime: mimeType,
-        base64: base64Data,
-      };
-      const fileDocx = await this.httpService
-        .post(`${this.apiFilesTemplate}/files/upload-template`, {
-          templateName: typeName,
-          file: fileObj,
-        })
-        .toPromise();
+    //   const fileObj = {
+    //     mime: mimeType,
+    //     base64: base64Data,
+    //   };
+    //   const fileDocx = await this.httpService
+    //     .post(`${this.apiFilesTemplate}/files/upload-template`, {
+    //       templateName: typeName,
+    //       file: fileObj,
+    //     })
+    //     .toPromise();
 
-      const newTypeDocument = new this.documentationTypeModel({
-        typeName,
-        idTemplateDocType: fileDocx.data.file._id,
-      });
-      return await newTypeDocument.save();
-    }
+    //   const newTypeDocument = new this.documentationTypeModel({
+    //     typeName,
+    //     idTemplateDocType: fileDocx.data.file._id,
+    //   });
+    //   return await newTypeDocument.save();
+    // }
   }
 
   async findAllPaginate(
@@ -223,10 +230,9 @@ export class DocumentationTypeService {
   async findDocumentsTypeActive(): Promise<DocumentationType[]> {
     const documentTypeActives = await this.documentationTypeModel
       .find({ activeDocumentType: true })
+      .sort({ createdAt: -1 })
       .exec();
-    return documentTypeActives.sort((a, b) =>
-      a.typeName.localeCompare(b.typeName),
-    );
+    return documentTypeActives;
   }
 
   async findOne(id: string): Promise<DocumentationType> {
@@ -262,7 +268,7 @@ export class DocumentationTypeService {
     if (documentationType.activeDocumentType === false) {
       throw new HttpException('documento borrado', 400);
     }
-    const { typeName, htmlContent, base64Docx } = updateDocumentationTypeDto;
+    const { typeName } = updateDocumentationTypeDto;
 
     const existingdocumentatuoType = await this.documentationTypeModel
       .findOne({ typeName })
@@ -270,95 +276,97 @@ export class DocumentationTypeService {
     if (existingdocumentatuoType) {
       throw new HttpException('nombre repetido', 400);
     }
+    documentationType.typeName = typeName;
+    return await documentationType.save();
 
     //----DESDE AQUI SE CREA EL DOCX DEL TEMPLATE
-    const HTMLtoDOCX = require('html-to-docx');
-    if (htmlContent) {
-      if (base64Docx) {
-        throw new HttpException(
-          'solo se puede enviar o html o .docx, no ambos',
-          400,
-        );
-      }
-      const fileBuffer = await HTMLtoDOCX(
-        htmlContent,
-        null,
-        {
-          table: { row: { cansSplit: true } },
-          footer: true,
-          pageNumber: true,
-        },
-        true,
-      );
+    // const HTMLtoDOCX = require('html-to-docx');
+    // if (htmlContent) {
+    //   if (base64Docx) {
+    //     throw new HttpException(
+    //       'solo se puede enviar o html o .docx, no ambos',
+    //       400,
+    //     );
+    //   }
+    //   const fileBuffer = await HTMLtoDOCX(
+    //     htmlContent,
+    //     null,
+    //     {
+    //       table: { row: { cansSplit: true } },
+    //       footer: true,
+    //       pageNumber: true,
+    //     },
+    //     true,
+    //   );
 
-      //guardar el archivo docx en template
-      const templateDir = path.join(process.cwd(), 'template');
-      const filePath = path.join(templateDir, `${typeName.toUpperCase()}.docx`);
-      fs.writeFileSync(filePath, fileBuffer);
+    //   //guardar el archivo docx en template
+    //   const templateDir = path.join(process.cwd(), 'template');
+    //   const filePath = path.join(templateDir, `${typeName.toUpperCase()}.docx`);
+    //   fs.writeFileSync(filePath, fileBuffer);
 
-      //obtener mime docx
-      const fileExtension = path.extname(filePath).substring(1);
-      const mimeTypeDocx = `application/${fileExtension}`;
+    //   //obtener mime docx
+    //   const fileExtension = path.extname(filePath).substring(1);
+    //   const mimeTypeDocx = `application/${fileExtension}`;
 
-      //obtener la base64 de docx
-      const docxBase64 = fileBuffer.toString('base64');
+    //   //obtener la base64 de docx
+    //   const docxBase64 = fileBuffer.toString('base64');
 
-      const fileObj = {
-        mime: mimeTypeDocx,
-        base64: docxBase64,
-      };
+    //   const fileObj = {
+    //     mime: mimeTypeDocx,
+    //     base64: docxBase64,
+    //   };
 
-      const fileDocx = await this.httpService
-        .post(`${this.apiFilesTemplate}/files/upload-template`, {
-          templateName: typeName,
-          file: fileObj,
-        })
-        .toPromise();
+    //   const fileDocx = await this.httpService
+    //     .post(`${this.apiFilesTemplate}/files/upload-template`, {
+    //       templateName: typeName,
+    //       file: fileObj,
+    //     })
+    //     .toPromise();
 
-      const timeToLiveFile = 1 * 60 * 1000;
-      setTimeout(() => {
-        fs.unlink(filePath, (err) => {
-          if (err) {
-            console.error('error al eliminar el archivo temporal', err);
-          } else {
-            console.log('archivo temporal eliminado', filePath);
-          }
-        });
-      }, timeToLiveFile);
+    //   const timeToLiveFile = 1 * 60 * 1000;
+    //   setTimeout(() => {
+    //     fs.unlink(filePath, (err) => {
+    //       if (err) {
+    //         console.error('error al eliminar el archivo temporal', err);
+    //       } else {
+    //         console.log('archivo temporal eliminado', filePath);
+    //       }
+    //     });
+    //   }, timeToLiveFile);
 
-      //sobreescribir datos de el tipo de documento con su template
-      documentationType.typeName = typeName;
-      documentationType.idTemplateDocType = fileDocx.data.file._id;
-      return await documentationType.save();
-    } else {
-      const prefixToCheck: string =
-        'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      if (base64Docx.startsWith(prefixToCheck)) {
-        if (htmlContent) {
-          throw new HttpException(
-            'solo se puede subir o html o base64, no ambos al mismo tiempo',
-            400,
-          );
-        }
-      }
-      const mimeType = base64Docx.split(';')[0].split(':')[1];
-      const base64Data = base64Docx.split(',')[1];
+    //   //sobreescribir datos de el tipo de documento con su template
+    //   documentationType.typeName = typeName;
+    //   documentationType.idTemplateDocType = fileDocx.data.file._id;
+    //   return await documentationType.save();
+    // } else {
+    //   const prefixToCheck: string =
+    //     'data:@file/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    //   if (base64Docx.startsWith(prefixToCheck)) {
+    //     if (htmlContent) {
+    //       throw new HttpException(
+    //         'solo se puede subir o html o base64, no ambos al mismo tiempo',
+    //         400,
+    //       );
+    //     }
+    //   }
+    //   const mimeType = base64Docx.split(';')[0].split(':')[1];
+    //   const base64Data = base64Docx.split(',')[1];
 
-      const fileObj = {
-        mime: mimeType,
-        base64: base64Data,
-      };
-      const fileDocx = await this.httpService
-        .post(`${this.apiFilesTemplate}/files/upload-template`, {
-          templateName: typeName,
-          file: fileObj,
-        })
-        .toPromise();
+    //   const fileObj = {
+    //     mime: mimeType,
+    //     base64: base64Data,
+    //   };
+    //   const fileDocx = await this.httpService
+    //     .post(`${this.apiFilesTemplate}/files/upload-template`, {
+    //       templateName: typeName,
+    //       file: fileObj,
+    //     })
+    //     .toPromise();
 
-      documentationType.typeName = typeName;
-      documentationType.idTemplateDocType = fileDocx.data.file._id;
-      return await documentationType.save();
-    }
+    //   documentationType.typeName = typeName;
+    //   documentationType.idTemplateDocType = fileDocx.data.file._id;
+    //   return await documentationType.save();
+    // }
   }
 
   async inactiverTypeDocument(id: string, activeDocumentType: boolean) {
@@ -404,15 +412,15 @@ export class DocumentationTypeService {
         throw new HttpException('tipo de documento eliminado', 400);
       }
 
-      if (documentationType.idTemplateDocType) {
-        const obtainBase64Template = await this.httpService
-          .get(
-            `${getConfig().api_files_uploader}/file/${
-              documentationType.idTemplateDocType
-            }`,
-          )
-          .toPromise();
-      }
+      // if (documentationType.idTemplateDocType) {
+      //   const obtainBase64Template = await this.httpService
+      //     .get(
+      //       `${getConfig().api_files_uploader}/file/${
+      //         documentationType.idTemplateDocType
+      //       }`,
+      //     )
+      //     .toPromise();
+      // }
       return documentationType;
     } catch (error) {
       console.error('Error al buscar nombre tipo de doucmento', error);
@@ -420,20 +428,20 @@ export class DocumentationTypeService {
     }
   }
 
-  async getBase64Template(id: string) {
-    const documentType = await this.documentationTypeModel.findById(id).exec();
-    documentType.idTemplateDocType;
-    const fileData = await this.httpService
-      .get(
-        `${getConfig().api_files_template}/file/template/${
-          documentType.idTemplateDocType
-        }`,
-      )
-      .toPromise();
-    return {
-      idTemplate: id,
-      DocumentationTypeName: documentType.typeName,
-      base64Docx: fileData.data.file.base64,
-    };
-  }
+  // async getBase64Template(id: string) {
+  //   const documentType = await this.documentationTypeModel.findById(id).exec();
+  //   documentType.idTemplateDocType;
+  //   const fileData = await this.httpService
+  //     .get(
+  //       `${getConfig().api_files_template}/file/template/${
+  //         documentType.idTemplateDocType
+  //       }`,
+  //     )
+  //     .toPromise();
+  //   return {
+  //     idTemplate: id,
+  //     DocumentationTypeName: documentType.typeName,
+  //     base64Docx: fileData.data.file.base64,
+  //   };
+  // }
 }

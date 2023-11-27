@@ -1,4 +1,3 @@
-/*
 import {
   Injectable,
   CanActivate,
@@ -36,8 +35,6 @@ export class RolesGuard implements CanActivate {
         .post(`${getConfig().api_central}/auth/decoded`, { token })
         .toPromise();
 
-      console.log('decodedToken', decodedToken.data);
-
       if (decodedToken.data.roles.length === 0) {
         throw new UnauthorizedException('El usuario no tiene roles asignados.');
       }
@@ -61,10 +58,14 @@ export class RolesGuard implements CanActivate {
             .toPromise(),
         ),
       );
+      const dataRoles = rolesWithDetails.map((response) => response.data);
+      // console.log('dataRoles', dataRoles);
 
       const userPermission = rolesWithDetails
         .map((response) => response.data.permissionName)
+        .filter((item) => item !== undefined)
         .flat();
+      console.log('userPermission', userPermission);
 
       //AL OBTENER LOS PERMISOS DEL USUARIO SE OBTIENE DIRECTO LOS NOMBRES:
 
@@ -93,6 +94,7 @@ export class RolesGuard implements CanActivate {
 
       //----------- SOLO USAR SI SE USA CENTRAL EXTERNO ---------------------\\
       const permissionNames = userPermission.map((item) => item.permissionName);
+      console.log(permissionNames);
       //------------------------------------------------------------------\\
 
       if (checkPermissions(requiredPermission, permissionNames)) {
@@ -123,7 +125,7 @@ export class RolesGuard implements CanActivate {
   }
 }
 
-*/
+/*
 
 import {
   Injectable,
@@ -268,3 +270,5 @@ export class RolesGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 }
+
+*/

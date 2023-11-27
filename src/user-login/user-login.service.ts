@@ -21,11 +21,25 @@ export class UserLoginService {
       const rolUser = obtainDAtaRolAll.map((response) => response.data.rolName);
 
       const { _id, name, lastName, ci, email, unity, file } = urlPersonal.data;
+      if (file === '') {
+        const dataPersonalLogged = {
+          _id,
+          name,
+          lastName,
+          ci,
+          email,
+          unity,
+          file: '',
+          rolUser,
+        };
+        return dataPersonalLogged;
+      }
 
-      // const fileData = await this.httpService
-      //   .get(`${getConfig().api_files_uploader}/file/${file}`)
-      //   .toPromise();
-
+      const fileData = await this.httpService
+        .get(`${getConfig().api_files_uploader}/file/${file}`)
+        .toPromise();
+      if (fileData) {
+      }
       const dataPersonalLogged = {
         _id,
         name,
@@ -33,13 +47,12 @@ export class UserLoginService {
         ci,
         email,
         unity,
-        file,
+        file: fileData.data.file.base64,
         rolUser,
       };
 
       return dataPersonalLogged;
     } catch (error) {
-      console.log('adfadfadsf');
       console.log(error);
       throw new HttpException(`usuario no conectado${error}`, 500);
     }

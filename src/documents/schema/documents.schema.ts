@@ -52,6 +52,8 @@ export class Documents {
       {
         ciUser: String,
         idOfUser: String,
+        name: String,
+        lastName: String,
         nameOfficeUserRecieved: String,
         dateRecived: Date,
         stateDocumentUser: String,
@@ -63,6 +65,8 @@ export class Documents {
   userReceivedDocument: {
     ciUser: string;
     idOfUser: string;
+    name: string;
+    lastName: string;
     nameOfficeUserRecieved: string;
     dateRecived: Date;
     stateDocumentUser: string;
@@ -129,7 +133,8 @@ export class Documents {
             ciUser: String,
             idOfUser: String,
             nameOfficeUserRecieved: String,
-            // nameUser: String,
+            name: String,
+            lastName: String,
             dateRecived: Date,
             stateDocumentUser: String,
             observado: { type: Boolean, default: false },
@@ -158,7 +163,8 @@ export class Documents {
       ciUser: string;
       idOfUser: string;
       nameOfficeUserRecieved: string;
-      // nameUser: string;
+      name: string;
+      lastName: string;
       dateRecived: Date;
       stateDocumentUser: string;
       observado: boolean;
@@ -183,6 +189,8 @@ export class Documents {
             ciUser: String,
             idOfUser: String,
             idOffice: String,
+            name: String,
+            lastName: String,
             nameOficeUserRecieved: String,
             stateDocumentUser: String,
           },
@@ -198,6 +206,8 @@ export class Documents {
       ciUser: string;
       idOfUser: string;
       idOffice: string;
+      name: string;
+      lastName: string;
       nameOficeUserRecieved: string;
       stateDocumentUser: string;
     }[];

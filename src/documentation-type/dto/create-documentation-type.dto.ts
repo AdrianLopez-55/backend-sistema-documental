@@ -6,9 +6,9 @@ export class CreateDocumentationTypeDto {
   @IsString()
   typeName: string;
 
-  @ApiProperty()
-  htmlContent: string;
+  // @ApiProperty()
+  // htmlContent: string;
 
-  @ApiProperty()
-  base64Docx: string;
+  // @ApiProperty()
+  // base64Docx: string;
 }

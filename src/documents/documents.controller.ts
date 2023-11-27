@@ -51,6 +51,7 @@ import { UnitysDto } from './dto/sendUnitysWithoutWorkflow.dto';
 import { SendHtmlFileDto } from './dto/sendHtmlFile.dto';
 import * as fs from 'fs';
 import { FilterDocumentsAll } from './dto/filterDocumentsAll';
+import { PreviewFileDto } from './dto/previewFile.dto';
 
 @ApiTags('Documents')
 @UseGuards(RolesGuard)
@@ -161,6 +162,15 @@ export class DocumentsController {
   })
   findAll() {
     return this.documentsService.findAll();
+  }
+
+  @Post('preview-file-document')
+  @ApiOperation({
+    summary: 'see preview file',
+    description: 'this endpoint is used to peview the file to add a document',
+  })
+  async previewFileDocument(@Body() createDocument: PreviewFileDto) {
+    return await this.documentsService.preview(createDocument);
   }
 
   @ApiBearerAuth()
@@ -414,10 +424,10 @@ export class DocumentsController {
     }
   }
 
-  @Get('base64Document/:id')
-  async base64Document(@Param('id') id: string) {
-    return await this.documentsService.showBase64TemplateDoc(id);
-  }
+  // @Get('base64Document/:id')
+  // async base64Document(@Param('id') id: string) {
+  //   return await this.documentsService.showBase64TemplateDoc(id);
+  // }
 
   @ApiBearerAuth()
   @Permissions(

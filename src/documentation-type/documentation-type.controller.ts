@@ -84,10 +84,10 @@ export class DocumentationTypeController {
     return this.documentationTypeService.findOne(id);
   }
 
-  @Get('base64Docx/:id')
-  async base64Docx(@Param('id') id: string) {
-    return this.documentationTypeService.getBase64Template(id);
-  }
+  // @Get('base64Docx/:id')
+  // async base64Docx(@Param('id') id: string) {
+  //   return this.documentationTypeService.getBase64Template(id);
+  // }
 
   // @ApiBearerAuth()
   // @Permissions(Permission.USER)

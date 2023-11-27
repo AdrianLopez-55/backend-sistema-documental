@@ -10,8 +10,8 @@ export class DocumentationType {
   })
   typeName: string;
 
-  @Prop()
-  idTemplateDocType: string;
+  // @Prop()
+  // idTemplateDocType: string;
 
   // @Prop()
   // dataUriTemplate: string;

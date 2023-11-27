@@ -20,15 +20,15 @@ export class FilterDocumentsAll {
   @MinLength(8)
   numberDocument: string;
 
-  @ApiProperty({
-    example: '64e84144561052a834987264',
-    description: 'search document by id user',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  @MinLength(8)
-  userId: string;
+  // @ApiProperty({
+  //   example: '64e84144561052a834987264',
+  //   description: 'search document by id user',
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsString()
+  // @MinLength(8)
+  // userId: string;
 
   @ApiProperty({
     example: 'Gastos',
