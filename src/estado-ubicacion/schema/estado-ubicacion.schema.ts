@@ -26,6 +26,7 @@ export class EstadoUbiacion {
             stateDocumentUser: String,
           },
         ],
+
         activo: Boolean,
       },
     ],
@@ -45,6 +46,7 @@ export class EstadoUbiacion {
       stateDocumentUser: string;
       observado: boolean;
     }[];
+    // oficinas
     activo: boolean;
   }[];
 

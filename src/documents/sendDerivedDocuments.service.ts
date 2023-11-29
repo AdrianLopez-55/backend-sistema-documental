@@ -1109,6 +1109,7 @@ export class SendDerivedDocumentsService {
         name: idOfice.name,
       })),
     );
+    console.log('obtainDatos envio a todos usuarios', obtainDatos);
 
     if (pasoActual < pasos.length) {
       // if (nextPasoUserState.completado === true) {

@@ -1,3 +1,5 @@
+/*
+
 import {
   Injectable,
   CanActivate,
@@ -125,7 +127,8 @@ export class RolesGuard implements CanActivate {
   }
 }
 
-/*
+
+*/
 
 import {
   Injectable,
@@ -270,5 +273,3 @@ export class RolesGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 }
-
-*/

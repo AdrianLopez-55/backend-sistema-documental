@@ -458,4 +458,34 @@ export class FileService {
       });
     });
   }
+
+  async updateFileContent(idDocument: string, idFile: string) {
+    const fileDocument = await this.fileModel.findOne({ idDocument }).exec();
+    if (!fileDocument) {
+      throw new HttpException('no se encotro el ID del documento', 400);
+    }
+    let documentBase64Files = [];
+    // for (const idFile of fileDocument.fileRegister) {
+    //   const infoBase64 = await this.httpService
+    //     .get(`${this.apiFilesUploader}/file/${idFile}`)
+    //     .toPromise();
+    //   documentBase64Files.push(infoBase64.data.file.base64);
+    // }
+    const selectedFile = fileDocument.fileRegister.find(
+      (file) => file.idFile === idFile,
+    );
+    if (!selectedFile) {
+      throw new Error('Archivo no encontrado en el documento'); // Maneja el caso en el que no se encuentre el archivo
+    }
+
+    const infoBase64 = await this.httpService
+      .get(`${this.apiFilesUploader}/file/${selectedFile.idFile}`)
+      .toPromise();
+
+    if (infoBase64.status !== 200) {
+      throw new Error('No se pudo obtener el base64 para el archivo');
+    }
+
+    return infoBase64.data.file.base64;
+  }
 }

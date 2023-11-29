@@ -77,7 +77,7 @@ export class PersonalGetService {
   async findAllPaginate(page: number, limit: number) {
     // const offset = (page - 1) * limit;
     const personalList = await this.httpService
-      .get(`${this.apiPersonalGet}/pagination?page=${page}&limit=${limit}`)
+      .get(`${this.apiPersonalGet}/filtered?page=${page}&limit=${limit}`)
       .toPromise();
     console.log(personalList.data);
     return personalList.data;

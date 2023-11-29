@@ -828,26 +828,27 @@ export class DocumentsService {
   async preview(createDocumentDTO: PreviewFileDto) {
     const { html } = createDocumentDTO;
     const responsehtmlPdf = await this.httpService
-      .post(`${getConfig().api_convet_html_pdf}/convert`, {
+      .post(`${getConfig().api_convet_html_pdf}/convert/preview`, {
         textPlain: html,
       })
       .toPromise();
-    const idFile = responsehtmlPdf.data.idFile;
+    const base64Preview = responsehtmlPdf.data.base64File;
 
-    const responseBase64 = await this.httpService
-      .get(`${this.apiFilesTemplate}/file/${idFile}`)
-      .toPromise();
-    return responseBase64.data.file.base64;
+    // const responseBase64 = await this.httpService
+    //   .get(`${this.apiFilesTemplate}/file/${idFile}`)
+    //   .toPromise();
+    return base64Preview;
   }
 
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
       const { file, documentTypeName, html } = createDocumentDTO;
+      console.log('html', html);
       const documentationTypeData =
         await this.findDocumentationTypeService.findDocumentationType(
           documentTypeName,
         );
-      if (file) {
+      if (file || file.length === 0) {
         let fileRegisterData = [];
         if (html) {
           const responsehtmlPdf = await this.httpService
@@ -984,7 +985,69 @@ export class DocumentsService {
           year: newDocument.year,
           estado_Ubicacion: newDocument.estado_Ubicacion,
         };
-      } else {
+      }
+      if (file.length === 0 && html === '') {
+        const newDocument = new this.documentModel({
+          ...createDocumentDTO,
+          fileRegister: null,
+          documentationType: documentationTypeData,
+          stateDocumentUserSend: 'EN ESPERA',
+          userId: userId,
+          htmlDoc: html,
+        });
+
+        const loggedUser = await this.httpService
+          .get(`${this.apiPersonalGet}/${userId}`)
+          .toPromise();
+        const userOficce = loggedUser.data.unity;
+        // const newFileRegister = new this.fileModel({
+        //   idDocument: newDocument._id,
+        //   fileRegister: fileRegisterData,
+        // });
+        // await newFileRegister.save();
+        const newEstadoUbicacion = new this.estadoUbiacionModel({
+          idDocument: newDocument._id,
+          estado_ubi: [
+            {
+              nameOffice: userOficce,
+              stateOffice: 'EN ESPERA',
+              numberPasoOffice: null,
+              receivedUsers: [
+                {
+                  ciUser: loggedUser.data.ci,
+                  idOfUser: userId,
+                  name: loggedUser.data.name,
+                  lastName: loggedUser.data.lastName,
+                  nameOfficeUserRecieved: loggedUser.data.unity,
+                  dateRecived: Date.now(),
+                  stateDocumentUser: 'EN ESPERA',
+                  observado: false,
+                },
+              ],
+              activo: true,
+            },
+          ],
+        });
+        await newEstadoUbicacion.save();
+        newDocument.estado_Ubicacion = newEstadoUbicacion;
+        await newDocument.save();
+        return {
+          _id: newDocument._id,
+          numberDocument: newDocument.numberDocument,
+          userId: newDocument.userId,
+          title: newDocument.title,
+          description: newDocument.description,
+          documentType: newDocument.documentationType,
+          stateDocumentUserSend: newDocument.stateDocumentUserSend,
+          workflow: newDocument.workflow,
+          fileRegister: newDocument.fileRegister,
+          active: newDocument.active,
+          year: newDocument.year,
+          estado_Ubicacion: newDocument.estado_Ubicacion,
+        };
+      }
+      if (file === null) {
+        console.log('esto es file', file);
         let fileRegisterData = [];
         if (html) {
           const responsehtmlPdf = await this.httpService
@@ -993,7 +1056,10 @@ export class DocumentsService {
             })
             .toPromise();
           const idFile = responsehtmlPdf.data.idFile;
-          fileRegisterData.push({ idFile: idFile });
+          fileRegisterData.push({
+            idFile: idFile,
+          });
+          console.log(fileRegisterData);
           const newDocument = new this.documentModel({
             ...createDocumentDTO,
             filesRegister: fileRegisterData,
@@ -1017,12 +1083,12 @@ export class DocumentsService {
             year: newDocument.year,
             estado_Ubicacion: newDocument.estado_Ubicacion,
           };
+          return this.functionCreateDocument(
+            createDocumentDTO,
+            documentationTypeData,
+            userId,
+          );
         }
-        return this.functionCreateDocument(
-          createDocumentDTO,
-          documentationTypeData,
-          userId,
-        );
       }
     } catch (error) {
       throw new Error(`error encontrado: ${error}`);
@@ -1177,7 +1243,6 @@ export class DocumentsService {
     let showDocument = { idDocument, idTemplate, base64Template };
     return showDocument;
   }
-
   */
 
   async update(id: string, updateDocumentDTO: UpdateDocumentDTO) {

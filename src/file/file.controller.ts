@@ -54,6 +54,18 @@ export class FileController {
     return await this.fileService.findBase64OfDocument(idDocumet, idFile);
   }
 
+  @Get('update-file/:idDocument/:idFile')
+  async updateFile(
+    @Param('idDocument') idDocument: string,
+    @Param('idFile') idFile: string,
+  ) {
+    return await this.fileService.updateFileContent(idDocument, idFile);
+
+    //-------------------------
+    //-----------------------------
+    //------------------------------------
+  }
+
   @Put(':id')
   update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
     return this.fileService.update(id, updateFileDto);

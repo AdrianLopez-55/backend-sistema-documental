@@ -59,6 +59,7 @@
     "passport-headerapikey": "^1.2.2",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "pdf2html": "^3.1.0",
     "pdfkit": "^0.13.0",
     "pino-http": "^8.3.3",
     "puppeteer": "^21.3.8",

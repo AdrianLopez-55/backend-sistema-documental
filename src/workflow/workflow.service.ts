@@ -97,9 +97,14 @@ export class WorkflowService {
 
     const offset = (page - 1) * limit;
 
-    const workflows = await this.workflowModel.find().limit(limit).skip(offset);
+    const workflows = await this.workflowModel
+      .find({ activeWorkflow: true })
+      .limit(limit)
+      .skip(offset);
 
-    const total = await this.workflowModel.countDocuments().exec();
+    const total = await this.workflowModel
+      .countDocuments({ activeWorkflow: true })
+      .exec();
     return {
       data: workflows,
       total: total,
@@ -178,11 +183,11 @@ export class WorkflowService {
     if (filter.descriptionWorkflow) {
       query['descriptionWorkflow'] = filter.descriptionWorkflow;
     }
-    if (filter.step) {
-      query['step'] = {
-        $elemMatch: { step: filter.step },
-      };
-    }
+    // if (filter.step) {
+    //   query['step'] = {
+    //     $elemMatch: { step: filter.step },
+    //   };
+    // }
     if (filter.descriptionStep) {
       query['step'] = {
         $elemMatch: { descriptionStep: filter.step },

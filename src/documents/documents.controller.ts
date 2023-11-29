@@ -89,8 +89,9 @@ export class DocumentsController {
       const numberDocument =
         await this.sequenceService.getNextValueNumberDocument();
 
-      if (createDocumentDTO.file.length < 0) {
-        createDocumentDTO.file = null;
+      console.log(createDocumentDTO.file.length);
+      if (createDocumentDTO.file.length <= 0 && createDocumentDTO.html === '') {
+        // createDocumentDTO.file = null;
       }
       const newRegisterDocument = {
         ...createDocumentDTO,

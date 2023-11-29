@@ -107,8 +107,8 @@ export class TemplateService {
       const bolivianTime = getBolivianTime();
       const headerHTMLString = `
       <div style="font-size: 10px; display: flex; align-items: center; justify-content: space-between; height: 20px; margin-top: 10px; width: 80%;">
-    <span style="margin-left: 50px;">FUNDACION DE SOFTWARE LIBRE</span>
-</div>`;
+      <span style="margin-left: 50px;">FUNDACION DE SOFTWARE LIBRE</span>
+      </div>`;
       const footerHTMLString = `
       <div style="font-size: 10px; display: flex; align-items: center; justify-content: space-between; height: 20px; margin-top: 10px;">
       <span style="margin-left: 50px;">${bolivianTime}</span>
