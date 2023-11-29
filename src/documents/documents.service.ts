@@ -407,6 +407,7 @@ export class DocumentsService {
                 },
               ],
               activo: true,
+              oficinas_falta: [],
               nameOffices: 'asd',
             },
             {
@@ -427,6 +428,7 @@ export class DocumentsService {
                 },
               ],
               activo: false,
+              oficinas_falta: [],
             },
           ],
           createdAt: undefined,
@@ -641,6 +643,7 @@ export class DocumentsService {
                 },
               ],
               activo: true,
+              oficinas_falta: [],
               nameOffices: '',
             },
           ],

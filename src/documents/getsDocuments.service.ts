@@ -1010,9 +1010,14 @@ export class GetDocumentsService {
         }
 
         if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
           });
         }
 
@@ -1021,11 +1026,15 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }

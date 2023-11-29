@@ -259,6 +259,10 @@ export class SendDerivedDocumentsService {
         });
         await findEstadoUbicacion.save();
 
+        const missingOffice = document.workflow.pasos
+          .filter((paso) => !paso.completado)
+          .map((paso) => ({ nameOffice: paso.oficina }));
+
         findEstadoUbicacion.estado_ubi.push({
           nameOffices: `${pasos[pasoActual].oficina}`,
           stateOffice: 'DERIVADO',
@@ -267,6 +271,7 @@ export class SendDerivedDocumentsService {
             .filter((entry) => entry.numberPasoOffice === pasoActual)
             .flatMap((item) => item.receivedUsers),
           activo: false,
+          oficinas_falta: missingOffice,
         });
 
         findEstadoUbicacion.estado_ubi.push({
@@ -275,6 +280,7 @@ export class SendDerivedDocumentsService {
           numberPasoOffice: pasoActual + 1,
           receivedUsers: receivedUsers,
           activo: true,
+          oficinas_falta: missingOffice,
         });
 
         await findEstadoUbicacion.save();
@@ -453,6 +459,10 @@ export class SendDerivedDocumentsService {
       });
       await findEstadoUbicacion.save();
 
+      const missingOffice = document.workflow.pasos
+        .filter((paso) => !paso.completado)
+        .map((paso) => ({ nameOffice: paso.oficina }));
+
       findEstadoUbicacion.estado_ubi.push({
         nameOffices: `${pasos[pasoActual - 1].oficina}`,
         stateOffice: 'DERIVADO',
@@ -461,6 +471,7 @@ export class SendDerivedDocumentsService {
           .filter((entry) => entry.numberPasoOffice === pasoActual)
           .flatMap((item) => item.receivedUsers),
         activo: false,
+        oficinas_falta: [],
       });
 
       findEstadoUbicacion.estado_ubi.push({
@@ -478,6 +489,7 @@ export class SendDerivedDocumentsService {
           stateDocumentUser: 'RECIBIDO',
         })),
         activo: true,
+        oficinas_falta: missingOffice,
       });
 
       await findEstadoUbicacion.save();
@@ -642,6 +654,7 @@ export class SendDerivedDocumentsService {
         },
       ],
       activo: false,
+      oficinas_falta: [],
     });
 
     findEstadoUbicacion.estado_ubi.push({
@@ -660,7 +673,9 @@ export class SendDerivedDocumentsService {
         observado: false,
       })),
       activo: true,
+      oficinas_falta: [],
     });
+
     await findEstadoUbicacion.save();
     document.estado_Ubicacion = findEstadoUbicacion;
     await document.save();
@@ -799,6 +814,7 @@ export class SendDerivedDocumentsService {
       numberPasoOffice: null,
       receivedUsers: usersFromSendMultiUnity,
       activo: false,
+      oficinas_falta: [],
     });
 
     findEstadoUbicacion.estado_ubi.push({
@@ -807,7 +823,9 @@ export class SendDerivedDocumentsService {
       numberPasoOffice: null,
       receivedUsers: usersFromSendMultiUnity,
       activo: true,
+      oficinas_falta: [],
     });
+
     await findEstadoUbicacion.save();
     document.estado_Ubicacion = findEstadoUbicacion;
 
@@ -980,12 +998,19 @@ export class SendDerivedDocumentsService {
       });
       await findEstadoUbicacion.save();
 
+      const missingOffice = document.workflow.pasos
+        .filter((paso) => !paso.completado)
+        .map((paso) => ({ nameOffice: paso.oficina }));
+
+      console.log(missingOffice);
+
       findEstadoUbicacion.estado_ubi.push({
         nameOffices: `${getInfoPersonal.data.unity}`,
         stateOffice: 'ENVIADO',
         numberPasoOffice: null,
         receivedUsers: receivedDocumentUsers,
         activo: false,
+        oficinas_falta: [],
       });
 
       findEstadoUbicacion.estado_ubi.push({
@@ -994,6 +1019,7 @@ export class SendDerivedDocumentsService {
         numberPasoOffice: pasoActual + 1,
         receivedUsers: receivedDocumentUsers,
         activo: true,
+        oficinas_falta: missingOffice,
       });
 
       await findEstadoUbicacion.save();
@@ -1005,6 +1031,23 @@ export class SendDerivedDocumentsService {
       document.stateDocumentUserSend = 'INICIADO';
       // document.stateDocumetUser = '';
       document.bitacoraWorkflow = newBitacora;
+
+      // //-------poner oficinas que faltan en el estado ubicacion
+      // document.estado_Ubicacion.estado_ubi.forEach((estado) => {
+      //   const { stateOffice, numberPasoOffice } = estado;
+      //   if (document.workflow && document.workflow.pasos) {
+      //     const pasosFalta = workflow.pasos.filter((paso) => !paso.completado);
+      //     // const oficinasFalta = pasosFalta.map((paso) => paso.oficina);
+      //     const oficinasFaltaObjeto = {
+      //       nameOffices: stateOffice,
+      //       numberPasoOffice: numberPasoOffice,
+      //       oficinas_pasar: pasosFalta.map((paso) => ({
+      //         oficina: paso.oficina,
+      //       })),
+      //     };
+      //     estado.oficinas_falta = [oficinasFaltaObjeto];
+      //   }
+      // });
       await document.save();
       return document;
     } else {
@@ -1198,12 +1241,18 @@ export class SendDerivedDocumentsService {
         });
         findEstadoUbicacion.save();
 
+        const missingOffice = document.workflow.pasos
+          .filter((paso) => !paso.completado)
+          .map((paso) => ({ nameOffice: paso.oficina }));
+        console.log(missingOffice);
+
         findEstadoUbicacion.estado_ubi.push({
           nameOffices: `${userOficce}`,
           stateOffice: 'ENVIADO',
           numberPasoOffice: null,
           receivedUsers: userReceivedDocument,
           activo: false,
+          oficinas_falta: [],
         });
 
         findEstadoUbicacion.estado_ubi.push({
@@ -1212,15 +1261,9 @@ export class SendDerivedDocumentsService {
           numberPasoOffice: pasoActual + 1,
           receivedUsers: userReceivedDocument,
           activo: true,
+          oficinas_falta: missingOffice,
         });
 
-        // const newEstadoUbicacion = findEstadoUbicacion.push({
-        //   idDocument: id,
-        //   nameOffice: userOficce,
-        //   stateOffice: 'ENVIADO',
-        //   receivedUsers: userReceivedDocument,
-        //   activo: false
-        // })
         await findEstadoUbicacion.save();
         document.estado_Ubicacion = findEstadoUbicacion;
         document.oficinaActual = workflow.oficinaActual;
@@ -1337,6 +1380,10 @@ export class SendDerivedDocumentsService {
         .findOne({ idDocument: documentId })
         .exec();
 
+      const missingOffice = document.workflow.pasos
+        .filter((paso) => !paso.completado)
+        .map((paso) => ({ nameOffice: paso.oficina }));
+
       //-----VER FUNCIONAMIENTO
       //-----VER FUNCIONAMIENTO
       //-----VER FUNCIONAMIENTO
@@ -1351,6 +1398,7 @@ export class SendDerivedDocumentsService {
         numberPasoOffice: pasoActual + 1,
         receivedUsers: document.userReceivedDocument,
         activo: false,
+        oficinas_falta: [],
       });
 
       findEstadoUbicacion.estado_ubi.push({
@@ -1359,6 +1407,7 @@ export class SendDerivedDocumentsService {
         numberPasoOffice: 0,
         receivedUsers: document.userReceivedDocument,
         activo: true,
+        oficinas_falta: missingOffice,
       });
 
       await findEstadoUbicacion.save();
@@ -1435,12 +1484,17 @@ export class SendDerivedDocumentsService {
         .findOne({ idDocument: documentId })
         .exec();
 
+      const missingOffice = document.workflow.pasos
+        .filter((paso) => !paso.completado)
+        .map((paso) => ({ nameOffice: paso.oficina }));
+
       findEstadoUbicacion.estado_ubi.push({
         nameOffices: `${document.oficinaActual}`,
         stateOffice: 'OBSERVADO Y DEVUELTO',
         numberPasoOffice: pasoActual + 1,
         receivedUsers: document.userReceivedDocument,
         activo: false,
+        oficinas_falta: [],
       });
 
       findEstadoUbicacion.estado_ubi.push({
@@ -1449,6 +1503,7 @@ export class SendDerivedDocumentsService {
         numberPasoOffice: 0,
         receivedUsers: document.userReceivedDocument,
         activo: true,
+        oficinas_falta: missingOffice,
       });
 
       await findEstadoUbicacion.save();
@@ -1538,12 +1593,17 @@ export class SendDerivedDocumentsService {
       .findOne({ idDocument: documentId })
       .exec();
 
+    const missingOffice = document.workflow.pasos
+      .filter((paso) => !paso.completado)
+      .map((paso) => ({ nameOffice: paso.oficina }));
+
     findEstadoUbicacion.estado_ubi.push({
       nameOffices: `${document.oficinaActual}`,
       stateOffice: 'OBSERVADO Y DEVUELTO',
       numberPasoOffice: pasoActual + 1,
       receivedUsers: document.userReceivedDocument,
       activo: false,
+      oficinas_falta: [],
     });
 
     findEstadoUbicacion.estado_ubi.push({
@@ -1552,7 +1612,23 @@ export class SendDerivedDocumentsService {
       numberPasoOffice: numberPaso,
       receivedUsers: document.userReceivedDocument,
       activo: true,
+      oficinas_falta: missingOffice,
     });
+
+    //-------poner oficinas que faltan en el estado ubicacion
+    // document.estado_Ubicacion.estado_ubi.forEach((estado) => {
+    //   const { numberPasoOffice } = estado;
+    //   if (document.workflow && document.workflow.pasos) {
+    //     const pasosFalta = workflow.pasos.filter((paso) => !paso.completado);
+    //     // const oficinasFalta = pasosFalta.map((paso) => paso.oficina);
+    //     const oficinasFaltaObjeto = {
+    //       nameOffices: stateOffice,
+    //       numberPasoOffice: numberPasoOffice,
+    //       oficinas_pasar: pasosFalta.map((paso) => ({ oficina: paso.oficina })),
+    //     };
+    //     estado.oficinas_falta = [oficinasFaltaObjeto];
+    //   }
+    // });
 
     await findEstadoUbicacion.save();
     document.estado_Ubicacion = findEstadoUbicacion;
