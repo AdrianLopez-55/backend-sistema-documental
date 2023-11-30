@@ -292,21 +292,6 @@ export class FileService {
     return base64s;
   }
 
-  // async addFileToDocment(id: string, idDocument: string) {
-  //   const findFile = await this.fileModel.findById(id).exec();
-  //   const document = await this.documentsModel.findById(idDocument).exec();
-  //   if (!idDocument) {
-  //     throw new HttpException('el documento no pudo ser encontrado', 400);
-  //   }
-  //   if (!document.fileRegister) {
-  //     document.fileRegister = findFile.fileRegister;
-  //     await document.save();
-  //     findFile.idDocument = document._id;
-  //     await findFile.save();
-  //     return findFile;
-  //   }
-  // }
-
   async addFileToDocumentExist(
     idDocument: string,
     addFileToDocumentDto: AddFileToDocumentDto,
@@ -426,7 +411,7 @@ export class FileService {
   }
 
   async remove(id: string) {
-    return await this.fileModel.findByIdAndRemove(id).exec();
+    return await this.fileModel.findByIdAndRemove(id, {}).exec();
   }
 
   private async uploadFile(fileObj: {

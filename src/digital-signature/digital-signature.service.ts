@@ -138,6 +138,7 @@ export class DigitalSignatureService {
     const newSignature = {
       digitalSignature: signature,
       userDigitalSignature: userId,
+      createdAt: new Date(),
     };
     const hasUserSigned = document.digitalSignatureDocument.some(
       (signature) => signature.userDigitalSignature === userId,
@@ -265,32 +266,32 @@ export class DigitalSignatureService {
 
   async getDigitalSignatureFromDocument(idDocument: string) {
     const document = await this.validateDocumentFind(idDocument);
-    const userDigitalSignatureIds = document.digitalSignatureDocument.map(
-      (signature) => signature.userDigitalSignature,
-    );
-    const obtenerNombreUsuario = async (userId) => {
+
+    const obtenerNombreUsuario = async (signature) => {
       try {
         const response = await this.httpService
-          .get(`${getConfig().api_personal}/api/personal/${userId}`)
+          .get(
+            `${getConfig().api_personal}/api/personal/${
+              signature.userDigitalSignature
+            }`,
+          )
           .toPromise();
         const { name, lastName, ci, unity } = response.data;
-        return { name, lastName, ci, unity };
+        return { name, lastName, ci, unity, createdAt: signature.createdAt };
       } catch (error) {
         console.error(
-          `Error al obtener el nombre para el usuario con ID ${userId}: ${error.message}`,
+          `Error al obtener el nombre para el usuario con ID ${signature.userDigitalSignature}: ${error.message}`,
         );
         return null;
       }
     };
 
     const nombresUsuariosPromesas =
-      userDigitalSignatureIds.map(obtenerNombreUsuario);
+      document.digitalSignatureDocument.map(obtenerNombreUsuario);
 
     const nombresUsuarios = await Promise.all(nombresUsuariosPromesas);
 
-    return nombresUsuarios.map((datosUsuario) => {
-      return { ...datosUsuario };
-    });
+    return nombresUsuarios.filter((usuario) => usuario !== null);
   }
 
   async removeDigitalSignature(id: string, userId: string): Promise<Documents> {

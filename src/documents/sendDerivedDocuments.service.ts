@@ -1031,23 +1031,6 @@ export class SendDerivedDocumentsService {
       document.stateDocumentUserSend = 'INICIADO';
       // document.stateDocumetUser = '';
       document.bitacoraWorkflow = newBitacora;
-
-      // //-------poner oficinas que faltan en el estado ubicacion
-      // document.estado_Ubicacion.estado_ubi.forEach((estado) => {
-      //   const { stateOffice, numberPasoOffice } = estado;
-      //   if (document.workflow && document.workflow.pasos) {
-      //     const pasosFalta = workflow.pasos.filter((paso) => !paso.completado);
-      //     // const oficinasFalta = pasosFalta.map((paso) => paso.oficina);
-      //     const oficinasFaltaObjeto = {
-      //       nameOffices: stateOffice,
-      //       numberPasoOffice: numberPasoOffice,
-      //       oficinas_pasar: pasosFalta.map((paso) => ({
-      //         oficina: paso.oficina,
-      //       })),
-      //     };
-      //     estado.oficinas_falta = [oficinasFaltaObjeto];
-      //   }
-      // });
       await document.save();
       return document;
     } else {

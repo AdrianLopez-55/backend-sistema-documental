@@ -5,7 +5,6 @@ import { Model } from 'mongoose';
 import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
 import { PaginationDto } from 'src/common/pagination.dto';
-// import { DocumentsFilter } from './dto/documents-dto';
 import { FilterDocumentsAll } from './dto/filterDocumentsAll';
 
 @Injectable()
@@ -94,9 +93,37 @@ export class GetDocumentsService {
       }
 
       if (dateRange.startDate && dateRange.endDate) {
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.where('createdAt', {
-          $gte: dateRange.startDate,
-          $lte: dateRange.endDate,
+          $gte: start < end ? start : end,
+          $lte: end > start ? end : start,
+        });
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lte: end,
+        });
+      } else if (dateRange.startDate) {
+        const start = new Date(dateRange.startDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
+        });
+      } else if (dateRange.endDate) {
+        const start = new Date(dateRange.endDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
         });
       }
 
@@ -105,11 +132,15 @@ export class GetDocumentsService {
         dateRangeRecived.startDateRecived &&
         dateRangeRecived.endDateRecived
       ) {
-        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const startRecived = new Date(dateRangeRecived.startDateRecived);
+        const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.elemMatch('userReceivedDocument', {
           dateRecived: {
-            $gte: dateRangeRecived.startDateRecived,
-            $lte: dateRangeRecived.endDateRecived,
+            $gte: startRecived < endRecived ? startRecived : endRecived,
+            $lte: endRecived > startRecived ? endRecived : startRecived,
           },
         });
       }
@@ -131,7 +162,29 @@ export class GetDocumentsService {
     } else if (view === 'RECIBIDOS') {
       if (withWorkflow === undefined) {
         let query = this.documentModel.find({
-          'userReceivedDocument.idOfUser': userId,
+          $or: [
+            {
+              'userReceivedDocument.idOfUser': userId,
+              'userReceivedDocument.stateDocumentUser': 'RECIBIDO',
+              workflow: { $ne: null },
+            },
+            {
+              sendMultiUnitysWithoutWorkflow: {
+                $elemMatch: {
+                  send: {
+                    $elemMatch: {
+                      receivedUsers: {
+                        $elemMatch: {
+                          idOfUser: `${userId}`,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              workflow: null,
+            },
+          ],
         });
 
         if (numberDocument) {
@@ -190,9 +243,37 @@ export class GetDocumentsService {
         }
 
         if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
+          });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
           });
         }
 
@@ -201,10 +282,15 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }
@@ -212,9 +298,15 @@ export class GetDocumentsService {
         const offset = (page - 1) * limit;
         const documents = await this.documentModel
           .find(query)
+          .lean()
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        documents.forEach((document) => {
+          document.stateDocumentUserRecieved = 'RECIBIDO';
+        });
+
         const total = await this.documentModel.countDocuments(query).exec();
         return {
           data: documents,
@@ -225,6 +317,7 @@ export class GetDocumentsService {
       if (withWorkflow && withWorkflow === 'true') {
         let query = this.documentModel.find({
           'userReceivedDocument.idOfUser': userId,
+          'userReceivedDocument.stateDocumentUser': 'RECIBIDO',
           workflow: { $ne: null },
         });
 
@@ -278,9 +371,37 @@ export class GetDocumentsService {
         }
 
         if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
+          });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
           });
         }
 
@@ -289,11 +410,15 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }
@@ -301,9 +426,14 @@ export class GetDocumentsService {
         const offset = (page - 1) * limit;
         const documents = await this.documentModel
           .find(query)
+          .lean()
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        documents.forEach((document) => {
+          document.stateDocumentUserRecieved = 'RECIBIDO';
+        });
         const total = await this.documentModel.countDocuments(query).exec();
         return {
           data: documents,
@@ -313,7 +443,19 @@ export class GetDocumentsService {
       }
       if (withWorkflow && withWorkflow === 'false') {
         let query = this.documentModel.find({
-          'userReceivedDocument.idOfUser': userId,
+          sendMultiUnitysWithoutWorkflow: {
+            $elemMatch: {
+              send: {
+                $elemMatch: {
+                  receivedUsers: {
+                    $elemMatch: {
+                      idOfUser: `${userId}`,
+                    },
+                  },
+                },
+              },
+            },
+          },
           workflow: null,
         });
 
@@ -349,32 +491,70 @@ export class GetDocumentsService {
           );
         }
 
+        if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
+          query = query.where('createdAt', {
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
+          });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        }
+
         //--filtrar documentos recividos
         if (
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }
 
-        if (dateRange.startDate && dateRange.endDate) {
-          query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
-          });
-        }
         const offset = (page - 1) * limit;
         const documents = await this.documentModel
           .find(query)
+          .lean()
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        documents.forEach((document) => {
+          document.stateDocumentUserRecieved = 'RECIBIDO';
+        });
         const total = await this.documentModel.countDocuments(query).exec();
         return {
           data: documents,
@@ -436,9 +616,37 @@ export class GetDocumentsService {
       }
 
       if (dateRange.startDate && dateRange.endDate) {
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.where('createdAt', {
-          $gte: dateRange.startDate,
-          $lte: dateRange.endDate,
+          $gte: start < end ? start : end,
+          $lte: end > start ? end : start,
+        });
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lte: end,
+        });
+      } else if (dateRange.startDate) {
+        const start = new Date(dateRange.startDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
+        });
+      } else if (dateRange.endDate) {
+        const start = new Date(dateRange.endDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
         });
       }
 
@@ -447,11 +655,15 @@ export class GetDocumentsService {
         dateRangeRecived.startDateRecived &&
         dateRangeRecived.endDateRecived
       ) {
-        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const startRecived = new Date(dateRangeRecived.startDateRecived);
+        const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.elemMatch('userReceivedDocument', {
           dateRecived: {
-            $gte: dateRangeRecived.startDateRecived,
-            $lte: dateRangeRecived.endDateRecived,
+            $gte: startRecived < endRecived ? startRecived : endRecived,
+            $lte: endRecived > startRecived ? endRecived : startRecived,
           },
         });
       }
@@ -549,9 +761,37 @@ export class GetDocumentsService {
           );
         }
         if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
+          });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
           });
         }
 
@@ -560,11 +800,15 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }
@@ -573,9 +817,39 @@ export class GetDocumentsService {
 
         const filteredDocuments = await this.documentModel
           .find(query)
+          .lean()
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        filteredDocuments.forEach((document) => {
+          if (
+            document.stateDocumentUserSend === 'INICIADO' &&
+            document.workflow
+          ) {
+            // Cumple con el primer requisito
+            document.stateDocumentUserRecieved = 'INICIADO';
+          } else if (
+            document.stateDocumentUserSend === 'ENVIADO DIRECTO' &&
+            !document.workflow
+          ) {
+            // Cumple con el segundo requisito
+            document.stateDocumentUserRecieved = 'ENVIADO';
+          } else if (document.bitacoraWorkflow) {
+            // Cumple con el tercer requisito
+            const receivedUser = document.bitacoraWorkflow
+              .flatMap((bitacora) => bitacora.receivedUsers)
+              .find(
+                (receivedUser) =>
+                  receivedUser.idOfUser === userId &&
+                  receivedUser.stateDocumentUser === 'DERIVADO',
+              );
+
+            if (receivedUser) {
+              document.stateDocumentUserRecieved = 'DERIVADO';
+            }
+          }
+        });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -655,9 +929,37 @@ export class GetDocumentsService {
         }
 
         if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
+          });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
           });
         }
 
@@ -666,11 +968,15 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }
@@ -679,9 +985,33 @@ export class GetDocumentsService {
 
         const filteredDocuments = await this.documentModel
           .find(query)
+          .lean()
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        filteredDocuments.forEach((document) => {
+          if (
+            document.stateDocumentUserSend === 'INICIADO' &&
+            document.workflow
+          ) {
+            // Cumple con el primer requisito
+            document.stateDocumentUserRecieved = 'INICIADO';
+          } else if (document.bitacoraWorkflow) {
+            // Cumple con el tercer requisito
+            const receivedUser = document.bitacoraWorkflow
+              .flatMap((bitacora) => bitacora.receivedUsers)
+              .find(
+                (receivedUser) =>
+                  receivedUser.idOfUser === userId &&
+                  receivedUser.stateDocumentUser === 'DERIVADO',
+              );
+
+            if (receivedUser) {
+              document.stateDocumentUserRecieved = 'DERIVADO';
+            }
+          }
+        });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -744,9 +1074,37 @@ export class GetDocumentsService {
         }
 
         if (dateRange.startDate && dateRange.endDate) {
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const start = new Date(dateRange.startDate);
+          const end = new Date(dateRange.endDate);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.where('createdAt', {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
+            $gte: start < end ? start : end,
+            $lte: end > start ? end : start,
+          });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
           });
         }
 
@@ -755,11 +1113,15 @@ export class GetDocumentsService {
           dateRangeRecived.startDateRecived &&
           dateRangeRecived.endDateRecived
         ) {
-          // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+          // Asegurémonos de obtener la fecha más temprana y la más tardía
+          const startRecived = new Date(dateRangeRecived.startDateRecived);
+          const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+          // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
           query = query.elemMatch('userReceivedDocument', {
             dateRecived: {
-              $gte: dateRangeRecived.startDateRecived,
-              $lte: dateRangeRecived.endDateRecived,
+              $gte: startRecived < endRecived ? startRecived : endRecived,
+              $lte: endRecived > startRecived ? endRecived : startRecived,
             },
           });
         }
@@ -771,6 +1133,10 @@ export class GetDocumentsService {
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        filteredDocuments.forEach((document) => {
+          document.stateDocumentUserRecieved = 'ENVIADO';
+        });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -830,9 +1196,37 @@ export class GetDocumentsService {
       }
 
       if (dateRange.startDate && dateRange.endDate) {
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.where('createdAt', {
-          $gte: dateRange.startDate,
-          $lte: dateRange.endDate,
+          $gte: start < end ? start : end,
+          $lte: end > start ? end : start,
+        });
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lte: end,
+        });
+      } else if (dateRange.startDate) {
+        const start = new Date(dateRange.startDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
+        });
+      } else if (dateRange.endDate) {
+        const start = new Date(dateRange.endDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
         });
       }
 
@@ -841,11 +1235,15 @@ export class GetDocumentsService {
         dateRangeRecived.startDateRecived &&
         dateRangeRecived.endDateRecived
       ) {
-        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const startRecived = new Date(dateRangeRecived.startDateRecived);
+        const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.elemMatch('userReceivedDocument', {
           dateRecived: {
-            $gte: dateRangeRecived.startDateRecived,
-            $lte: dateRangeRecived.endDateRecived,
+            $gte: startRecived < endRecived ? startRecived : endRecived,
+            $lte: endRecived > startRecived ? endRecived : startRecived,
           },
         });
       }
@@ -854,9 +1252,14 @@ export class GetDocumentsService {
 
       const filteredDocuments = await this.documentModel
         .find(query)
+        .lean()
         .limit(limit)
         .skip(offset)
         .sort({ createdAt: -1 });
+
+      filteredDocuments.forEach((document) => {
+        document.stateDocumentUserRecieved = 'COMPLETADO';
+      });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -920,9 +1323,37 @@ export class GetDocumentsService {
       }
 
       if (dateRange.startDate && dateRange.endDate) {
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.where('createdAt', {
-          $gte: dateRange.startDate,
-          $lte: dateRange.endDate,
+          $gte: start < end ? start : end,
+          $lte: end > start ? end : start,
+        });
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lte: end,
+        });
+      } else if (dateRange.startDate) {
+        const start = new Date(dateRange.startDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
+        });
+      } else if (dateRange.endDate) {
+        const start = new Date(dateRange.endDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
         });
       }
 
@@ -931,11 +1362,15 @@ export class GetDocumentsService {
         dateRangeRecived.startDateRecived &&
         dateRangeRecived.endDateRecived
       ) {
-        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const startRecived = new Date(dateRangeRecived.startDateRecived);
+        const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.elemMatch('userReceivedDocument', {
           dateRecived: {
-            $gte: dateRangeRecived.startDateRecived,
-            $lte: dateRangeRecived.endDateRecived,
+            $gte: startRecived < endRecived ? startRecived : endRecived,
+            $lte: endRecived > startRecived ? endRecived : startRecived,
           },
         });
       }
@@ -944,9 +1379,14 @@ export class GetDocumentsService {
 
       const filteredDocuments = await this.documentModel
         .find(query)
+        .lean()
         .limit(limit)
         .skip(offset)
         .sort({ createdAt: -1 });
+
+      filteredDocuments.forEach((document) => {
+        document.stateDocumentUserRecieved = 'OBSERVADO';
+      });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -1019,6 +1459,29 @@ export class GetDocumentsService {
             $gte: start < end ? start : end,
             $lte: end > start ? end : start,
           });
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lte: end,
+          });
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
+        } else if (dateRange.endDate) {
+          const start = new Date(dateRange.endDate);
+          const nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          query = query.where('createdAt', {
+            $gte: start,
+            $lt: nextDay,
+          });
         }
 
         //--filtrar documentos recividos
@@ -1046,6 +1509,10 @@ export class GetDocumentsService {
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 });
+
+        filteredDocuments.forEach((document) => {
+          document.stateDocumentUserRecieved = '';
+        });
 
         const total = await this.documentModel.countDocuments(query).exec();
 
@@ -1108,9 +1575,37 @@ export class GetDocumentsService {
       }
 
       if (dateRange.startDate && dateRange.endDate) {
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.where('createdAt', {
-          $gte: dateRange.startDate,
-          $lte: dateRange.endDate,
+          $gte: start < end ? start : end,
+          $lte: end > start ? end : start,
+        });
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lte: end,
+        });
+      } else if (dateRange.startDate) {
+        const start = new Date(dateRange.startDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
+        });
+      } else if (dateRange.endDate) {
+        const start = new Date(dateRange.endDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
         });
       }
 
@@ -1119,11 +1614,15 @@ export class GetDocumentsService {
         dateRangeRecived.startDateRecived &&
         dateRangeRecived.endDateRecived
       ) {
-        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const startRecived = new Date(dateRangeRecived.startDateRecived);
+        const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.elemMatch('userReceivedDocument', {
           dateRecived: {
-            $gte: dateRangeRecived.startDateRecived,
-            $lte: dateRangeRecived.endDateRecived,
+            $gte: startRecived < endRecived ? startRecived : endRecived,
+            $lte: endRecived > startRecived ? endRecived : startRecived,
           },
         });
       }
@@ -1132,9 +1631,14 @@ export class GetDocumentsService {
 
       const filteredDocuments = await this.documentModel
         .find(query)
+        .lean()
         .limit(limit)
         .skip(offset)
         .sort({ createdAt: -1 });
+
+      filteredDocuments.forEach((document) => {
+        document.stateDocumentUserRecieved = 'ARCHIVADO';
+      });
 
       const total = await this.documentModel.countDocuments(query).exec();
 
@@ -1203,9 +1707,37 @@ export class GetDocumentsService {
       }
 
       if (dateRange.startDate && dateRange.endDate) {
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.where('createdAt', {
-          $gte: dateRange.startDate,
-          $lte: dateRange.endDate,
+          $gte: start < end ? start : end,
+          $lte: end > start ? end : start,
+        });
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lte: end,
+        });
+      } else if (dateRange.startDate) {
+        const start = new Date(dateRange.startDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
+        });
+      } else if (dateRange.endDate) {
+        const start = new Date(dateRange.endDate);
+        const nextDay = new Date(start);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        query = query.where('createdAt', {
+          $gte: start,
+          $lt: nextDay,
         });
       }
 
@@ -1214,11 +1746,15 @@ export class GetDocumentsService {
         dateRangeRecived.startDateRecived &&
         dateRangeRecived.endDateRecived
       ) {
-        // Filtrar por el campo 'userReceivedDocument.dateRecived' dentro del array
+        // Asegurémonos de obtener la fecha más temprana y la más tardía
+        const startRecived = new Date(dateRangeRecived.startDateRecived);
+        const endRecived = new Date(dateRangeRecived.endDateRecived);
+
+        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
         query = query.elemMatch('userReceivedDocument', {
           dateRecived: {
-            $gte: dateRangeRecived.startDateRecived,
-            $lte: dateRangeRecived.endDateRecived,
+            $gte: startRecived < endRecived ? startRecived : endRecived,
+            $lte: endRecived > startRecived ? endRecived : startRecived,
           },
         });
       }
@@ -1230,6 +1766,10 @@ export class GetDocumentsService {
         .limit(limit)
         .skip(offset)
         .sort({ createdAt: -1 });
+
+      filteredDocuments.forEach((document) => {
+        document.stateDocumentUserRecieved = 'DERIVADO';
+      });
 
       const total = await this.documentModel.countDocuments(query).exec();
 

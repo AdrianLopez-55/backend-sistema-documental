@@ -47,6 +47,9 @@ export class Documents {
   @Prop({ uppercase: true })
   stateDocumentUserSend: string;
 
+  @Prop({ uppercase: true })
+  stateDocumentUserRecieved: string;
+
   @Prop({
     type: [
       {
@@ -254,12 +257,14 @@ export class Documents {
       {
         digitalSignature: String,
         userDigitalSignature: String,
+        createdAt: Date,
       },
     ],
   })
   digitalSignatureDocument: {
     digitalSignature: string;
     userDigitalSignature: string;
+    createdAt: Date;
   }[];
 }
 

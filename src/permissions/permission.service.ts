@@ -133,4 +133,6 @@ export class PermissionsService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  async viewPermissionCentral() {}
 }

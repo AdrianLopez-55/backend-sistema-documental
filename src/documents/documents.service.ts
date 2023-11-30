@@ -972,6 +972,7 @@ export class DocumentsService {
         });
         await newEstadoUbicacion.save();
         newDocument.estado_Ubicacion = newEstadoUbicacion;
+        newDocument.stateDocumentUserRecieved = '';
         await newDocument.save();
         // return newDocument;
         return {
