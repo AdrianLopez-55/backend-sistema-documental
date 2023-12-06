@@ -10,10 +10,16 @@ import { Reflector } from '@nestjs/core';
 import { Permission } from './constants/Permission';
 import { HttpService } from '@nestjs/axios';
 import getConfig from '../config/configuration';
+// import { MessagingService } from '../messaging/messaging.service';
+import { error } from 'console';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector, private httpService: HttpService) {}
+  constructor(
+    private reflector: Reflector, //servicio websocket
+    // private messagingService: MessagingService,
+    private httpService: HttpService,
+  ) {}
 
   async canActivate(context: ExecutionContext) {
     const requiredPermission = this.reflector.get<Permission>(
@@ -67,7 +73,16 @@ export class RolesGuard implements CanActivate {
         .map((response) => response.data.permissionName)
         .filter((item) => item !== undefined)
         .flat();
-      console.log('userPermission', userPermission);
+
+      if (userPermission.length <= 0) {
+        throw new Error(`usuario sin permisos: ${error}`);
+      }
+
+      let permissionUser = userPermission;
+      request['permissionUserLogin'] = permissionUser;
+      // console.log('userPermission', userPermission);
+
+      //servicio websocket
 
       //AL OBTENER LOS PERMISOS DEL USUARIO SE OBTIENE DIRECTO LOS NOMBRES:
 
@@ -96,7 +111,7 @@ export class RolesGuard implements CanActivate {
 
       //----------- SOLO USAR SI SE USA CENTRAL EXTERNO ---------------------\\
       const permissionNames = userPermission.map((item) => item.permissionName);
-      console.log(permissionNames);
+      // console.log(permissionNames);
       //------------------------------------------------------------------\\
 
       if (checkPermissions(requiredPermission, permissionNames)) {
@@ -108,9 +123,7 @@ export class RolesGuard implements CanActivate {
       }
     } catch (error) {
       console.error(error);
-      throw new UnauthorizedException(
-        'No se pudo verificar los permisos del usuario.',
-      );
+      throw new UnauthorizedException('Usuario sin permisos de acceso o uso.');
     }
     function checkPermissions(requiredPermissions, permissionNames) {
       return requiredPermissions.some((requiredPermission) =>
@@ -126,7 +139,6 @@ export class RolesGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 }
-
 
 */
 
@@ -148,12 +160,14 @@ import {
 } from 'src/permissions/schemas/permission.schema';
 import { Rol, RolDocument } from 'src/rol/schema/rol.schema';
 import getConfig from '../config/configuration';
+// import { UserService } from '../user.service';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private httpService: HttpService,
+    // private userService: UserService,
     @InjectModel(PermissionSchema.name)
     private readonly permissionModel: Model<PermissionDocument>,
     @InjectModel(Rol.name) private readonly rolModel: Model<RolDocument>,
@@ -175,6 +189,19 @@ export class RolesGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('No autorizado, no existe token');
     }
+    // if (token) {
+    //   const tokenSend = await this.userService.getPermissionsFromToken(token);
+    //   console.log('token enviado desde fornt', tokenSend);
+    //   const decodedToken = await this.httpService
+    //     .post(`${getConfig().api_central}/auth/decoded`, { token: tokenSend })
+    //     .toPromise();
+    //   if (decodedToken.data.roles.length === 0) {
+    //     throw new HttpException('no tiene roles', 401);
+    //   }
+
+    //   // Do something with the obtained permissions
+    //   console.log();
+    // }
 
     let userPermission;
     let userDataId;
@@ -201,6 +228,20 @@ export class RolesGuard implements CanActivate {
         throw new HttpException('no tiene roles', 401);
       }
 
+      //nuevo
+      const user = {
+        userDataId,
+        userDataRol,
+        userPassword,
+        tokenDat,
+      };
+
+      // context.switchToWs().getClient().data.user = user;
+      // request.user = user;
+      // client['user'] = user;
+      request['userData'] = user;
+      //----------------------------------------------
+
       const rolesWithDetails = await Promise.all(
         decodedToken.data.roles.map((roleId) =>
           this.httpService
@@ -215,6 +256,7 @@ export class RolesGuard implements CanActivate {
       if (!roleNames) {
         throw new HttpException('no tiene los permisos necesarios', 403);
       }
+      console.log('roles del usuario', roleNames);
 
       let hasRequiredPermissions = true;
       for (const rolName of roleNames) {
@@ -224,14 +266,18 @@ export class RolesGuard implements CanActivate {
 
         if (findRole) {
           const rolePermissions = findRole.permissionName;
+          let permissionUser = rolePermissions;
+          // request['permissionUserLogin'] = permissionUser;
 
           if (rolePermissions.length === 0) {
             hasRequiredPermissions = false;
           }
+          console.log('permisos del usuario', rolePermissions);
           for (const rolePermission of rolePermissions) {
             const findPermission = await this.permissionModel
               .findById(rolePermission)
               .exec();
+            // console.log('permisos usuario con nombre', findPermission);
 
             if (findPermission) {
               const hasAllPermissions = requiredPermission.every((permission) =>
@@ -267,9 +313,52 @@ export class RolesGuard implements CanActivate {
   }
 
   private extractTokenFromHeader(
+    // request: Request & { handshake: { headers: { authorization?: string } } },
     request: Request & { headers: { authorization?: string } },
   ): string | undefined {
+    // const authorizationHeader = request.handshake.headers.authorization;
+    // if (!authorizationHeader) {
+    //   console.log('token no sirvio del guard');
+    //   return undefined;
+    // }
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    // const [type, token] = authorizationHeader.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  async getTokenExternal(token: string) {
+    const decodedToken = await this.httpService
+      .post(`${getConfig().api_central}/auth/decoded`, { token })
+      .toPromise();
+    //-------------usuarios
+    const userDataId = decodedToken.data.idUser;
+    const userDataRol = decodedToken.data.roles;
+    const userPassword = decodedToken.data.password;
+    const tokenDat = token;
+
+    const rolesWithDetails = await Promise.all(
+      decodedToken.data.roles.map((roleId) =>
+        this.httpService
+          .get(`${getConfig().api_central}/rol/${roleId}`)
+          .toPromise(),
+      ),
+    );
+
+    const roleDetails = rolesWithDetails.map((response) => response.data);
+
+    const roleNames = roleDetails.map((role) => role.rolName);
+    if (!roleNames) {
+      throw new HttpException('no tiene los permisos necesarios', 403);
+    }
+
+    const dataUser = await this.httpService
+      .get(`${getConfig().api_personal_get}/${userDataId}`)
+      .toPromise();
+
+    return {
+      name: dataUser.data.name,
+      lastName: dataUser.data.lastName,
+      email: dataUser.data.email,
+    };
   }
 }

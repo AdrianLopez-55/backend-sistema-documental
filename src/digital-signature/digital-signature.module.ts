@@ -19,6 +19,7 @@ import {
 } from './schemas/credentialUser.schema';
 import { PinUser, PinUserSchema } from './schemas/pinUser.schema';
 import { LoggerInterceptor } from '../interceptors/loggerInterceptors';
+// import { UserService } from 'src/user.service';
 
 @Module({
   imports: [

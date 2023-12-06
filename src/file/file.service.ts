@@ -411,7 +411,38 @@ export class FileService {
   }
 
   async remove(id: string) {
-    return await this.fileModel.findByIdAndRemove(id, {}).exec();
+    return await this.fileModel.findByIdAndRemove(id, { lean: true }).exec();
+  }
+
+  async removeOneFile(idDocument: string, idFile: string) {
+    try {
+      const updatedDocument = await this.fileModel
+        .findOneAndUpdate(
+          { idDocument: idDocument },
+          { $pull: { fileRegister: { idFile: idFile } } },
+          { new: true },
+        )
+        .exec();
+
+      if (!updatedDocument) {
+        throw new HttpException(
+          'No se encontró el documento o el archivo',
+          404,
+        );
+      }
+
+      const documentFiles = await this.documentsModel
+        .findById(idDocument)
+        .exec();
+      documentFiles.fileRegister = updatedDocument.fileRegister;
+      await documentFiles.save();
+      return updatedDocument;
+    } catch (error) {
+      throw new HttpException(
+        `Error al actualizar el documento: ${error}`,
+        500,
+      );
+    }
   }
 
   private async uploadFile(fileObj: {

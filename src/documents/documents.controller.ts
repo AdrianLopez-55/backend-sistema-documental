@@ -65,12 +65,7 @@ export class DocumentsController {
   ) {}
 
   @ApiBearerAuth()
-  @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
-    Permission.SUPERADMIN,
-    Permission.CREAR_DOCUMENTO,
-  )
+  @Permissions(Permission.CREAR_DOCUMENTO, Permission.SUPERADMIN)
   // @UseInterceptors(LoggerInterceptor)
   @Post()
   @ApiOperation({
@@ -112,12 +107,7 @@ export class DocumentsController {
   }
 
   @ApiBearerAuth()
-  @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
-    Permission.SUPERADMIN,
-    Permission.CREAR_DOCUMENTO,
-  )
+  @Permissions(Permission.CREAR_DOCUMENTO)
   @Post('create-multi-documents-with-workflow')
   async createMultiDocuments(@Req() req) {
     const userId = req.user;
@@ -137,12 +127,7 @@ export class DocumentsController {
   */
 
   @ApiBearerAuth()
-  @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
-    Permission.SUPERADMIN,
-    Permission.CREAR_DOCUMENTO,
-  )
+  @Permissions(Permission.CREAR_DOCUMENTO)
   @Post('create-multi-documents-on-hold')
   async createMultiDocumentsOnHold(@Req() req) {
     const userId = req.user;
@@ -151,18 +136,22 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.OBTENER_DOCUMENTOS,
-    Permission.CREAR_DOCUMENTO,
+    // Permission.OBTENER_DOCUMENTOS,
+    // Permission.CREAR_DOCUMENTO,
+    Permission.SUPERADMIN,
+    Permission.VER_DOCUMENTOS_TODOS,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
   )
+  @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
+  @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
   @Get()
   @ApiOperation({
     summary: 'see all documents or search by filters',
     description:
       'this endpoint is used to view all documents registered for all personnel.',
   })
-  findAll() {
-    return this.documentsService.findAll();
+  async findAll(@Query() filterPaginate: PaginationDto) {
+    return await this.documentsService.findAll(filterPaginate);
   }
 
   @Post('preview-file-document')
@@ -176,10 +165,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
-    Permission.OBTENER_DOCUMENTOS,
+    // Permission.OBTENER_DOCUMENTOS,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
   )
   @Get('active')
   @ApiOperation({
@@ -217,11 +207,13 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
-    Permission.OBTENER_DOCUMENTOS,
-    Permission.CREAR_DOCUMENTO,
+    // Permission.OBTENER_DOCUMENTOS,
+    // Permission.CREAR_DOCUMENTO,
+    Permission.VER_DOCUMENTOS_TODOS,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
   )
   @Get('paginacion')
   @ApiOperation({
@@ -237,11 +229,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
-    Permission.ELIMINAR_DOCUMENTO,
-    Permission.CREAR_DOCUMENTO,
+    // Permission.ELIMINAR_DOCUMENTO,
+    // Permission.CREAR_DOCUMENTO,
+    Permission.VER_DOCUMENTOS_INACTIVOS,
   )
   @Get('inactive')
   @ApiOperation({
@@ -280,10 +273,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
-    Permission.OBTENER_DOCUMENTOS,
+    // Permission.OBTENER_DOCUMENTOS,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
+    Permission.VER_DOCUMENTOS_TODOS,
   )
   @Get('filtrado')
   @ApiOperation({
@@ -332,11 +327,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.OBTENER_DOCUMENTOS,
-    Permission.CREAR_DOCUMENTO,
+    // Permission.CREAR_DOCUMENTO,
   )
   @ApiQuery({ name: 'limit', type: Number, example: 10, required: false })
   @ApiQuery({ name: 'page', type: Number, example: 1, required: false })
@@ -400,11 +395,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.OBTENER_DOCUMENTOS,
-    Permission.CREAR_DOCUMENTO,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
+    // Permission.CREAR_DOCUMENTO,
   )
   @Get(':id')
   @ApiOperation({
@@ -432,11 +428,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.OBTENER_DOCUMENTOS,
-    Permission.CREAR_DOCUMENTO,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
+    // Permission.CREAR_DOCUMENTO,
   )
   @Get('get-documents-user/:userId')
   @ApiOperation({
@@ -474,11 +471,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.OBTENER_DOCUMENTOS,
     Permission.CREAR_DOCUMENTO,
+    Permission.VER_DOCUMENTOS_ACTIVADOS,
   )
   @Get('versions/:id/:version')
   @ApiOperation({
@@ -496,11 +494,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
+    // Permission.EDITAR_DOCUMENTO,
+    // Permission.CREAR_DOCUMENTO,
     Permission.EDITAR_DOCUMENTO,
-    Permission.CREAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Put(':id')
@@ -520,11 +519,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.ELIMINAR_DOCUMENTO,
-    Permission.CREAR_DOCUMENTO,
+    // Permission.CREAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Delete('inactive/:id')
@@ -537,11 +536,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.REACTIVAR_DOCUMENTO,
-    Permission.CREAR_DOCUMENTO,
+    // Permission.CREAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Put('active/:id')
@@ -578,11 +577,12 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
-    Permission.CREAR_DOCUMENTO,
+    Permission.ENVIAR_DOCUMENTO,
+    // Permission.CREAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Post('send-document-employeeds/:id')
@@ -610,10 +610,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.ENVIAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Post('send-document-unity/:id')
@@ -637,10 +638,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.ENVIAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Post('send-document-without-workflow/:id')
@@ -665,10 +667,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.ENVIAR_DOCUMENTO,
   )
   @Post('send-document-multiple-units/:id')
   async sendDocumentMultipleUnits(
@@ -689,10 +692,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.DERIVAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Post('derive-document-employeed/:id')
@@ -713,10 +717,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.DERIVAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Post('derive-document-unity-all/:id')
@@ -731,10 +736,11 @@ export class DocumentsController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.OBSERVAR_DOCUMENTO,
   )
   @UseInterceptors(LoggerInterceptor)
   @Post('mark-document-observed/:id/:paso')

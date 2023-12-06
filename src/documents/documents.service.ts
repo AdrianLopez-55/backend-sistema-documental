@@ -48,6 +48,7 @@ import {
 import { File, FileDocument } from 'src/file/schema/file.schema';
 import { FilterDocumentsAll } from './dto/filterDocumentsAll';
 import { PreviewFileDto } from './dto/previewFile.dto';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class DocumentsService {
@@ -829,24 +830,31 @@ export class DocumentsService {
   }
 
   async preview(createDocumentDTO: PreviewFileDto) {
-    const { html } = createDocumentDTO;
-    const responsehtmlPdf = await this.httpService
-      .post(`${getConfig().api_convet_html_pdf}/convert/preview`, {
-        textPlain: html,
-      })
-      .toPromise();
-    const base64Preview = responsehtmlPdf.data.base64File;
-
-    // const responseBase64 = await this.httpService
-    //   .get(`${this.apiFilesTemplate}/file/${idFile}`)
-    //   .toPromise();
-    return base64Preview;
+    try {
+      const { html } = createDocumentDTO;
+      const responsehtmlPdf = await this.httpService
+        .post(`${getConfig().api_convet_html_pdf}/convert/preview`, {
+          textPlain: html,
+        })
+        .toPromise();
+      const base64Preview = responsehtmlPdf.data.base64File;
+      return base64Preview;
+    } catch (error) {
+      throw new Error(`Error encontrado: ${error}`);
+    }
   }
 
   async create(createDocumentDTO: CreateDocumentDTO, userId: string) {
     try {
+      const date = new Date();
+      const time = moment.utc(date).tz('America/La_Paz');
+      // console.log('esto es el tiempo', time);
+      // const formattedDateTime = time.format('YYYY-MM-DD:HH:mm:ss');
+      const formattedDateTime = new Date(time.format());
+      // const formattedDateAsDate = new Date(formattedDateTime);
+      console.log('esto es tiempo', formattedDateTime);
+      // console.log('esto es tiempo', formattedDateTime);
       const { file, documentTypeName, html } = createDocumentDTO;
-      console.log('html', html);
       const documentationTypeData =
         await this.findDocumentationTypeService.findDocumentationType(
           documentTypeName,
@@ -867,7 +875,6 @@ export class DocumentsService {
 
         for (const fileData of fileDataArray) {
           const { mime, base64 } = fileData;
-          console.log('esto es mime', mime);
           if (
             mime.startsWith(
               'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -936,6 +943,8 @@ export class DocumentsService {
           stateDocumentUserSend: 'EN ESPERA',
           userId: userId,
           htmlDoc: html,
+          createdAt: new Date(),
+          updateAt: new Date(),
         });
 
         const loggedUser = await this.httpService
@@ -961,7 +970,7 @@ export class DocumentsService {
                   name: loggedUser.data.name,
                   lastName: loggedUser.data.lastName,
                   nameOfficeUserRecieved: loggedUser.data.unity,
-                  dateRecived: Date.now(),
+                  dateRecived: new Date(),
                   stateDocumentUser: 'EN ESPERA',
                   observado: false,
                 },
@@ -974,7 +983,7 @@ export class DocumentsService {
         newDocument.estado_Ubicacion = newEstadoUbicacion;
         newDocument.stateDocumentUserRecieved = '';
         await newDocument.save();
-        // return newDocument;
+
         return {
           _id: newDocument._id,
           numberDocument: newDocument.numberDocument,
@@ -1096,26 +1105,6 @@ export class DocumentsService {
       }
     } catch (error) {
       throw new Error(`error encontrado: ${error}`);
-    }
-  }
-
-  //-------------------------------------
-  //aumentar files a un dcumento
-  async addFilesDocument(id: string, createDocumentDto: CreateDocumentDTO) {
-    const document = await this.documentModel.findById(id).exec();
-    const { file } = createDocumentDto;
-    if (file) {
-      const fileDataArray = this.extractFileData(createDocumentDto);
-
-      for (const fileData of fileDataArray) {
-        const { mime, base64 } = fileData;
-        const fileObj = {
-          mime: mime,
-          base64: base64,
-        };
-        const response = await this.uploadFile(fileObj);
-        const fileRegister = this.createFileRegister(response.data.file);
-      }
     }
   }
 
@@ -1254,32 +1243,111 @@ export class DocumentsService {
       await this.findDocumentationTypeService.findDocumentationType(
         updateDocumentDTO.documentTypeName,
       );
-    const { file } = updateDocumentDTO;
+    const { file, html } = updateDocumentDTO;
 
-    if (file) {
+    if (file || file.length === 0) {
+      let fileRegisterData = [];
+      if (html) {
+        const responsehtmlPdf = await this.httpService
+          .post(`${getConfig().api_convet_html_pdf}/convert`, {
+            textPlain: html,
+          })
+          .toPromise();
+        const idFile = responsehtmlPdf.data.idFile;
+        fileRegisterData.push({ idFile });
+        // documentFind.fileRegister.push({idFile})
+      }
+
       const fileDataArray = await this.extractFileData(updateDocumentDTO);
 
-      let fileRegisterData = [];
       for (const fileData of fileDataArray) {
         const { mime, base64 } = fileData;
-        const fileObj = {
-          mime: mime,
-          base64: base64,
-        };
-        const response = await this.uploadFile(fileObj);
-        const fileRegister = this.createFileRegister(response.data.file);
-        fileRegisterData.push(fileRegister);
+        if (
+          mime.startsWith(
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          )
+        ) {
+          const binaryData = Buffer.from(base64, 'base64');
+
+          //definir ruta y nombre del archivo temporal
+          const path = require('path');
+          const tempFolder = path.join(process.cwd(), 'template');
+          const fileName = `_file.docx`;
+          const filePathTemplateDoc = path.join(tempFolder, fileName);
+          fs.writeFileSync(filePathTemplateDoc, binaryData);
+          //borrar el template descargado
+          const timeToLiveInMillisencods = 1 * 60 * 1000;
+          setTimeout(() => {
+            fs.unlink(filePathTemplateDoc, (err) => {
+              if (err) {
+                console.error('error al eliminar file', err);
+              } else {
+                console.log('archivo eliminado', filePathTemplateDoc);
+              }
+            });
+          }, timeToLiveInMillisencods);
+          //convertir a pdf
+          const inputPath = path.join(process.cwd(), 'template', `_file.docx`);
+          const outPutDocumentTemplate = path.join(process.cwd(), 'template');
+          const outPuthFileName = `_file.pdf`;
+          const outPutPathTemplate = path.join(
+            outPutDocumentTemplate,
+            outPuthFileName,
+          );
+          await this.convertDocxToPdf(inputPath, outPutPathTemplate);
+          const rutaPdfGenerated = path.join(
+            process.cwd(),
+            'template',
+            `_file.pdf`,
+          );
+          const resultFile = fs.readFileSync(rutaPdfGenerated);
+          const base64String = resultFile.toString('base64');
+          const fileObj = {
+            mime: 'application/pdf',
+            base64: base64String,
+          };
+          const response = await this.uploadFile(fileObj);
+          const fileRegister = await this.createFileRegister(
+            response.data.file,
+          );
+          fileRegisterData.push(fileRegister);
+        } else {
+          const fileObj = {
+            mime: mime,
+            base64: base64,
+          };
+          const response = await this.uploadFile(fileObj);
+          const fileRegister = this.createFileRegister(response.data.file);
+          fileRegisterData.push(fileRegister);
+        }
       }
+
+      const existingDocument = await this.documentModel.findById(id).exec();
+
+      // const updatedFileRegister =
+      //   existingDocument.fileRegister.concat(fileRegisterData);
+      const updatedFileRegister = (existingDocument.fileRegister =
+        fileRegisterData);
+
       const updateDocument = {
         ...updateDocumentDTO,
-        fileRegister: fileRegisterData,
+        fileRegister: updatedFileRegister,
         documentationType,
       };
       const updateNewDocument = await this.documentModel
         .findOneAndUpdate({ _id: id }, updateDocument, { new: true })
         .exec();
+      // const newFileRegister = await this.fileModel({
+      //   idDocument: updateNewDocument._id,
+      //   fileRegister: fileRegisterData,
+      // });
+      const updateFileRegister = await this.fileModel
+        .findOne({ idDocument: updateNewDocument._id })
+        .exec();
+      updateFileRegister.fileRegister = updatedFileRegister;
+      await updateFileRegister.save();
       return updateNewDocument;
-    } else {
+    } else if (file.length === 0 && html === '') {
       const updateDocument = {
         ...updateDocumentDTO,
         documentationType,
@@ -1440,6 +1508,7 @@ export class DocumentsService {
 
       userMarkReviewed.stateDocumentUser = 'REVISADO';
       document.bitacoraWorkflow = updateBitacoraWorkflow;
+      document.updateAt = new Date();
 
       await document.save();
       return document;
@@ -1712,13 +1781,22 @@ export class DocumentsService {
     return filteredDocuments;
   }
 
-  async findAll(): Promise<Documents[]> {
+  async findAll(filterPaginate: PaginationDto) {
+    const { limit = this.defaultLimit, page = 1 } = filterPaginate;
+    const offset = (page - 1) * limit;
     const documents = await this.documentModel
       .find()
+      .limit(limit)
+      .skip(offset)
       .sort({ numberDocument: 1 })
       .setOptions({ sanitizeFilter: true })
       .exec();
-    return documents;
+    const total = await this.documentModel.countDocuments().exec();
+    return {
+      data: documents,
+      total: total,
+      totaPages: Math.ceil(total / limit),
+    };
   }
 
   async findDocumentsActive(query: any): Promise<Documents[]> {

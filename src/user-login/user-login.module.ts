@@ -8,6 +8,8 @@ import {
 import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
 import { HttpModule } from '@nestjs/axios';
 import { UserLoginService } from './user-login.service';
+// import { RolesGuard } from 'src/guard/roles.guard';
+// import { UserService } from 'src/user.service';
 
 @Module({
   imports: [

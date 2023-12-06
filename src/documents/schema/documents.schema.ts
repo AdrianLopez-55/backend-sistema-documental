@@ -12,8 +12,14 @@ import {
   EstadoUbiacion,
   EstadoUbiacionSchema,
 } from 'src/estado-ubicacion/schema/estado-ubicacion.schema';
+import * as moment from 'moment-timezone';
 
 export type DocumentDocument = Documents & Document;
+
+const date = new Date();
+const time = moment.utc(date).tz('America/La_Paz');
+const formattedDateTime = time.format('YYYY-MM-DD:HH:mm:ss');
+const formattedDateAsDate = new Date(formattedDateTime);
 
 @Schema({ versionKey: '__v', timestamps: true })
 export class Documents {
@@ -23,14 +29,14 @@ export class Documents {
   @Prop()
   userId: string;
 
-  // @Prop({ type: Object })
-  // userInfo: {
-  //   name: string;
-  //   lastName: string;
-  //   ci: string;
-  //   email: string;
-  //   unity: string;
-  // };
+  @Prop({ type: Object })
+  userInfo: {
+    name: string;
+    lastName: string;
+    ci: string;
+    email: string;
+    unity: string;
+  };
 
   @Prop({ uppercase: true })
   title: string;
@@ -112,7 +118,8 @@ export class Documents {
   @Prop({ default: true })
   active: boolean;
 
-  @Prop({ type: Date, default: () => new Date(), immutable: true })
+  // @Prop({ type: Date, default: () => new Date(), immutable: true })
+  @Prop({ default: formattedDateAsDate, immutable: true })
   createdAt: Date;
 
   @Prop({ type: Date, default: () => new Date() })

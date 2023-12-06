@@ -10,13 +10,17 @@ import { AuthGuard } from './guards/auth.guard';
 // import { LoggerMiddleware } from './logger.middleware';
 import { PermissionsService } from './permissions/permission.service';
 import { RolService } from './rol/rol.service';
+// import { SocketIoAdapter } from './messaging/socket-io.adapter';
 // import * as io from 'socket.io';
 
 async function bootstrap() {
   process.env.TZ = 'America/La_Paz';
 
   const app = await NestFactory.create(AppModule, { cors: true });
-  app.use(express.json({ limit: '10mb' }));
+  // app.useWebSocketAdapter(new SocketIoAdapter(app));
+  // app.use(cors())
+  app.enableCors();
+  app.use(express.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ extended: true }));
 
   app.use(bodyParser.text({ type: 'text/html' }));
@@ -85,6 +89,8 @@ async function bootstrap() {
       'endpoint related to obtaining the organizational chart',
     )
     .addTag('personal-get', 'obtain data personal')
+
+    // .addTag('message')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -100,5 +106,8 @@ async function bootstrap() {
   // app.useGlobalInterceptors(new ErrorManager());
   // app.useGlobalGuards(new AuthGuard());
   await app.listen(getConfig().port);
+
+  //puerto para el docker
+  // await app.listen(8085);
 }
 bootstrap();

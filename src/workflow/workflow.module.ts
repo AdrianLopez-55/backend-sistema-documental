@@ -12,6 +12,7 @@ import {
   Permission,
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
+// import { UserService } from 'src/user.service';
 
 @Module({
   imports: [

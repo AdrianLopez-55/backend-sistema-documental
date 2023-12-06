@@ -26,7 +26,7 @@ import { Permission } from 'src/guard/constants/Permission';
 import { Request } from 'express';
 
 @ApiTags('Permissions')
-// @UseGuards(RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('permissions')
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
@@ -46,6 +46,26 @@ export class PermissionsController {
   @ApiOperation({ summary: 'get all permission' })
   findAll() {
     return this.permissionsService.findAll();
+  }
+
+  @ApiBearerAuth()
+  @Permissions(Permission.CREAR_DOCUMENTO)
+  @Get('permission-central')
+  @ApiOperation({ summary: 'show permission of the user login' })
+  async permissionCentral(@Req() req) {
+    try {
+      const permissionUserLogin = req.permissionUserLogin;
+      console.log(
+        'esto es permission user login controller',
+        permissionUserLogin,
+      );
+      const filteredPermissions = permissionUserLogin.filter((permission) =>
+        permission.permissionName.startsWith('GESTIONDOCUMENTAL_'),
+      );
+      return await this.permissionsService.viewPermissionCentral(
+        filteredPermissions,
+      );
+    } catch (error) {}
   }
 
   // @ApiBearerAuth()

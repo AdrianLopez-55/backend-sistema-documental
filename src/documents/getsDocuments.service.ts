@@ -184,6 +184,23 @@ export class GetDocumentsService {
               },
               workflow: null,
             },
+            {
+              'userReceivedDocument.idOfUser': userId,
+              'userReceivedDocument/stateDocumentUser': 'RECIBIDO DIRECTO',
+              workflow: null,
+            },
+            {
+              bitacoraWithoutWorkflow: {
+                $elemMatch: {
+                  recievedUsers: {
+                    $elemMatch: {
+                      idOfUser: userId,
+                    },
+                  },
+                },
+              },
+              workflow: null,
+            },
           ],
         });
 
@@ -271,7 +288,7 @@ export class GetDocumentsService {
           const nextDay = new Date(start);
           nextDay.setDate(nextDay.getDate() + 1);
 
-          query = query.where('createdAt', {
+          query = query.where('updateAt', {
             $gte: start,
             $lt: nextDay,
           });
@@ -301,13 +318,52 @@ export class GetDocumentsService {
           .lean()
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ updateAt: -1 });
 
-        documents.forEach((document) => {
+        // documents.forEach(async (document) => {
+        //   document.stateDocumentUserRecieved = 'RECIBIDO';
+        //   const userDataSend = await this.httpService
+        //     .get(`${this.apiPersonalGet}/${document.userId}`)
+        //     .toPromise();
+        //   document.userInfo = {
+        //     name: userDataSend.data.name,
+        //     lastName: userDataSend.data.lastName,
+        //     ci: userDataSend.data.ci,
+        //     email: userDataSend.data.email,
+        //     unity: userDataSend.data.unity,
+        //   };
+        //   console.log('esto es user info', document.userInfo);
+        // });
+        for (const document of documents) {
           document.stateDocumentUserRecieved = 'RECIBIDO';
-        });
+          try {
+            const userDataSend = await this.httpService
+              .get(`${this.apiPersonalGet}/${document.userId}`)
+              .toPromise();
+
+            document.userInfo = {
+              name: userDataSend.data.name,
+              lastName: userDataSend.data.lastName,
+              ci: userDataSend.data.ci,
+              email: userDataSend.data.email,
+              unity: userDataSend.data.unity,
+            };
+
+            console.log('esto es user info', document.userInfo);
+          } catch (error) {
+            console.error('Error al obtener datos del usuario:', error);
+          }
+        }
+
+        console.log(
+          'esto es use info pero oficial',
+          documents.map((entry) => entry.userInfo),
+        );
 
         const total = await this.documentModel.countDocuments(query).exec();
+        if (total === 0) {
+          return 'No se encontraron datos';
+        }
         return {
           data: documents,
           total: total,
@@ -429,11 +485,28 @@ export class GetDocumentsService {
           .lean()
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ updateAt: -1 });
 
-        documents.forEach((document) => {
+        for (const document of documents) {
           document.stateDocumentUserRecieved = 'RECIBIDO';
-        });
+          try {
+            const userDataSend = await this.httpService
+              .get(`${this.apiPersonalGet}/${document.userId}`)
+              .toPromise();
+
+            document.userInfo = {
+              name: userDataSend.data.name,
+              lastName: userDataSend.data.lastName,
+              ci: userDataSend.data.ci,
+              email: userDataSend.data.email,
+              unity: userDataSend.data.unity,
+            };
+
+            console.log('esto es user info', document.userInfo);
+          } catch (error) {
+            console.error('Error al obtener datos del usuario:', error);
+          }
+        }
         const total = await this.documentModel.countDocuments(query).exec();
         return {
           data: documents,
@@ -443,20 +516,36 @@ export class GetDocumentsService {
       }
       if (withWorkflow && withWorkflow === 'false') {
         let query = this.documentModel.find({
-          sendMultiUnitysWithoutWorkflow: {
-            $elemMatch: {
-              send: {
+          $or: [
+            {
+              sendMultiUnitysWithoutWorkflow: {
                 $elemMatch: {
-                  receivedUsers: {
+                  send: {
                     $elemMatch: {
-                      idOfUser: `${userId}`,
+                      receivedUsers: {
+                        $elemMatch: {
+                          idOfUser: `${userId}`,
+                        },
+                      },
                     },
                   },
                 },
               },
+              workflow: null,
             },
-          },
-          workflow: null,
+            {
+              bitacoraWithoutWorkflow: {
+                $elemMatch: {
+                  recievedUsers: {
+                    $elemMatch: {
+                      idOfUser: userId,
+                    },
+                  },
+                },
+              },
+              workflow: null,
+            },
+          ],
         });
 
         if (numberDocument) {
@@ -550,11 +639,28 @@ export class GetDocumentsService {
           .lean()
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ updateAt: -1 });
 
-        documents.forEach((document) => {
+        for (const document of documents) {
           document.stateDocumentUserRecieved = 'RECIBIDO';
-        });
+          try {
+            const userDataSend = await this.httpService
+              .get(`${this.apiPersonalGet}/${document.userId}`)
+              .toPromise();
+
+            document.userInfo = {
+              name: userDataSend.data.name,
+              lastName: userDataSend.data.lastName,
+              ci: userDataSend.data.ci,
+              email: userDataSend.data.email,
+              unity: userDataSend.data.unity,
+            };
+
+            console.log('esto es user info', document.userInfo);
+          } catch (error) {
+            console.error('Error al obtener datos del usuario:', error);
+          }
+        }
         const total = await this.documentModel.countDocuments(query).exec();
         return {
           data: documents,
@@ -676,6 +782,26 @@ export class GetDocumentsService {
         .skip(offset)
         .sort({ createdAt: -1 });
 
+      for (const document of filteredDocuments) {
+        try {
+          const userDataSend = await this.httpService
+            .get(`${this.apiPersonalGet}/${document.userId}`)
+            .toPromise();
+
+          document.userInfo = {
+            name: userDataSend.data.name,
+            lastName: userDataSend.data.lastName,
+            ci: userDataSend.data.ci,
+            email: userDataSend.data.email,
+            unity: userDataSend.data.unity,
+          };
+
+          console.log('esto es user info', document.userInfo);
+        } catch (error) {
+          console.error('Error al obtener datos del usuario:', error);
+        }
+      }
+
       const total = await this.documentModel.countDocuments(query).exec();
 
       return {
@@ -689,10 +815,12 @@ export class GetDocumentsService {
           $or: [
             {
               stateDocumentUserSend: 'INICIADO',
+              userId: userId,
               workflow: { $ne: null },
             },
             {
               stateDocumentUserSend: 'ENVIADO DIRECTO',
+              userId: userId,
               workflow: null,
             },
             {
@@ -820,7 +948,7 @@ export class GetDocumentsService {
           .lean()
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ updateAt: -1 });
 
         filteredDocuments.forEach((document) => {
           if (
@@ -829,6 +957,7 @@ export class GetDocumentsService {
           ) {
             // Cumple con el primer requisito
             document.stateDocumentUserRecieved = 'INICIADO';
+            document.updateAt = new Date();
           } else if (
             document.stateDocumentUserSend === 'ENVIADO DIRECTO' &&
             !document.workflow
@@ -988,7 +1117,7 @@ export class GetDocumentsService {
           .lean()
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ updateAt: -1 });
 
         filteredDocuments.forEach((document) => {
           if (
@@ -1132,7 +1261,7 @@ export class GetDocumentsService {
           .find(query)
           .limit(limit)
           .skip(offset)
-          .sort({ createdAt: -1 });
+          .sort({ updateAt: -1 });
 
         filteredDocuments.forEach((document) => {
           document.stateDocumentUserRecieved = 'ENVIADO';
@@ -1638,137 +1767,6 @@ export class GetDocumentsService {
 
       filteredDocuments.forEach((document) => {
         document.stateDocumentUserRecieved = 'ARCHIVADO';
-      });
-
-      const total = await this.documentModel.countDocuments(query).exec();
-
-      return {
-        data: filteredDocuments,
-        total: total,
-        totalPages: Math.ceil(total / limit),
-      };
-    } else if (view === 'DERIVADOS') {
-      let query = this.documentModel.find({
-        'estado_Ubicacion.estado_ubi': {
-          $elemMatch: {
-            'receivedUsers.idOfUser': userId,
-            'receivedUsers.stateDocumentUser': 'DERIVADO',
-          },
-        },
-      });
-
-      if (numberDocument) {
-        query = query.where('numberDocument', new RegExp(numberDocument, 'i'));
-      }
-      // if (userId) {
-      //   query = query.where('userId', new RegExp(userId, 'i'));
-      // }
-      if (title) {
-        query = query.where('title', new RegExp(title, 'i'));
-      }
-      if (typeName) {
-        query = query.where(
-          'documentationType.typeName',
-          new RegExp(typeName, 'i'),
-        );
-      }
-      if (stateDocumentUserSend) {
-        query['stateDocumentUserSend'] = stateDocumentUserSend;
-      }
-
-      if (nombre) {
-        query = query.where('workflow.nombre', new RegExp(nombre, 'i'));
-      }
-      if (descriptionWorkflow) {
-        query = query.where(
-          'workflow.descriptionWorkflow',
-          new RegExp(descriptionWorkflow, 'i'),
-        );
-      }
-      if (oficinaActual) {
-        query = query.where(
-          'workflow.oficinaActual',
-          new RegExp(oficinaActual, 'i'),
-        );
-      }
-
-      if (description) {
-        query = query.where('userId', new RegExp(description, 'i'));
-      }
-      if (active === 'true') {
-        query = query.where('active', active);
-      }
-
-      if (userDigitalSignature === 'true') {
-        query = query.where(
-          'digitalSignatureDocument.userDigitalSignature',
-          userId,
-        );
-      }
-
-      if (dateRange.startDate && dateRange.endDate) {
-        // Asegurémonos de obtener la fecha más temprana y la más tardía
-        const start = new Date(dateRange.startDate);
-        const end = new Date(dateRange.endDate);
-
-        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
-        query = query.where('createdAt', {
-          $gte: start < end ? start : end,
-          $lte: end > start ? end : start,
-        });
-
-        query = query.where('createdAt', {
-          $gte: start,
-          $lte: end,
-        });
-      } else if (dateRange.startDate) {
-        const start = new Date(dateRange.startDate);
-        const nextDay = new Date(start);
-        nextDay.setDate(nextDay.getDate() + 1);
-
-        query = query.where('createdAt', {
-          $gte: start,
-          $lt: nextDay,
-        });
-      } else if (dateRange.endDate) {
-        const start = new Date(dateRange.endDate);
-        const nextDay = new Date(start);
-        nextDay.setDate(nextDay.getDate() + 1);
-
-        query = query.where('createdAt', {
-          $gte: start,
-          $lt: nextDay,
-        });
-      }
-
-      //--filtrar documentos recividos
-      if (
-        dateRangeRecived.startDateRecived &&
-        dateRangeRecived.endDateRecived
-      ) {
-        // Asegurémonos de obtener la fecha más temprana y la más tardía
-        const startRecived = new Date(dateRangeRecived.startDateRecived);
-        const endRecived = new Date(dateRangeRecived.endDateRecived);
-
-        // Luego, usemos $gte con la fecha más temprana y $lte con la más tardía
-        query = query.elemMatch('userReceivedDocument', {
-          dateRecived: {
-            $gte: startRecived < endRecived ? startRecived : endRecived,
-            $lte: endRecived > startRecived ? endRecived : startRecived,
-          },
-        });
-      }
-
-      const offset = (page - 1) * limit;
-
-      const filteredDocuments = await this.documentModel
-        .find(query)
-        .limit(limit)
-        .skip(offset)
-        .sort({ createdAt: -1 });
-
-      filteredDocuments.forEach((document) => {
-        document.stateDocumentUserRecieved = 'DERIVADO';
       });
 
       const total = await this.documentModel.countDocuments(query).exec();

@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Permission, PermissionSchema } from './schemas/permission.schema';
 import { HttpModule } from '@nestjs/axios';
 import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
+import { UserService } from 'src/user.service';
 
 @Module({
   imports: [
@@ -15,6 +16,6 @@ import { Rol, RolSchema } from 'src/rol/schema/rol.schema';
     HttpModule,
   ],
   controllers: [PermissionsController],
-  providers: [PermissionsService],
+  providers: [PermissionsService, UserService],
 })
 export class PermissionsModule {}

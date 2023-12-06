@@ -76,6 +76,14 @@ export class FileController {
     return this.fileService.remove(id);
   }
 
+  @Delete('remove-file-document/:idDocument/:idFile')
+  async removeFileDocument(
+    @Param('idDocument') idDocument: string,
+    @Param('idFile') idFile: string,
+  ) {
+    return await this.fileService.removeOneFile(idDocument, idFile);
+  }
+
   @Post('generate-pdf')
   // @ApiBody({ description: 'Contenido HTML' })
   async generatePdf(

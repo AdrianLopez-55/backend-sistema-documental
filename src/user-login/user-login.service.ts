@@ -35,11 +35,11 @@ export class UserLoginService {
         return dataPersonalLogged;
       }
 
-      const fileData = await this.httpService
-        .get(`${getConfig().api_files_uploader}/file/${file}`)
-        .toPromise();
-      if (fileData) {
-      }
+      // const fileData = await this.httpService
+      //   .get(`${getConfig().api_files_uploader}/file/${file}`)
+      //   .toPromise();
+      // if (fileData) {
+      // }
       const dataPersonalLogged = {
         _id,
         name,
@@ -47,7 +47,7 @@ export class UserLoginService {
         ci,
         email,
         unity,
-        file: fileData.data.file.base64,
+        file,
         rolUser,
       };
 

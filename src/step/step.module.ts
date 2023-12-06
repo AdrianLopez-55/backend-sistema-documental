@@ -10,6 +10,7 @@ import {
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
 import { Workflow, WorkflowSchema } from 'src/workflow/schemas/workflow.schema';
+import { UserService } from 'src/user.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { Workflow, WorkflowSchema } from 'src/workflow/schemas/workflow.schema';
     ]),
     HttpModule,
   ],
-  providers: [StepService],
+  providers: [StepService, UserService],
   exports: [StepService],
   controllers: [StepController],
 })

@@ -34,58 +34,65 @@ export class WorkflowService {
   ) {}
 
   async createWorkflow(workflowDto: WorkflowDto) {
-    const { nombre, descriptionWorkflow, pasos } = workflowDto;
-    const existingWorkflow = await this.workflowModel
-      .findOne({ nombre })
-      .exec();
-    if (existingWorkflow) {
-      throw new HttpException(`El nombre ${existingWorkflow} ya existe.`, 400);
-    }
-
-    let prevPaso = 0;
-    for (const paso of pasos) {
-      const oficina = paso.oficina;
-      try {
-        const officeInfo = await this.checkOfficeValidity(oficina);
-        paso.idOffice = officeInfo.id;
-
-        await this.validateOffice(oficina);
-      } catch (error) {
-        throw new BadRequestException(
-          `Oficína no válida en el paso ${paso.paso}: ${error.message}`,
-        );
-      }
-      if (paso.paso <= prevPaso) {
+    try {
+      const { nombre, descriptionWorkflow, pasos } = workflowDto;
+      const existingWorkflow = await this.workflowModel
+        .findOne({ nombre: nombre })
+        .exec();
+      if (existingWorkflow) {
         throw new HttpException(
-          `El número de paso en el paso ${paso.paso} no sigue la secuencia adecuada`,
+          `El nombre ${existingWorkflow.nombre} ya existe.`,
           400,
         );
       }
-      prevPaso = paso.paso;
+
+      let prevPaso = 0;
+      for (const paso of pasos) {
+        const oficina = paso.oficina;
+        try {
+          const officeInfo = await this.checkOfficeValidity(oficina);
+          paso.idOffice = officeInfo.id;
+
+          await this.validateOffice(oficina);
+        } catch (error) {
+          throw new BadRequestException(
+            `Oficína no válida en el paso ${paso.paso}: ${error.message}`,
+          );
+        }
+        if (paso.paso <= prevPaso) {
+          throw new HttpException(
+            `El número de paso en el paso ${paso.paso} no sigue la secuencia adecuada`,
+            400,
+          );
+        }
+        prevPaso = paso.paso;
+      }
+      if (!this.areStepsConsecutive(pasos)) {
+        throw new HttpException(
+          'Los números de paso no están en secuencia adecuada',
+          400,
+        );
+      }
+      const newStep = new this.stepModel({
+        pasos: pasos,
+      });
+      await newStep.save();
+      console.log('esto es newStep');
+      console.log(newStep);
+
+      const nuevoWorkflow = new this.workflowModel({
+        nombre: nombre,
+        descriptionWorkflow: descriptionWorkflow,
+        pasos: newStep.pasos,
+
+        idStep: newStep._id,
+        oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
+      });
+
+      return nuevoWorkflow.save();
+    } catch (error) {
+      throw new Error(error);
     }
-    if (!this.areStepsConsecutive(pasos)) {
-      throw new HttpException(
-        'Los números de paso no están en secuencia adecuada',
-        400,
-      );
-    }
-    const newStep = new this.stepModel({
-      pasos: pasos,
-    });
-    await newStep.save();
-    console.log('esto es newStep');
-    console.log(newStep);
-
-    const nuevoWorkflow = new this.workflowModel({
-      nombre: nombre,
-      descriptionWorkflow: descriptionWorkflow,
-      pasos: newStep.pasos,
-
-      idStep: newStep._id,
-      oficinaActual: 'aun no se envio a ninguna oficina para su seguimiento',
-    });
-
-    return nuevoWorkflow.save();
   }
 
   async findAll(): Promise<Workflow[]> {

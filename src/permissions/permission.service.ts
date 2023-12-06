@@ -134,5 +134,16 @@ export class PermissionsService {
     };
   }
 
-  async viewPermissionCentral() {}
+  async viewPermissionCentral(permissionNames: string[]) {
+    try {
+      // const filterPermissions = permissionNames.map((entry) => {
+      //   permissionNames.map((entry) => {
+      //     entry.p
+      //   })
+      // });
+      return await permissionNames;
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
 }

@@ -43,19 +43,28 @@ export class SendDerivedDocumentsService {
     const document = await this.checkDocument(documentId);
     const { workflowName } = addWorkflowWithoutCiDocumentDto;
     if (document.stateDocumentUserSend === 'OBSERVADO') {
-      if (workflowName === document.workflow.nombre) {
-        const documentSend = await this.sendDocumentWithoutCi(
-          documentId,
-          workflowName,
-          userId,
-        );
-        return documentSend;
-      } else {
-        throw new HttpException(
-          'El documento debe enviarse al mismo flujo de trabajo',
-          400,
-        );
-      }
+      let worflowbefore = workflowName;
+      worflowbefore = document.workflow.nombre;
+      const documentSend = await this.sendDocumentWithoutCi(
+        documentId,
+        worflowbefore,
+        userId,
+      );
+      return documentSend;
+
+      // if (workflowName === document.workflow.nombre) {
+      //   const documentSend = await this.sendDocumentWithoutCi(
+      //     documentId,
+      //     workflowName,
+      //     userId,
+      //   );
+      //   return documentSend;
+      // } else {
+      //   throw new HttpException(
+      //     'El documento debe enviarse al mismo flujo de trabajo',
+      //     400,
+      //   );
+      // }
     } else {
       if (document.stateDocumentUserSend === 'INICIADO') {
         throw new HttpException(`El documento ya fue enviado`, 400);
@@ -82,20 +91,35 @@ export class SendDerivedDocumentsService {
     }
     await this.validateCi(ci);
     if (document.stateDocumentUserSend === 'OBSERVADO') {
-      if (worflowName === document.workflow.nombre) {
-        const documentSend = await this.sendDocument(
-          documentId,
-          worflowName,
-          ci,
-          userId,
-        );
-        return documentSend;
-      } else {
-        throw new HttpException(
-          `El documento debe enviarse al mismo flujo de trabajo`,
-          400,
-        );
-      }
+      let worflowbefore = worflowName;
+      worflowbefore = document.workflow.nombre;
+      let ciBefore = ci;
+      ciBefore = [];
+      const ciSend = document.bitacoraWorkflow[0].receivedUsers.map((entry) => {
+        return entry.ciUser;
+      });
+      ciBefore = ciSend;
+      const documentSend = await this.sendDocument(
+        documentId,
+        worflowbefore,
+        ciBefore,
+        userId,
+      );
+      return documentSend;
+      // if (worflowName === document.workflow.nombre) {
+      //   const documentSend = await this.sendDocument(
+      //     documentId,
+      //     worflowName,
+      //     ci,
+      //     userId,
+      //   );
+      //   return documentSend;
+      // } else {
+      //   throw new HttpException(
+      //     `El documento debe enviarse al mismo flujo de trabajo`,
+      //     400,
+      //   );
+      // }
     } else {
       if (document.stateDocumentUserSend === 'INICIADO') {
         throw new HttpException(`El documento ya fue enviado`, 400);
@@ -292,6 +316,7 @@ export class SendDerivedDocumentsService {
         document.workflow = workflow;
         // document.stateDocumetUser = 'DERIVADO';
         document.stateDocumentUserSend = 'INICIADO';
+        document.updateAt = new Date();
       }
       await document.save();
       return document;
@@ -503,6 +528,7 @@ export class SendDerivedDocumentsService {
       document.workflow = workflow;
       // document.stateDocumetUser = 'DERIVADO';
       document.stateDocumentUserSend = 'INICIADO';
+      document.updateAt = new Date();
       await document.save();
       return document;
     } else {
@@ -634,7 +660,7 @@ export class SendDerivedDocumentsService {
       return (entry.activo = false);
     });
 
-    findEstadoUbicacion.save();
+    await findEstadoUbicacion.save();
 
     findEstadoUbicacion.estado_ubi.push({
       nameOffices: `${userOficce}`,
@@ -678,6 +704,7 @@ export class SendDerivedDocumentsService {
 
     await findEstadoUbicacion.save();
     document.estado_Ubicacion = findEstadoUbicacion;
+    document.updateAt = new Date();
     await document.save();
     return document;
   }
@@ -828,7 +855,7 @@ export class SendDerivedDocumentsService {
 
     await findEstadoUbicacion.save();
     document.estado_Ubicacion = findEstadoUbicacion;
-
+    document.updateAt = new Date();
     await document.save();
     return document;
   }
@@ -1031,6 +1058,7 @@ export class SendDerivedDocumentsService {
       document.stateDocumentUserSend = 'INICIADO';
       // document.stateDocumetUser = '';
       document.bitacoraWorkflow = newBitacora;
+      document.updateAt = new Date();
       await document.save();
       return document;
     } else {
@@ -1222,7 +1250,7 @@ export class SendDerivedDocumentsService {
         findEstadoUbicacion.estado_ubi.map((entry) => {
           return (entry.activo = false);
         });
-        findEstadoUbicacion.save();
+        await findEstadoUbicacion.save();
 
         const missingOffice = document.workflow.pasos
           .filter((paso) => !paso.completado)
@@ -1255,6 +1283,7 @@ export class SendDerivedDocumentsService {
         document.stateDocumentUserSend = 'INICIADO';
         document.bitacoraWorkflow = newBitacora;
       }
+      document.updateAt = new Date();
       await document.save();
       return document;
     } else {
@@ -1395,7 +1424,7 @@ export class SendDerivedDocumentsService {
 
       await findEstadoUbicacion.save();
       document.estado_Ubicacion = findEstadoUbicacion;
-
+      document.updateAt = new Date();
       await document.save();
       return document;
     }

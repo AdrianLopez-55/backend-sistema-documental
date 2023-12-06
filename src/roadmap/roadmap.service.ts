@@ -71,7 +71,7 @@ export class RoadmapService {
   }
 
   async remove(id: string) {
-    return this.roadmapModel.findByIdAndRemove({ _id: id }).exec();
+    return this.roadmapModel.findByIdAndRemove(id, { lean: true }).exec();
   }
 
   async addAssignedDocument(

@@ -24,10 +24,11 @@ export class UserLoginController {
 
   @ApiBearerAuth()
   @Permissions(
-    Permission.USER,
-    Permission.ADMIN,
+    // Permission.USER,
+    // Permission.ADMIN,
     Permission.SUPERADMIN,
     Permission.CREAR_DOCUMENTO,
+    Permission.USUARIO_LOGEADO,
   )
   @Get('profile')
   @ApiOperation({ summary: 'see data of the logged in user' })

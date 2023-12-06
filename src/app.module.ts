@@ -4,8 +4,6 @@ import {
   MiddlewareConsumer,
   RequestMethod,
 } from '@nestjs/common';
-// import { AppController } from './app.controller';
-// import { AppService } from './app.service';
 import { ApiModule } from './ServiceApi/api.module';
 import { ConfigModule } from '@nestjs/config';
 import { DocumentsModule } from './documents/documents.module';
@@ -52,6 +50,13 @@ import { EmailService } from './email/email.service';
 import { EmailController } from './email/email.controller';
 import { EstadoUbicacionModule } from './estado-ubicacion/estado-ubicacion.module';
 import { FileModule } from './file/file.module';
+// import { WebSocketsModule   } from '@nestjs/websockets';
+// import { MessagingService } from './messaging/messaging.service';
+// import { MessagingGateway } from './messaging/messaging.gateway';
+// import { WebsocketsController } from './messaging/websockets.controller';
+// import { ChatGateway } from './chat/chat.gateway';
+import { MessagesWsModule } from './messages-ws/messages-ws.module';
+import { UserService } from './user.service';
 
 @Module({
   imports: [
@@ -93,9 +98,22 @@ import { FileModule } from './file/file.module';
     BitacoraModule,
     EstadoUbicacionModule,
     FileModule,
+    MessagesWsModule,
+    // WebSocketModule,
   ],
-  controllers: [PersonalGetController, EmailController],
-  providers: [PersonalGetService, CustomErrorService, EmailService],
+  controllers: [
+    PersonalGetController,
+    EmailController /*WebsocketsController*/,
+  ],
+  providers: [
+    PersonalGetService,
+    CustomErrorService,
+    EmailService,
+    // UserService,
+    // MessagingGateway,
+    // MessagingService,
+    // ChatGateway,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

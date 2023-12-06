@@ -8,6 +8,7 @@ import {
   PermissionSchema,
 } from 'src/permissions/schemas/permission.schema';
 import { HttpModule } from '@nestjs/axios';
+// import { UserService } from 'src/user.service';
 
 @Module({
   imports: [
